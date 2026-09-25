@@ -1,0 +1,49 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  foundation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.19"
+          enable-cache: true
+      - run: uv sync --locked --all-packages
+      - run: npm ci
+      - run: uv run ruff format --check .
+      - run: uv run ruff check .
+      - run: uv run mypy
+      - run: uv run pytest
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: uv run python scripts/smoke.py
+      - name: Start local dependencies
+        run: |
+          cp .env.example .env
+          docker compose config --quiet
+          docker compose up -d --wait --wait-timeout 90
+          docker compose exec -T postgres psql -U agentrail -d agentrail -v ON_ERROR_STOP=1 -c 'SELECT 1;'
+      - name: Dependency logs on failure
+        if: failure()
+        run: docker compose logs --no-color
+      - name: Stop local dependencies
+        if: always()
+        run: docker compose down

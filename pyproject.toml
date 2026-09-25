@@ -1,0 +1,38 @@
+[project]
+name = "agentrail-workspace"
+version = "0.1.0"
+requires-python = ">=3.12,<3.13"
+dependencies = []
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["apps/api"]
+
+[dependency-groups]
+dev = [
+  "httpx>=0.28,<1",
+  "mypy>=1.15,<2",
+  "pytest>=8,<10",
+  "pytest-asyncio>=1,<2",
+  "ruff>=0.11,<1",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["apps/api/src", "apps/api/tests", "scripts"]
+
+[tool.pytest.ini_options]
+testpaths = ["apps/api/tests"]
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
+addopts = "-ra --strict-markers --strict-config"

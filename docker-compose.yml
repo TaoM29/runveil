@@ -1,0 +1,21 @@
+name: agentrail
+services:
+  postgres:
+    image: postgres:17.9-bookworm
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-agentrail}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Copy .env.example to .env and set a local password}
+      POSTGRES_DB: ${POSTGRES_DB:-agentrail}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        ["CMD-SHELL", 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 2s
+      timeout: 3s
+      retries: 20
+    stop_grace_period: 10s
+volumes:
+  postgres_data:

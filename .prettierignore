@@ -1,0 +1,7 @@
+package-lock.json
+uv.lock
+.next
+node_modules
+.venv
+docs/PROJECT_PLAN.md
+apps/web/next-env.d.ts
