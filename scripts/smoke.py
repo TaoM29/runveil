@@ -8,7 +8,7 @@ import tempfile
 import time
 from contextlib import ExitStack
 from typing import BinaryIO
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
 
 
@@ -89,6 +89,21 @@ def main() -> None:
                 if response.status != 200 or "Runveil" not in html or "Phase 0" not in html:
                     raise RuntimeError("Web page did not render the foundation content")
             print("PASS web: production home page")
+            expected_ready = bool(os.environ.get("DATABASE_URL"))
+            try:
+                with urlopen(f"http://127.0.0.1:{api_port}/ready", timeout=5) as readiness:
+                    ready_code, ready_body = readiness.status, json.load(readiness)
+            except HTTPError as error:
+                ready_code, ready_body = error.code, json.load(error)
+                error.close()
+            expected_body = (
+                {"status": "ok", "database": "reachable"}
+                if expected_ready
+                else {"status": "unavailable", "database": "unavailable"}
+            )
+            if ready_code != (200 if expected_ready else 503) or ready_body != expected_body:
+                raise RuntimeError("Unexpected API database readiness response")
+            print("PASS api: database readiness contract")
         except (OSError, RuntimeError):
             for service, saved_log in logs:
                 saved_log.seek(0)

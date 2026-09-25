@@ -13,6 +13,9 @@ jobs:
   foundation:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      DATABASE_URL: postgresql+psycopg://runveil:runveil-local-only@127.0.0.1:5432/runveil
+      RUNVEIL_TEST_DATABASE_URL: postgresql+psycopg://runveil:runveil-local-only@127.0.0.1:5432/postgres
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -28,6 +31,16 @@ jobs:
       - run: uv run ruff format --check .
       - run: uv run ruff check .
       - run: uv run mypy
+      - name: Start local dependencies
+        run: |
+          cp .env.example .env
+          docker compose config --quiet
+          docker compose up -d --wait --wait-timeout 90
+          docker compose exec -T postgres psql -U runveil -d runveil -v ON_ERROR_STOP=1 -c 'SELECT 1;'
+      - name: Validate migrations
+        run: |
+          uv run alembic upgrade head
+          uv run alembic check
       - run: uv run pytest
       - run: npm run format:check
       - run: npm run lint
@@ -35,12 +48,6 @@ jobs:
       - run: npm test
       - run: npm run build
       - run: uv run python scripts/smoke.py
-      - name: Start local dependencies
-        run: |
-          cp .env.example .env
-          docker compose config --quiet
-          docker compose up -d --wait --wait-timeout 90
-          docker compose exec -T postgres psql -U runveil -d runveil -v ON_ERROR_STOP=1 -c 'SELECT 1;'
       - name: Dependency logs on failure
         if: failure()
         run: docker compose logs --no-color

@@ -1,18 +1,22 @@
 # Architecture
 
-## Implemented in Phase 0
+## Implemented through Phase 1A
 
 ```mermaid
 flowchart LR
     Browser --> Web[Next.js console :3000]
     Client[HTTP client] --> API[FastAPI :8000]
     Compose[Docker Compose] --> PG[(PostgreSQL :5432)]
+    API -->|readiness query| PG
+    Persistence[Async repositories and Alembic] --> PG
+    Persistence --> Domain[Immutable agent versions and run lifecycle]
 ```
 
 Both applications expose `GET /health` with a typed/structured service identity.
-These endpoints report liveness. PostgreSQL has a separate Compose health check
-and SQL smoke check; neither application depends on it yet. There is no web-to-API
-request or CORS configuration until a feature needs one.
+These endpoints report liveness. The API also has `/ready`, a bounded database
+connectivity probe. PostgreSQL has its own Compose health check. Schema migration
+is an explicit operation. The web console remains the Phase 0 foundation; there
+are no domain HTTP endpoints or web-to-API requests yet.
 
 The root uv workspace locks Python dependencies in `uv.lock`; the API uses a src
 layout and is installed as a real package. The npm workspace uses one root lockfile.
@@ -58,14 +62,26 @@ implementations exist. `apps/worker` will own process/queue integration.
 Dependency direction should point from apps and adapters toward domain contracts,
 never from the domain toward FastAPI or Next.js.
 
-PostgreSQL persistence, SQLAlchemy and Alembic arrive together in Phase 1.
-Durability semantics, queue consistency, approvals and sandbox boundaries require
-future ADRs and tests; the target diagram does not claim those properties exist.
+Phase 1A adds `AgentDefinition`, immutable `AgentVersion` and `Run` snapshots in
+`runveil_core`. Configuration is stored as opaque JSON without provider/tool
+semantics. `runveil_persistence` owns SQLAlchemy mappings, psycopg async connections,
+concrete repositories and Alembic migration 0001. The core imports neither the API
+nor the persistence adapter. API lifecycle code owns and disposes its readiness engine.
+
+Repository callers own transactions. Parent-row locks serialize version numbering;
+run-row locks plus required expected revisions reject stale transitions. PostgreSQL
+triggers enforce immutable versions and the same state graph as the domain. Store
+creation, most recent transition, first start and terminal timestamps. Full event
+history and checkpoint recovery do not exist yet. See
+[ADR 0003](docs/adr/0003-phase-1a-persistence.md) for the transition table and trade-offs.
+
+Queue consistency, approvals and sandbox boundaries still require future ADRs and
+tests; the target diagram does not claim those properties exist.
 
 ## Open decisions
 
 - Public product/repository name and license.
-- Event ordering, checkpoint transaction boundaries and immutable version policy.
+- Event ordering and checkpoint transaction boundaries (Phase 1B).
 - Queue/database consistency and worker claim semantics.
 - Sandbox threat model and AWS cost/deployment details.
 

@@ -3,7 +3,7 @@ name = "runveil-api"
 version = "0.1.0"
 description = "Runveil control API foundation"
 requires-python = ">=3.12,<3.13"
-dependencies = ["fastapi>=0.115,<1", "pydantic>=2,<3", "uvicorn>=0.34,<1"]
+dependencies = ["fastapi>=0.115,<1", "pydantic>=2,<3", "uvicorn>=0.34,<1", "runveil-persistence"]
 
 [build-system]
 requires = ["hatchling>=1.27,<2"]
@@ -11,3 +11,6 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/runveil_api"]
+
+[tool.uv.sources]
+runveil-persistence = { workspace = true }
