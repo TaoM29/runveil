@@ -17,7 +17,7 @@ The supplied charter is preserved byte-for-byte in `docs/PROJECT_PLAN.md`.
 - One lockfile per ecosystem; only create packages when they contain real behavior.
 - Health endpoints report process liveness, independent of database readiness.
 - Docker supplies local PostgreSQL; AWS and Terraform remain deployment targets.
-- AgentRail is a working name with known collisions; see naming research.
+- Runveil is a working name with known collisions; see naming research.
 
 ## Verification
 
@@ -41,10 +41,10 @@ were added to PATH for verification. Commands run from the repository root:
 | `uv run python scripts/smoke.py`                                                                                   | Passed; real API health, web health and rendered production home page |
 | `docker compose config --quiet`                                                                                    | Passed with local `.env`                                              |
 | `docker compose up -d --wait --wait-timeout 90`                                                                    | Passed; PostgreSQL healthy                                            |
-| `docker compose exec -T postgres psql -U agentrail -d agentrail -v ON_ERROR_STOP=1 -c 'SELECT 1;'`                 | Passed; returned 1                                                    |
+| `docker compose exec -T postgres psql -U runveil -d runveil -v ON_ERROR_STOP=1 -c 'SELECT 1;'`                     | Passed; returned 1                                                    |
 | `docker compose ps`                                                                                                | Healthy; loopback port binding confirmed                              |
 | `docker compose down`                                                                                              | Passed; database volume preserved                                     |
-| `uv run uvicorn agentrail_api.main:app --reload --host 127.0.0.1 --port 8000`                                      | Development server booted                                             |
+| `uv run uvicorn runveil_api.main:app --reload --host 127.0.0.1 --port 8000`                                        | Development server booted                                             |
 | `npm run dev:web`                                                                                                  | Development server booted                                             |
 | `curl --fail --silent http://127.0.0.1:8000/health`                                                                | HTTP 200; expected API JSON                                           |
 | `curl --fail --silent http://127.0.0.1:3000/health`                                                                | HTTP 200; expected web JSON                                           |
@@ -102,9 +102,9 @@ volume is retained; the test container and network have been removed.
 - `README.md`
 - `ROADMAP.md`
 - `apps/api/pyproject.toml`
-- `apps/api/src/agentrail_api/__init__.py`
-- `apps/api/src/agentrail_api/health.py`
-- `apps/api/src/agentrail_api/main.py`
+- `apps/api/src/runveil_api/__init__.py`
+- `apps/api/src/runveil_api/health.py`
+- `apps/api/src/runveil_api/main.py`
 - `apps/api/tests/test_health.py`
 - `apps/web/AGENTS.md`
 - `apps/web/CLAUDE.md`

@@ -40,7 +40,7 @@ jobs:
           cp .env.example .env
           docker compose config --quiet
           docker compose up -d --wait --wait-timeout 90
-          docker compose exec -T postgres psql -U agentrail -d agentrail -v ON_ERROR_STOP=1 -c 'SELECT 1;'
+          docker compose exec -T postgres psql -U runveil -d runveil -v ON_ERROR_STOP=1 -c 'SELECT 1;'
       - name: Dependency logs on failure
         if: failure()
         run: docker compose logs --no-color

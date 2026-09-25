@@ -1,5 +1,5 @@
 {
-  "name": "agentrail",
+  "name": "runveil",
   "private": true,
   "workspaces": [
     "apps/web"
@@ -8,11 +8,11 @@
     "node": ">=24.19.0 <25"
   },
   "scripts": {
-    "dev:web": "npm run dev --workspace @agentrail/web",
-    "build": "npm run build --workspace @agentrail/web",
-    "lint": "npm run lint --workspace @agentrail/web",
-    "typecheck": "npm run typecheck --workspace @agentrail/web",
-    "test": "npm run test --workspace @agentrail/web",
+    "dev:web": "npm run dev --workspace @runveil/web",
+    "build": "npm run build --workspace @runveil/web",
+    "lint": "npm run lint --workspace @runveil/web",
+    "typecheck": "npm run typecheck --workspace @runveil/web",
+    "test": "npm run test --workspace @runveil/web",
     "format:check": "prettier --check .",
     "format": "prettier --write ."
   },

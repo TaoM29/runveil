@@ -4,7 +4,7 @@ export default function Home() {
       <p className="text-sm font-semibold uppercase tracking-widest text-slate-600">
         Phase 0 · Foundation
       </p>
-      <h1 className="mt-4 text-4xl font-semibold">AgentRail</h1>
+      <h1 className="mt-4 text-4xl font-semibold">Runveil</h1>
       <p className="mt-6 text-lg leading-relaxed">
         A production-style runtime for reliable, observable and evaluable AI
         agents.

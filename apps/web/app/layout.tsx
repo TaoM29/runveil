@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "AgentRail | Project foundation",
+  title: "Runveil | Project foundation",
   description: "A production-style AI agent runtime, under development.",
 };
 

@@ -52,7 +52,7 @@ def main() -> None:
         (
             "api",
             api_port,
-            ["uvicorn", "agentrail_api.main:app", "--host", "127.0.0.1", "--port", str(api_port)],
+            ["uvicorn", "runveil_api.main:app", "--host", "127.0.0.1", "--port", str(api_port)],
         ),
         (
             "web",
@@ -86,7 +86,7 @@ def main() -> None:
                 print(f"PASS {service}: HTTP health contract")
             with urlopen(f"http://127.0.0.1:{web_port}/", timeout=5) as response:
                 html = response.read().decode()
-                if response.status != 200 or "AgentRail" not in html or "Phase 0" not in html:
+                if response.status != 200 or "Runveil" not in html or "Phase 0" not in html:
                     raise RuntimeError("Web page did not render the foundation content")
             print("PASS web: production home page")
         except (OSError, RuntimeError):

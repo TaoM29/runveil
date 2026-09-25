@@ -1,4 +1,4 @@
-# AgentRail
+# Runveil
 
 A production-style runtime for reliable, observable and evaluable AI agents.
 
@@ -31,13 +31,13 @@ uv sync --locked --all-packages
 npm ci
 docker compose config --quiet
 docker compose up -d --wait --wait-timeout 90
-docker compose exec -T postgres psql -U agentrail -d agentrail -v ON_ERROR_STOP=1 -c 'SELECT 1;'
+docker compose exec -T postgres psql -U runveil -d runveil -v ON_ERROR_STOP=1 -c 'SELECT 1;'
 ```
 
 Run these in separate terminals:
 
 ```sh
-uv run uvicorn agentrail_api.main:app --reload --host 127.0.0.1 --port 8000
+uv run uvicorn runveil_api.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
 ```sh
