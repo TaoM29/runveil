@@ -1,6 +1,6 @@
 # Architecture
 
-## Implemented through Phase 2A
+## Implemented through Phase 2B
 
 ```mermaid
 flowchart LR
@@ -11,6 +11,8 @@ flowchart LR
     Persistence[Async repositories and Alembic] --> PG
     Persistence --> Domain[Immutable versions, run lifecycle and history snapshots]
     Scripted[Offline scripted provider] --> Contracts[Model contracts and action validation]
+    Hosted[HTTPX Chat Completions adapter] --> Contracts
+    Hosted --> Endpoint[Configured OpenAI-compatible endpoint]
 ```
 
 Both applications expose `GET /health` with a typed/structured service identity.
@@ -106,8 +108,20 @@ tool names. This does not authorize tools or validate arguments against tool
 schemas. Contract JSON fits Phase 1C invocation records without a migration;
 an integration test commits intent, calls outside a transaction, validates, then
 persists/restores the outcome and checkpoint. See
-[ADR 0006](docs/adr/0006-model-contracts.md). Hosted transport, actual timeout
-handling and live verification are Phase 2B; the runtime loop remains Phase 3.
+[ADR 0006](docs/adr/0006-model-contracts.md).
+
+Phase 2B adds `runveil_providers`, with one OpenAI-compatible Chat Completions
+adapter using HTTPX. Operator configuration and credentials remain outside core
+requests and persistence. JSON mode and an explicit action-schema instruction
+preserve Phase 2A's envelope; callers still validate actions. The adapter owns and
+closes its client, makes no retries, disables redirects/environment proxy settings,
+bounds request/response bodies and enforces a network deadline. Cancellation
+propagates; failures expose fixed codes. The wire boundary retains only selected
+response fields and normalizes refusal, truncation, usage and latency. Native tool
+calling, streaming and vendor-specific capability negotiation are not implemented.
+See [ADR 0007](docs/adr/0007-hosted-provider.md) and
+[provider operations](docs/operations/MODELS.md). An opt-in live command is available;
+manual hosted acceptance is pending. The runtime loop remains Phase 3.
 
 Queue consistency, approvals and sandbox boundaries still require future ADRs and
 tests; the target diagram does not claim those properties exist.
@@ -115,7 +129,7 @@ tests; the target diagram does not claim those properties exist.
 ## Open decisions
 
 - Public product/repository name and license.
-- Hosted provider mapping, capabilities and opt-in live verification (Phase 2B).
+- Manual hosted acceptance and future additional provider profiles/capabilities.
 - Queue/database consistency and worker claim semantics.
 - Sandbox threat model and AWS cost/deployment details.
 

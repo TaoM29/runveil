@@ -2,16 +2,17 @@
 
 A production-style runtime for reliable, observable and evaluable AI agents.
 
-**Working name · Phase 2A implemented, awaiting review.** This repository contains
+**Working name · Phase 2B implemented; review and live acceptance pending.** This repository contains
 immutable agent versions, persisted runs with validated lifecycle transitions,
 ordered execution history, checkpoint snapshots, model/tool request and outcome
 records, PostgreSQL migrations and integration tests, plus normalized model
-contracts, structured action validation, an offline scripted provider and the
-Phase 0 API/web foundation. Hosted model calls remain Phase 2B work.
+contracts, structured action validation, scripted and OpenAI-compatible HTTP
+providers, and the Phase 0 API/web foundation. A hosted live check is opt-in and
+has not been run.
 It does not execute agents. No live demo or benchmark results exist.
 
 [Architecture](ARCHITECTURE.md) · [Roadmap](ROADMAP.md) ·
-[Project charter](docs/PROJECT_PLAN.md) · [Verification](docs/operations/PHASE_2A.md)
+[Project charter](docs/PROJECT_PLAN.md) · [Verification](docs/operations/PHASE_2B.md)
 
 ## Purpose
 
@@ -96,13 +97,16 @@ URL they are explicitly skipped; CI sets it and runs the full suite.
 The smoke check starts the API and the production web build on temporary local
 ports, checks their real HTTP responses, and stops both processes. Run the build
 first. It also checks API readiness: 200 with `DATABASE_URL`, 503 without it.
-No model keys, paid services or AWS credentials are needed.
+No model keys, paid services or AWS credentials are needed for these checks.
+For the separate, explicitly opt-in hosted check, see
+[provider operations](docs/operations/MODELS.md#opt-in-live-verification).
 
 ## Repository
 
 - `apps/api`: installable Python API package in the uv workspace.
 - `apps/web`: Next.js App Router application in the npm workspace.
 - `packages/agent_core`: domain snapshots, lifecycle rules, model contracts and scripted provider.
+- `packages/model_providers`: bounded HTTP adapter and opt-in live fixture command.
 - `packages/persistence`: PostgreSQL repositories, mappings, migrations and tests.
 - `scripts`: process-level smoke verification.
 - `docs`: original charter, decisions, naming research and verification record.
@@ -114,7 +118,7 @@ phases supply actual behavior. See the architecture for the intended boundaries.
 
 ## Evidence and limitations
 
-Current verification is recorded in [the Phase 2A handoff](docs/operations/PHASE_2A.md);
+Current verification is recorded in [the Phase 2B handoff](docs/operations/PHASE_2B.md);
 [Phase 0 evidence](docs/operations/PHASE_0.md) is retained.
 Model contract usage is documented in [model operations](docs/operations/MODELS.md).
 Repository usage and state rules are documented in [persistence operations](docs/operations/PERSISTENCE.md).
