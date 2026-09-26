@@ -1,6 +1,6 @@
 # Architecture
 
-## Implemented through Phase 2B
+## Implemented through Phase 3
 
 ```mermaid
 flowchart LR
@@ -13,6 +13,10 @@ flowchart LR
     Scripted[Offline scripted provider] --> Contracts[Model contracts and action validation]
     Hosted[HTTPX Chat Completions adapter] --> Contracts
     Hosted --> Endpoint[Configured OpenAI-compatible endpoint]
+    Runtime[Bounded core execution loop] --> Contracts
+    Runtime --> Store[PostgreSQL execution store]
+    Store --> Persistence
+    Runtime --> Fixture[Fixed read-only fixture tool]
 ```
 
 Both applications expose `GET /health` with a typed/structured service identity.
@@ -96,7 +100,7 @@ in the same run. Migration 0003 adds the two tables and integrity guards without
 rewriting Phase 1B history. See [ADR 0005](docs/adr/0005-invocation-records.md).
 
 A requested record is evidence of intent, not a worker claim or proof of dispatch.
-Workers, authorization and execution remain later phases. No new
+Durable workers and general tool authorization remain later phases. No new
 packages or HTTP routes were needed for Phase 1C.
 
 Phase 2A adds provider-neutral Pydantic contracts and an async `ModelProvider`
@@ -121,7 +125,20 @@ response fields and normalizes refusal, truncation, usage and latency. Native to
 calling, streaming and vendor-specific capability negotiation are not implemented.
 See [ADR 0007](docs/adr/0007-hosted-provider.md) and
 [provider operations](docs/operations/MODELS.md). An opt-in live command is available;
-manual hosted acceptance is pending. The runtime loop remains Phase 3.
+manual hosted acceptance is pending.
+
+Phase 3 adds a bounded loop and storage protocol in `runveil_core.runtime`, with a
+`PostgresExecutionStore` adapter in the persistence package. It starts only queued
+runs, validates pinned configuration and checkpoints initial context. Model and
+fixed fixture-tool invocations consume a shared step bound. Every request commits
+before dispatch; outcomes checkpoint full context and final/error state. Terminal
+outcomes and lifecycle transitions share one transaction. Provider calls have a
+deadline and occur outside transactions. Stale writes and task cancellation
+propagate; interrupted executions are not resumed or retried. The one fixture tool
+has no filesystem/network capability. Runtime checkpoint state can be restored for
+inspection independently of execution. See [ADR 0008](docs/adr/0008-minimal-runtime.md)
+and [runtime operations](docs/operations/RUNTIME.md). No migration or domain HTTP
+endpoint was needed; the CLI demonstration uses the same persisted loop.
 
 Queue consistency, approvals and sandbox boundaries still require future ADRs and
 tests; the target diagram does not claim those properties exist.

@@ -9,7 +9,7 @@ commit or push is authorized.
 | 0     | Charter, workspaces, health, quality tooling, Compose, CI | Implemented; see verification record     |
 | 1     | Domain model, immutable versions, persistence, migrations | Implemented through Phase 1C             |
 | 2     | Provider protocol, scripted and hosted providers          | Phase 2B implemented; live check pending |
-| 3     | Minimal persisted execution loop                          | Planned                                  |
+| 3     | Minimal persisted execution loop                          | Implemented; awaiting review             |
 | 4     | Typed tools and authorization                             | Planned                                  |
 | 5     | Durable worker, retries, idempotency and budgets          | Planned                                  |
 | 6     | Human approval and controlled mutations                   | Planned                                  |
@@ -58,10 +58,22 @@ commit or push is authorized.
   [verification record](docs/operations/PHASE_2B.md). No configured authorized live
   invocation was available; full Phase 2 acceptance is not claimed.
 
+## Phase 3 review gate
+
+- **Implemented, awaiting review:** pinned runtime configuration, bounded execution
+  loop, one fixed read-only fixture tool, ordered context, committed request intent,
+  atomic outcomes/checkpoints/terminal transitions and database reconstruction.
+  Integration coverage includes step limits, safe failures, stale results and
+  cancellation. See [ADR 0008](docs/adr/0008-minimal-runtime.md),
+  [runtime operations](docs/operations/RUNTIME.md) and
+  [verification record](docs/operations/PHASE_3.md).
+- Explicit Phase 3 authorization allowed offline work while the Phase 2 hosted
+  live gate remains pending. Neither the offline demo nor tests close that gate.
+
 ## Recommended next slice
 
-Review Phase 2B and run its single opt-in hosted fixture with an explicitly selected
-compatible model and credentials to close the manual acceptance gate. After that,
-begin Phase 3 with a minimal persisted scripted model → one trivial read-only tool
-→ model → finish loop, step bound and checkpoints. Keep worker recovery,
-production tool authorization and retries in their planned phases.
+Review Phase 3, then begin Phase 4 with a small typed tool registry, validated input
+and output contracts, and explicit authorization around native read-only tools.
+Keep worker recovery, retries, mutations and approvals in their planned phases.
+The separate opt-in hosted acceptance fixture still needs an explicitly selected
+compatible model and credentials.

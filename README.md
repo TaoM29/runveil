@@ -2,17 +2,18 @@
 
 A production-style runtime for reliable, observable and evaluable AI agents.
 
-**Working name · Phase 2B implemented; review and live acceptance pending.** This repository contains
+**Working name · Phase 3 implemented; awaiting review. Hosted live acceptance pending.** This repository contains
 immutable agent versions, persisted runs with validated lifecycle transitions,
 ordered execution history, checkpoint snapshots, model/tool request and outcome
 records, PostgreSQL migrations and integration tests, plus normalized model
 contracts, structured action validation, scripted and OpenAI-compatible HTTP
 providers, and the Phase 0 API/web foundation. A hosted live check is opt-in and
 has not been run.
-It does not execute agents. No live demo or benchmark results exist.
+A bounded in-process runtime executes a persisted model → fixture tool → model →
+finish loop. No durable worker, live demo or benchmark results exist.
 
 [Architecture](ARCHITECTURE.md) · [Roadmap](ROADMAP.md) ·
-[Project charter](docs/PROJECT_PLAN.md) · [Verification](docs/operations/PHASE_2B.md)
+[Project charter](docs/PROJECT_PLAN.md) · [Verification](docs/operations/PHASE_3.md)
 
 ## Purpose
 
@@ -105,7 +106,7 @@ For the separate, explicitly opt-in hosted check, see
 
 - `apps/api`: installable Python API package in the uv workspace.
 - `apps/web`: Next.js App Router application in the npm workspace.
-- `packages/agent_core`: domain snapshots, lifecycle rules, model contracts and scripted provider.
+- `packages/agent_core`: domain snapshots, model contracts, scripted provider and bounded execution loop.
 - `packages/model_providers`: bounded HTTP adapter and opt-in live fixture command.
 - `packages/persistence`: PostgreSQL repositories, mappings, migrations and tests.
 - `scripts`: process-level smoke verification.
@@ -113,13 +114,16 @@ For the separate, explicitly opt-in hosted check, see
 - `.github/workflows/ci.yml`: locked installs, formatting, lint, types, tests,
   production build, HTTP smoke checks, migrations and PostgreSQL integration tests.
 
-Workers, execution behavior, benchmarks and Terraform are introduced when their
+Durable workers, production tools, benchmarks and Terraform are introduced when their
 phases supply actual behavior. See the architecture for the intended boundaries.
 
 ## Evidence and limitations
 
-Current verification is recorded in [the Phase 2B handoff](docs/operations/PHASE_2B.md);
+Current verification is recorded in [the Phase 3 handoff](docs/operations/PHASE_3.md);
 [Phase 0 evidence](docs/operations/PHASE_0.md) is retained.
+Run the offline persisted demonstration with `uv run python scripts/runtime_demo.py`
+after migration and database configuration. It creates and retains one new run; see
+[runtime operations](docs/operations/RUNTIME.md).
 Model contract usage is documented in [model operations](docs/operations/MODELS.md).
 Repository usage and state rules are documented in [persistence operations](docs/operations/PERSISTENCE.md).
 Reliability, evaluation, security, inference benchmarks and AWS deployment remain
