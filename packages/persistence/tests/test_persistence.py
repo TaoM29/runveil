@@ -40,7 +40,15 @@ async def test_migration_round_trip_and_metadata(empty_database: AsyncEngine) ->
         await connection.run_sync(lambda conn: command.upgrade(migration_config(conn), "head"))
         await connection.run_sync(lambda conn: command.check(migration_config(conn)))
         tables = await connection.run_sync(lambda conn: inspect(conn).get_table_names())
-        assert set(tables) == {"alembic_version", "agent_definitions", "agent_versions", "runs"}
+        assert set(tables) == {
+            "alembic_version",
+            "agent_definitions",
+            "agent_versions",
+            "runs",
+            "run_steps",
+            "execution_events",
+            "checkpoints",
+        }
         for table in Base.metadata.sorted_tables:
             checks = await connection.run_sync(check_constraint_names, table.name)
             assert checks == {
@@ -250,6 +258,16 @@ async def test_database_transition_matrix(database: AsyncEngine) -> None:
                 if target.value in allowed[source.value]:
                     await session.execute(sql, params)
                     assert (await repo.get(run.id)).status == target
+                    assert (
+                        await session.scalar(
+                            text(
+                                "SELECT payload->>'status' FROM execution_events "
+                                "WHERE run_id=:id ORDER BY sequence DESC LIMIT 1"
+                            ),
+                            {"id": run.id},
+                        )
+                        == target.value
+                    )
                 else:
                     with pytest.raises(IntegrityError, match="Invalid run transition"):
                         async with session.begin_nested():
