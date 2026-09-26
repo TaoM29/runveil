@@ -9,7 +9,7 @@ from runveil_core.runs import Run, RunStatus
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from runveil_persistence.models import AgentRow, RunRow, VersionRow
+from runveil_persistence.models import AgentRow, EventRow, RunRow, VersionRow
 
 
 def version_snapshot(row: VersionRow) -> AgentVersion:
@@ -97,7 +97,14 @@ class RunRepository:
             raise NotFound("Run not found")
         return run_snapshot(row)
 
-    async def transition(self, run_id: UUID, target: RunStatus, *, expected_revision: int) -> Run:
+    async def transition(
+        self,
+        run_id: UUID,
+        target: RunStatus,
+        *,
+        expected_revision: int,
+        expected_sequence: int | None = None,
+    ) -> Run:
         row = await self.session.scalar(
             select(RunRow)
             .where(RunRow.id == run_id)
@@ -108,6 +115,12 @@ class RunRepository:
             raise NotFound("Run not found")
         if row.revision != expected_revision:
             raise RevisionConflict("Run changed; reload it before requesting a transition")
+        if expected_sequence is not None:
+            sequence = await self.session.scalar(
+                select(func.max(EventRow.sequence)).where(EventRow.run_id == run_id)
+            )
+            if (sequence or 0) != expected_sequence:
+                raise RevisionConflict("Run history changed; reload before requesting a transition")
         at = await self.session.scalar(select(func.clock_timestamp()))
         if not isinstance(at, datetime):
             raise TypeError("Database clock did not return a datetime")

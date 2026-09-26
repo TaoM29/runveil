@@ -8,6 +8,7 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKey,
+    ForeignKeyConstraint,
     Integer,
     MetaData,
     String,
@@ -90,3 +91,73 @@ class RunRow(Base):
     )
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class StepRow(Base):
+    __tablename__ = "run_steps"
+    __table_args__ = (
+        CheckConstraint("number > 0", name="positive_number"),
+        CheckConstraint("kind ~ '^[a-z][a-z0-9_.]{0,99}$'", name="valid_kind"),
+        CheckConstraint("jsonb_typeof(details) = 'object'", name="details_object"),
+    )
+    run_id: Mapped[UUID] = mapped_column(
+        ForeignKey("runs.id", ondelete="RESTRICT"), primary_key=True
+    )
+    number: Mapped[int] = mapped_column(Integer, primary_key=True)
+    kind: Mapped[str] = mapped_column(String(100))
+    details: Mapped[dict[str, JsonValue]] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.clock_timestamp()
+    )
+
+
+class EventRow(Base):
+    __tablename__ = "execution_events"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["run_id", "step_number"], ["run_steps.run_id", "run_steps.number"], ondelete="RESTRICT"
+        ),
+        CheckConstraint("sequence > 0", name="positive_sequence"),
+        CheckConstraint("run_revision >= 0", name="nonnegative_revision"),
+        CheckConstraint("jsonb_typeof(payload) = 'object'", name="payload_object"),
+    )
+    run_id: Mapped[UUID] = mapped_column(
+        ForeignKey("runs.id", ondelete="RESTRICT"), primary_key=True
+    )
+    sequence: Mapped[int] = mapped_column(Integer, primary_key=True, server_default="0")
+    kind: Mapped[str] = mapped_column(String(100))
+    run_revision: Mapped[int] = mapped_column(Integer)
+    step_number: Mapped[int | None] = mapped_column(Integer)
+    payload: Mapped[dict[str, JsonValue]] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.clock_timestamp()
+    )
+
+
+class CheckpointRow(Base):
+    __tablename__ = "checkpoints"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["run_id", "event_sequence"],
+            ["execution_events.run_id", "execution_events.sequence"],
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["run_id", "step_number"], ["run_steps.run_id", "run_steps.number"], ondelete="RESTRICT"
+        ),
+        UniqueConstraint("run_id", "step_number", name="uq_checkpoints_run_step"),
+        CheckConstraint("schema_version > 0", name="positive_schema_version"),
+        CheckConstraint("run_revision >= 0", name="nonnegative_revision"),
+        CheckConstraint("run_status = 'RUNNING'", name="running_boundary"),
+        CheckConstraint("jsonb_typeof(state) = 'object'", name="state_object"),
+    )
+    run_id: Mapped[UUID] = mapped_column(primary_key=True)
+    event_sequence: Mapped[int] = mapped_column(Integer, primary_key=True)
+    step_number: Mapped[int] = mapped_column(Integer)
+    run_revision: Mapped[int] = mapped_column(Integer)
+    run_status: Mapped[str] = mapped_column(String(32))
+    schema_version: Mapped[int] = mapped_column(Integer)
+    state: Mapped[dict[str, JsonValue]] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.clock_timestamp()
+    )
