@@ -6,6 +6,7 @@ requires-python = "==3.12.*"
 members = [
     "runveil-agent-core",
     "runveil-api",
+    "runveil-model-providers",
     "runveil-persistence",
     "runveil-workspace",
 ]
@@ -455,6 +456,23 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2,<3" },
     { name = "runveil-persistence", editable = "packages/persistence" },
     { name = "uvicorn", specifier = ">=0.34,<1" },
+]
+
+[[package]]
+name = "runveil-model-providers"
+version = "0.1.0"
+source = { editable = "packages/model_providers" }
+dependencies = [
+    { name = "httpx" },
+    { name = "pydantic" },
+    { name = "runveil-agent-core" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.28,<1" },
+    { name = "pydantic", specifier = ">=2.11,<3" },
+    { name = "runveil-agent-core", editable = "packages/agent_core" },
 ]
 
 [[package]]
