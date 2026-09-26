@@ -1,4 +1,4 @@
-# Persistence operations — Phase 1B
+# Persistence operations — Phase 1C
 
 ## Configuration and migration
 
@@ -17,7 +17,11 @@ uv run alembic check
 
 Revision `0001` creates definitions, versions and runs with lifecycle guards.
 Revision `0002` adds steps, events, checkpoints and history triggers, and seeds an
-incomplete baseline for existing runs. Downgrading to `0001` **deletes all history
+incomplete baseline for existing runs. Revision `0003` adds model-invocation and
+tool-call tables and request/outcome guards. Downgrading to `0002` deletes those
+records but preserves history/checkpoints, leaving any UUID references in event
+payloads unresolved. Re-upgrade cannot reconstruct deleted records.
+Downgrading to `0001` **deletes all history
 and checkpoint data** while preserving agents/runs. A downgrade to `base`
 **deletes all domain tables and their data**. Round-trip migration tests use disposable databases;
 never use downgrade as an ordinary developer reset. Production migration execution
@@ -169,3 +173,74 @@ The repository method provides atomic step/event/checkpoint assembly; arbitrary
 manual inserts are not a supported substitute. Structural guards do not authorize
 SQL clients, validate the meaning of opaque state, or prevent database owners from
 disabling triggers. No retention or deletion API is implemented.
+
+## Model-invocation and tool-call records
+
+`InvocationRepository` exposes `request_model`, `get_model`, `complete_model`,
+`request_tool`, `get_tool` and `complete_tool`. Lookups require both run and record
+ID; IDs can be recovered from the ordered events' `record_id` payloads. Unknown or
+wrong-run records raise `NotFound`. Request UUIDs are caller-supplied; keep them
+stable across uncertain writes and inspect persisted state before taking action.
+Duplicate IDs raise a database integrity error, not an idempotent success response.
+Roll back on database errors. Persistence does not make external actions safe to
+repeat.
+
+For a new run already started at revision 1/event 2, in a caller-owned transaction:
+
+```python
+from uuid import uuid4
+from runveil_persistence.invocations import InvocationRepository
+
+records = InvocationRepository(session)
+requested = await records.request_model(
+    run.id,
+    invocation_id=uuid4(),
+    provider="fixture",
+    model="scripted",
+    request={"messages": [{"role": "user", "content": "Fixture task"}]},
+    expected_revision=1,
+    expected_sequence=2,
+)
+# Commit intent before any future external operation. No model is called here.
+```
+
+In a later transaction, assuming the run/history are unchanged:
+
+```python
+completed = await InvocationRepository(session).complete_model(
+    run.id,
+    requested.id,
+    result={"summary": "Fixture response"},
+    state={"messages": [{"role": "assistant", "content": "Fixture response"}]},
+    expected_revision=1,
+    expected_sequence=requested.requested_event_sequence,
+)
+```
+
+This writes `model.completed`, a matching step and a full checkpoint, and changes
+the record to SUCCEEDED atomically. For failure, pass `error_code="provider_timeout"`
+instead of `result`. Exactly one result object or error code is required. Error
+codes are lowercase identifiers up to 64 characters; do not pass raw exception
+strings. A completed record is immutable. The historical request snapshot returned
+earlier remains REQUESTED; reload by ID to inspect the latest persisted outcome.
+
+Tool methods use the same contract, with `tool_call_id`, `tool_name` and `arguments`
+at request time. An optional `model_invocation_id` must refer to a succeeded model
+record in this run. This is provenance only: it does not prove the model selected
+that exact tool or authorize execution. Provider/tool-specific validation remains
+future work. A source-less tool request is permitted for future native callers.
+
+Both request and outcome writes require RUNNING plus matching revision/sequence.
+A pending request remains visible after cancellation; late completion is rejected.
+There are no claims, leases, automatic retries, attempt tracking or reconciliation.
+The operation status REQUESTED does not say whether an external call started.
+Recorded timestamps are persistence times, not measured model/tool latency.
+
+Request/outcome events contain record identity only, without duplicating request,
+result or error content. They have no step number because the completed boundary
+is allocated afterwards; the record's `step_number` and step's `record_id` details
+supply correlation. The checkpoint watermark includes the outcome event, and the
+record and checkpoint become visible together at commit. Inputs are detached and
+validated before writes. JSON objects are still opaque selected data; do not place
+credentials or hidden reasoning in them. See
+[ADR 0005](../adr/0005-invocation-records.md) for limits and migration trade-offs.
