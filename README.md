@@ -2,13 +2,14 @@
 
 A production-style runtime for reliable, observable and evaluable AI agents.
 
-**Working name · Phase 3 implemented; awaiting review. Hosted live acceptance pending.** This repository contains
+**Working name · Phase 3 implemented; awaiting review. Phase 2 hosted acceptance complete.** This repository contains
 immutable agent versions, persisted runs with validated lifecycle transitions,
 ordered execution history, checkpoint snapshots, model/tool request and outcome
 records, PostgreSQL migrations and integration tests, plus normalized model
 contracts, structured action validation, scripted and OpenAI-compatible HTTP
-providers, and the Phase 0 API/web foundation. A hosted live check is opt-in and
-has not been run.
+providers, and the Phase 0 API/web foundation. The opt-in hosted acceptance check
+[passed](docs/operations/PHASE_2B.md#subsequent-hosted-live-acceptance--complete),
+based on user-reported evidence.
 A bounded in-process runtime executes a persisted model → fixture tool → model →
 finish loop. No durable worker, live demo or benchmark results exist.
 

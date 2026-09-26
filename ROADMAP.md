@@ -4,25 +4,25 @@ The [original charter](docs/PROJECT_PLAN.md) is the source of truth. Each phase 
 be independently reviewed before the next begins. No automatic continuation,
 commit or push is authorized.
 
-| Phase | Scope                                                     | Status                                   |
-| ----- | --------------------------------------------------------- | ---------------------------------------- |
-| 0     | Charter, workspaces, health, quality tooling, Compose, CI | Implemented; see verification record     |
-| 1     | Domain model, immutable versions, persistence, migrations | Implemented through Phase 1C             |
-| 2     | Provider protocol, scripted and hosted providers          | Phase 2B implemented; live check pending |
-| 3     | Minimal persisted execution loop                          | Implemented; awaiting review             |
-| 4     | Typed tools and authorization                             | Planned                                  |
-| 5     | Durable worker, retries, idempotency and budgets          | Planned                                  |
-| 6     | Human approval and controlled mutations                   | Planned                                  |
-| 7     | Telemetry and trace UI                                    | Planned                                  |
-| 8     | Deterministic evaluation harness                          | Planned                                  |
-| 9     | Statistical comparison                                    | Planned                                  |
-| 10    | Sandboxed software engineering application                | Planned                                  |
-| 11    | MCP adapter through existing policy                       | Planned                                  |
-| 12    | AWS infrastructure with Terraform                         | Planned                                  |
-| 13    | Production CI/CD                                          | Planned                                  |
-| 14    | Temporary self-hosted inference and benchmarks            | Planned                                  |
-| 15    | Security hardening                                        | Planned                                  |
-| 16    | Public demo and portfolio release                         | Planned                                  |
+| Phase | Scope                                                     | Status                                  |
+| ----- | --------------------------------------------------------- | --------------------------------------- |
+| 0     | Charter, workspaces, health, quality tooling, Compose, CI | Implemented; see verification record    |
+| 1     | Domain model, immutable versions, persistence, migrations | Implemented through Phase 1C            |
+| 2     | Provider protocol, scripted and hosted providers          | Implemented; hosted acceptance complete |
+| 3     | Minimal persisted execution loop                          | Implemented; awaiting review            |
+| 4     | Typed tools and authorization                             | Planned                                 |
+| 5     | Durable worker, retries, idempotency and budgets          | Planned                                 |
+| 6     | Human approval and controlled mutations                   | Planned                                 |
+| 7     | Telemetry and trace UI                                    | Planned                                 |
+| 8     | Deterministic evaluation harness                          | Planned                                 |
+| 9     | Statistical comparison                                    | Planned                                 |
+| 10    | Sandboxed software engineering application                | Planned                                 |
+| 11    | MCP adapter through existing policy                       | Planned                                 |
+| 12    | AWS infrastructure with Terraform                         | Planned                                 |
+| 13    | Production CI/CD                                          | Planned                                 |
+| 14    | Temporary self-hosted inference and benchmarks            | Planned                                 |
+| 15    | Security hardening                                        | Planned                                 |
+| 16    | Public demo and portfolio release                         | Planned                                 |
 
 ## Phase 1 review gates
 
@@ -51,12 +51,12 @@ commit or push is authorized.
   round-trip verification. See [ADR 0006](docs/adr/0006-model-contracts.md),
   [model contract usage](docs/operations/MODELS.md) and the
   [verification record](docs/operations/PHASE_2A.md).
-- **2B — Implemented, awaiting review; live acceptance pending:** hosted/OpenAI-compatible
+- **2B — Implemented; hosted acceptance complete:** hosted/OpenAI-compatible
   adapter, bounded HTTP transport, timeout/cancellation and safe error mapping,
   offline provider contract tests and an explicitly opt-in live command. See
   [ADR 0007](docs/adr/0007-hosted-provider.md) and the
-  [verification record](docs/operations/PHASE_2B.md). No configured authorized live
-  invocation was available; full Phase 2 acceptance is not claimed.
+  [verification record](docs/operations/PHASE_2B.md#subsequent-hosted-live-acceptance--complete)
+  for the successful user-reported hosted invocation and safe acceptance evidence.
 
 ## Phase 3 review gate
 
@@ -68,12 +68,12 @@ commit or push is authorized.
   [runtime operations](docs/operations/RUNTIME.md) and
   [verification record](docs/operations/PHASE_3.md).
 - Explicit Phase 3 authorization allowed offline work while the Phase 2 hosted
-  live gate remains pending. Neither the offline demo nor tests close that gate.
+  live gate was pending. That gate is now complete through the separately reported
+  hosted invocation, not the offline demo or tests.
 
 ## Recommended next slice
 
 Review Phase 3, then begin Phase 4 with a small typed tool registry, validated input
 and output contracts, and explicit authorization around native read-only tools.
 Keep worker recovery, retries, mutations and approvals in their planned phases.
-The separate opt-in hosted acceptance fixture still needs an explicitly selected
-compatible model and credentials.
+The separate Phase 2 hosted acceptance gate is complete.
