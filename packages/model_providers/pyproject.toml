@@ -1,0 +1,15 @@
+[project]
+name = "runveil-model-providers"
+version = "0.1.0"
+requires-python = ">=3.12,<3.13"
+dependencies = ["runveil-agent-core", "httpx>=0.28,<1", "pydantic>=2.11,<3"]
+
+[tool.uv.sources]
+runveil-agent-core = { workspace = true }
+
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/runveil_providers"]
