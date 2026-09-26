@@ -48,6 +48,8 @@ async def test_migration_round_trip_and_metadata(empty_database: AsyncEngine) ->
             "run_steps",
             "execution_events",
             "checkpoints",
+            "model_invocations",
+            "tool_calls",
         }
         for table in Base.metadata.sorted_tables:
             checks = await connection.run_sync(check_constraint_names, table.name)
