@@ -202,7 +202,8 @@ a fixed code, never raw HTTP bodies, response content, credentials or exception
 text. Exit codes: 0 passed, 1 provider/action failure, 2 opt-in/configuration/fixture
 failure, 130 interrupted. No output file or database record is created.
 
-No live call was run during this implementation because an authorized live setup
-was not configured. The manual hosted acceptance gate remains pending; run it and
-record only safe evidence before claiming Phase 2 complete. Next implementation
-work after review/acceptance is the minimal persisted Phase 3 loop.
+The Phase 2 manual hosted acceptance gate is complete. The user reported a successful
+invocation against the configured OpenAI-compatible endpoint; see the
+[safe acceptance evidence](PHASE_2B.md#subsequent-hosted-live-acceptance--complete).
+Future live checks remain explicitly opt-in. See the [roadmap](../../ROADMAP.md)
+for current implementation and review status.

@@ -1,7 +1,8 @@
 # Phase 2B handoff
 
 Date: 2026-09-26. Implementation complete and stopped for review. The manual hosted
-acceptance check remains pending. No commit or push.
+acceptance gate is complete; see the subsequent user-reported evidence below.
+No commit or push.
 
 ## Implementation summary
 
@@ -89,7 +90,8 @@ bound it before final checks. Review also allowed empty native-tool arrays (no c
 while rejecting actual native calls, mapped decoding failures separately, and added
 safe request-serialization rejection. The new package was verified through the
 locked editable workspace installation. No hosted CI execution or real provider
-invocation was run. CI's existing checks discover the new tests through the updated
+invocation was run during the implementation checks; subsequent hosted evidence
+is recorded below. CI's existing checks discover the new tests through the updated
 root testpaths. npm reported existing ESLint deprecation/install-script notices and
 an npm update notice; no frontend dependency changes were made.
 
@@ -97,6 +99,25 @@ Confirmed zero remaining `runveil_test_*` databases. Removed only the task-creat
 `runveil-phase2b` container, network and volume with the same Compose variables and
 `docker compose -p runveil-phase2b down --volumes`. Existing services, volumes and
 local `.env` were preserved. Smoke processes stopped themselves.
+
+## Subsequent hosted live acceptance — complete
+
+The user reported a successful Phase 2 hosted live acceptance against the configured
+OpenAI-compatible endpoint. Safe evidence supplied:
+
+| Field         | Result     |
+| ------------- | ---------- |
+| Status        | `passed`   |
+| Action        | `finish`   |
+| Input tokens  | 524        |
+| Output tokens | 16         |
+| Latency       | 2211.37 ms |
+
+This closes the Phase 2 manual hosted acceptance gate. This documentation update
+records user-supplied evidence; it did not rerun the live request. No endpoint URL,
+model/account identifiers, credentials, request content or raw response is recorded.
+The result establishes acceptance for that configured invocation, not universal
+provider compatibility or a performance benchmark.
 
 ## Files created
 
@@ -122,12 +143,8 @@ local `.env` were preserved. Smoke processes stopped themselves.
 
 ## Remaining concerns and next slice
 
-The manual hosted acceptance gate is **pending**: no live model/key setup was
-configured and no paid-call opt-in was given. Offline transport fixtures cannot
-prove account access, billing, actual model compatibility or provider availability.
-Run the documented `uv run python -m runveil_providers.live --live` command with an
-explicit compatible model and safely supplied credentials; record only its safe
-usage/latency evidence. Full Phase 2 acceptance is not claimed without that result.
+The manual hosted acceptance gate is **complete**, based on the subsequent
+user-reported result above. Future live checks remain explicitly opt-in.
 
 Compatibility is limited to the documented Chat Completions JSON-mode profile,
 including temperature and max-completion-token support. Models requiring different
@@ -141,7 +158,8 @@ provider-specific accounting, routing, tracing and stronger tool schema/policy w
 remain later concerns. No caller should store secrets or hidden reasoning; selected
 content remains the caller's responsibility.
 
-After review and manual acceptance, the next coherent implementation is **Phase 3**:
+At the original handoff, the recommended next implementation was **Phase 3**
+(now implemented; see the [current roadmap](../../ROADMAP.md)):
 a minimal persisted scripted model → trivial read-only tool → model → finish loop,
 with a maximum step bound and checkpoints. Worker leases, replay/recovery, retries
 and general tool authorization stay in their planned phases. Stop for review here.
