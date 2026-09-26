@@ -50,5 +50,7 @@ Checkpoints use a versioned runtime state inside the existing versioned opaque
 checkpoint envelope; no migration is needed. Completed runs can be reconstructed
 from database snapshots and correlated invocation records without the provider.
 No HTTP execution endpoint, worker, lease, retry, approval or production tool
-policy is added. Phase 2 hosted acceptance remains separately pending; explicit
-Phase 3 authorization permits offline runtime implementation before that live gate.
+policy is added. Phase 2 hosted acceptance was separately pending when this
+decision was accepted; explicit Phase 3 authorization permitted offline runtime
+implementation before that live gate. The gate has since closed through a
+[user-reported hosted invocation](../operations/PHASE_2B.md#subsequent-hosted-live-acceptance--complete).
