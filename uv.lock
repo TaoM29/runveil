@@ -431,6 +431,12 @@ wheels = [
 name = "runveil-agent-core"
 version = "0.1.0"
 source = { editable = "packages/agent_core" }
+dependencies = [
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "pydantic", specifier = ">=2.11,<3" }]
 
 [[package]]
 name = "runveil-api"
