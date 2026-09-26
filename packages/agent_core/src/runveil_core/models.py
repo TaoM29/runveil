@@ -107,6 +107,7 @@ class ProviderErrorCode(StrEnum):
     UNAVAILABLE = "provider_unavailable"
     RATE_LIMITED = "provider_rate_limited"
     AUTHENTICATION = "provider_authentication"
+    REJECTED = "provider_rejected"
     INVALID_RESPONSE = "invalid_response"
     SCRIPT_EXHAUSTED = "script_exhausted"
 

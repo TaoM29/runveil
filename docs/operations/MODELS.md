@@ -1,8 +1,10 @@
-# Model contracts — Phase 2A
+# Model contracts and providers — Phase 2B
 
 The core package exposes an async `ModelProvider.generate(ModelRequest)` protocol
-and an offline scripted implementation. No HTTP endpoint, hosted adapter, runtime
-loop or credentials are needed. Install with `uv sync --locked --all-packages`.
+and an offline scripted implementation. The `runveil_providers` package adds a
+hosted OpenAI-compatible HTTP adapter. Neither starts a runtime loop or exposes
+an application HTTP endpoint. Install with `uv sync --locked --all-packages`.
+The following scripted example needs no credentials:
 
 ```python
 from runveil_core.models import (
@@ -48,8 +50,8 @@ produce a usable action. Raw text, Markdown fences, extra fields, duplicate keys
 non-finite numbers, invalid types and unknown actions are rejected, without repair.
 
 Model response `content` contains the action JSON. Native vendor tool calls are
-not a second action path in this slice; a later adapter must normalize them or
-reject unsupported modes. Response `model` may be the resolved model identifier
+not a second action path: the HTTP adapter rejects nonempty native tool calls and
+legacy function calls. Response `model` may be the resolved model identifier
 rather than the request alias. Usage counters are individually nullable and cannot
 be negative; unknown usage must never be reported as zero. Latency is milliseconds
 supplied by the provider, independent of persistence timestamps.
@@ -95,6 +97,112 @@ uv run pytest packages/agent_core/tests/test_models.py
 uv run pytest packages/persistence/tests/test_invocations.py -k normalized
 ```
 
-Phase 2B adds real transport, actual timeout/cancellation handling, error mapping,
-adapter contract tests and an explicitly opt-in live check. No live invocation or
-full Phase 2 completion is claimed here.
+## Hosted adapter
+
+Use `OpenAICompatibleProvider` as an async context manager, or explicitly call
+`aclose()` when its lifetime ends. It owns the client. Keep provider configuration
+outside persisted agent versions, model requests and checkpoint state:
+
+```python
+import os
+
+from pydantic import SecretStr
+from runveil_providers.chat import OpenAICompatibleProvider
+from runveil_providers.configuration import ProviderConfiguration
+
+
+async def hosted_example(request: ModelRequest) -> str:
+    configuration = ProviderConfiguration(
+        base_url=os.environ.get("RUNVEIL_PROVIDER_BASE_URL", "https://api.openai.com/v1"),
+        api_key=SecretStr(os.environ["RUNVEIL_PROVIDER_API_KEY"]),
+    )
+    async with OpenAICompatibleProvider(configuration) as provider:
+        response = await provider.generate(request)
+        action = validate_response(request, response)
+        return action.action
+```
+
+The URL identifies the API base (e.g. `/v1`), not the full completions endpoint.
+The adapter appends `chat/completions`. Configuration requires HTTPS and a key for
+remote hosts. Literal loopback/localhost permits HTTP and an absent key for local
+compatible services. Credentials in URLs, queries and fragments are rejected.
+Redirects, environment proxy settings and netrc inheritance are disabled. This
+configuration is trusted operator input, not an end-user URL or an SSRF boundary.
+Do not put secrets in URL paths. Local validation errors should not be logged with
+sensitive inputs; the live command prints only fixed error codes.
+
+The supported profile is deliberately narrow: one non-streaming Chat Completions
+choice, `response_format={"type":"json_object"}`, `temperature`,
+`max_completion_tokens`, `n=1` and `store=false`. Select a model/endpoint supporting
+these parameters. Settings are never silently dropped or retried with alternatives.
+No universal compatibility with every model or OpenAI-like service is claimed.
+OpenAI is the default hosted endpoint; alternate endpoints use the same adapter.
+
+A prepended system message supplies the core JSON action schema and advertised
+tool descriptions/schemas. Original text message order is preserved. Core tool
+observations have no native call IDs, so they become labelled JSON data in user
+messages. This labelling helps context interpretation but is not an authorization
+or prompt-injection security boundary. No native tool is registered or executed.
+
+The adapter explicitly chooses JSON mode plus local validation. The current action
+schema has a root union and open-ended arguments and cannot be sent unchanged to
+OpenAI strict Structured Outputs. JSON mode does not guarantee schema adherence;
+`validate_response` must succeed before an action can be used. See the
+[official structured-output guide](https://developers.openai.com/api/docs/guides/structured-outputs)
+and [ADR 0007](../adr/0007-hosted-provider.md).
+
+Requests and decoded response bodies are limited to 2 MiB; oversized requests
+fail before dispatch. This caps accumulated payloads, not all parsing/decompression
+memory. A whole-network-operation deadline uses `timeout_seconds` in addition to
+HTTPX's operation timeouts. Cancellation propagates and closes the response stream.
+Latency is measured with a monotonic clock through body reading, not database
+timestamps. Only one attempt is made; errors do not imply an operation is safe to
+retry. Responses retain only selected fields, never arbitrary provider metadata or
+hidden reasoning. Refusal text is discarded. Missing usage remains null.
+
+| Condition                                                                   | Error code / outcome                                             |
+| --------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| HTTP 401/403                                                                | `provider_authentication`                                        |
+| HTTP 429                                                                    | `provider_rate_limited`                                          |
+| HTTP 408/504 or elapsed deadline/HTTPX timeout                              | `provider_timeout`                                               |
+| Other HTTP 5xx or connection/transport failure                              | `provider_unavailable`                                           |
+| Other non-2xx, including redirects; oversized/invalid encoded request       | `provider_rejected`                                              |
+| Bad response JSON/envelope, native calls, body overflow or decoding failure | `invalid_response`                                               |
+| Provider refusal/content filtering                                          | Response reason `refusal`, unusable by action validator          |
+| Output limit / unknown finish reason                                        | Response reason `length` / `other`, unusable by action validator |
+
+Keep the provider call and action validation outside database transactions. Commit
+intent first, then persist the selected outcome with revision/event-position checks.
+No automatic persistence, run transitions, retries or tools are added to providers.
+
+Offline adapter checks use HTTPX mock transports, including stalled streamed bodies:
+
+```sh
+uv run pytest packages/model_providers/tests
+```
+
+## Opt-in live verification
+
+The ordinary test suite and CI never contact a model provider. This separate command
+makes exactly one potentially billable fixture request with a 256-token completion
+limit and 30-second deadline. It requires an explicitly selected compatible model:
+
+```sh
+export RUNVEIL_PROVIDER_MODEL='your-compatible-model-id'
+export RUNVEIL_PROVIDER_BASE_URL='https://api.openai.com/v1'
+# Set RUNVEIL_PROVIDER_API_KEY securely in the shell environment; do not paste it
+# into source, command history or handoff output. Python does not auto-load .env.
+uv run python -m runveil_providers.live --live
+```
+
+Omitting `--live` exits before configuration or client creation. Missing/invalid
+configuration fails before dispatch. The command validates a finish action with
+no artifacts and prints only success, normalized usage and latency. Failure prints
+a fixed code, never raw HTTP bodies, response content, credentials or exception
+text. Exit codes: 0 passed, 1 provider/action failure, 2 opt-in/configuration/fixture
+failure, 130 interrupted. No output file or database record is created.
+
+No live call was run during this implementation because an authorized live setup
+was not configured. The manual hosted acceptance gate remains pending; run it and
+record only safe evidence before claiming Phase 2 complete. Next implementation
+work after review/acceptance is the minimal persisted Phase 3 loop.
