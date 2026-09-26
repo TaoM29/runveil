@@ -1,4 +1,4 @@
-# Persistence operations — Phase 1A
+# Persistence operations — Phase 1B
 
 ## Configuration and migration
 
@@ -15,9 +15,11 @@ uv run alembic current
 uv run alembic check
 ```
 
-Revision `0001` creates definitions, versions and runs, their constraints/indexes,
-and immutability/lifecycle trigger functions. A downgrade to `base` **deletes all
-three tables and their data**. Round-trip migration tests use disposable databases;
+Revision `0001` creates definitions, versions and runs with lifecycle guards.
+Revision `0002` adds steps, events, checkpoints and history triggers, and seeds an
+incomplete baseline for existing runs. Downgrading to `0001` **deletes all history
+and checkpoint data** while preserving agents/runs. A downgrade to `base`
+**deletes all domain tables and their data**. Round-trip migration tests use disposable databases;
 never use downgrade as an ordinary developer reset. Production migration execution
 and separate runtime/migration roles are future deployment work.
 
@@ -79,7 +81,9 @@ The version number is allocated under a parent lock and is unique per definition
 Version updates/deletes and invalid run changes fail even through direct SQL.
 Database owners can disable triggers; this is an integrity boundary, not a sandbox
 or substitute for future least-privilege roles. No deletion/retention API exists.
-There is no complete transition history until ordered events arrive in Phase 1B.
+New runs have complete lifecycle history through transactional database triggers.
+Runs migrated from 1A start with a `run.snapshot` baseline that explicitly marks
+prior history incomplete.
 
 ## Readiness and tests
 
@@ -101,3 +105,67 @@ Missing test configuration produces explicit skips; unreachable or invalid confi
 databases fail. Interrupted test processes can leave temporary databases behind;
 inspect and remove only confirmed test leftovers. CI supplies the URL and executes
 all tests after booting PostgreSQL and validating migrations.
+
+## Execution boundaries and checkpoint restoration
+
+`HistoryRepository` provides `record_step`, `events`, `steps` and
+`latest_checkpoint`. A step is an immutable recorded boundary, not an in-flight
+operation or tool invocation. Each boundary has a full checkpoint; schema version 1
+stores an opaque JSON object and readers reject unsupported versions. Select safe
+content: never persist secrets, credentials or hidden model reasoning. The API
+does not redact arbitrary caller JSON. See [ADR 0004](../adr/0004-execution-history.md).
+
+For a new run (created at event 1), starting it creates event 2:
+
+```python
+from runveil_persistence.history import HistoryRepository
+
+# Inside the caller's transaction, after starting a newly created run:
+history = HistoryRepository(session)
+checkpoint = await history.record_step(
+    run.id,
+    kind="fixture.response",
+    details={"summary": "Deterministic fixture response"},
+    state={"messages": [{"role": "assistant", "content": "Fixture"}], "iteration": 1},
+    expected_revision=1,
+    expected_sequence=2,
+)
+# The step and its two events are now flushed, still uncommitted.
+finished = await RunRepository(session).transition(
+    run.id,
+    RunStatus.SUCCEEDED,
+    expected_revision=checkpoint.run_revision,
+    expected_sequence=checkpoint.event_sequence,
+)
+# Commit on exiting sessions.begin(); any escaping exception rolls everything back.
+```
+
+Both revision and sequence must match for boundary writes. Lifecycle transitions
+accept an optional `expected_sequence`; supply it whenever the decision depends on
+history. Revision-only transitions retain the original lifecycle contract. Never
+blindly replay a failed write or external operation. Reload and reconsider after
+`RevisionConflict`; roll back after any database failure. Use READ COMMITTED, one
+session per task, and short transactions without external calls.
+
+After reconnecting, `await history.latest_checkpoint(run.id)` returns the newest
+persisted snapshot, or `None` if no boundary was recorded. Unknown runs raise
+`NotFound`. Load the current run and pinned agent version separately. Read
+`await history.events(run.id, after_sequence=checkpoint.event_sequence)` for the
+post-checkpoint tail; the checkpoint's lifecycle state is historical. These reads
+are not a coherent multi-query snapshot under READ COMMITTED; subsequent writes
+must validate revision and sequence. Loading is not execution, replay, worker
+ownership or side-effect deduplication.
+
+`events(..., after_sequence=0, limit=100)` and
+`steps(..., after_number=0, limit=100)` return ascending pages. Limits must be
+1–1000; cursors are exclusive. Continue using the last returned position. Empty
+pages are valid. Ordering is per run by sequence/number, never by wall-clock time.
+The checkpoint watermark is its `checkpoint.created` event position, including
+all history through that boundary.
+
+Database triggers reject history UPDATE/DELETE, invalid step order and mismatched
+checkpoint links. Event sequence allocation and lifecycle events are database-owned.
+The repository method provides atomic step/event/checkpoint assembly; arbitrary
+manual inserts are not a supported substitute. Structural guards do not authorize
+SQL clients, validate the meaning of opaque state, or prevent database owners from
+disabling triggers. No retention or deletion API is implemented.
