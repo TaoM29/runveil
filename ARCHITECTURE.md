@@ -1,6 +1,6 @@
 # Architecture
 
-## Implemented through Phase 1A
+## Implemented through Phase 1B
 
 ```mermaid
 flowchart LR
@@ -9,7 +9,7 @@ flowchart LR
     Compose[Docker Compose] --> PG[(PostgreSQL :5432)]
     API -->|readiness query| PG
     Persistence[Async repositories and Alembic] --> PG
-    Persistence --> Domain[Immutable agent versions and run lifecycle]
+    Persistence --> Domain[Immutable versions, run lifecycle and history snapshots]
 ```
 
 Both applications expose `GET /health` with a typed/structured service identity.
@@ -71,9 +71,22 @@ nor the persistence adapter. API lifecycle code owns and disposes its readiness 
 Repository callers own transactions. Parent-row locks serialize version numbering;
 run-row locks plus required expected revisions reject stale transitions. PostgreSQL
 triggers enforce immutable versions and the same state graph as the domain. Store
-creation, most recent transition, first start and terminal timestamps. Full event
-history and checkpoint recovery do not exist yet. See
+creation, most recent transition, first start and terminal timestamps. See
 [ADR 0003](docs/adr/0003-phase-1a-persistence.md) for the transition table and trade-offs.
+
+Phase 1B adds immutable `RunStep`, `ExecutionEvent` and `Checkpoint` snapshots,
+ORM tables and migration 0002. The run row serializes all repository boundary
+writes. `record_step` checks both expected revision and event sequence, then writes
+the step, two events and full checkpoint in the caller's transaction. Database
+triggers append lifecycle events and assign event order, including direct SQL
+lifecycle writes. Existing runs receive an explicitly incomplete snapshot baseline.
+Read APIs use bounded cursor pagination and latest-checkpoint lookup. See
+[ADR 0004](docs/adr/0004-execution-history.md) for the transaction and restore contract.
+
+Checkpoint loading restores opaque versioned JSON state and its event watermark;
+it does not resume execution. The current run may have advanced since that snapshot.
+Model-invocation/tool-call records remain Phase 1C; providers, workers and execution
+loops remain later phases. No new packages or HTTP routes were needed.
 
 Queue consistency, approvals and sandbox boundaries still require future ADRs and
 tests; the target diagram does not claim those properties exist.
@@ -81,7 +94,7 @@ tests; the target diagram does not claim those properties exist.
 ## Open decisions
 
 - Public product/repository name and license.
-- Event ordering and checkpoint transaction boundaries (Phase 1B).
+- Invocation/tool-call records and their execution-boundary correlation (Phase 1C).
 - Queue/database consistency and worker claim semantics.
 - Sandbox threat model and AWS cost/deployment details.
 
