@@ -27,6 +27,27 @@ def checkpoint_snapshot(row: CheckpointRow) -> Checkpoint:
     )
 
 
+async def lock_running_run(
+    session: AsyncSession, run_id: UUID, *, expected_revision: int, expected_sequence: int
+) -> RunRow:
+    row = await session.scalar(
+        select(RunRow)
+        .where(RunRow.id == run_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if row is None:
+        raise NotFound("Run not found")
+    sequence = await session.scalar(
+        select(func.max(EventRow.sequence)).where(EventRow.run_id == run_id)
+    )
+    if row.revision != expected_revision or (sequence or 0) != expected_sequence:
+        raise RevisionConflict("Run history changed; reload before recording a boundary")
+    if row.status != RunStatus.RUNNING:
+        raise InvalidTransition("Execution boundaries require a running run")
+    return row
+
+
 class HistoryRepository:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
@@ -50,21 +71,12 @@ class HistoryRepository:
         # Validate and detach untrusted JSON before acquiring a database lock.
         details_copy = json.loads(configuration_json(details))
         state_copy = json.loads(configuration_json(state))
-        row = await self.session.scalar(
-            select(RunRow)
-            .where(RunRow.id == run_id)
-            .with_for_update()
-            .execution_options(populate_existing=True)
+        row = await lock_running_run(
+            self.session,
+            run_id,
+            expected_revision=expected_revision,
+            expected_sequence=expected_sequence,
         )
-        if row is None:
-            raise NotFound("Run not found")
-        sequence = await self.session.scalar(
-            select(func.max(EventRow.sequence)).where(EventRow.run_id == run_id)
-        )
-        if row.revision != expected_revision or (sequence or 0) != expected_sequence:
-            raise RevisionConflict("Run history changed; reload before recording a boundary")
-        if row.status != RunStatus.RUNNING:
-            raise InvalidTransition("Execution boundaries require a running run")
         latest_step = await self.session.scalar(
             select(func.max(StepRow.number)).where(StepRow.run_id == run_id)
         )

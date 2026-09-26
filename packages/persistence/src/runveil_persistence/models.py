@@ -161,3 +161,99 @@ class CheckpointRow(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.clock_timestamp()
     )
+
+
+class InvocationColumns:
+    """Shared columns for the two concrete request/outcome tables."""
+
+    id: Mapped[UUID] = mapped_column(primary_key=True)
+    run_id: Mapped[UUID] = mapped_column(ForeignKey("runs.id", ondelete="RESTRICT"))
+    status: Mapped[str] = mapped_column(String(16), server_default="REQUESTED")
+    requested_event_sequence: Mapped[int] = mapped_column(Integer)
+    completed_event_sequence: Mapped[int | None] = mapped_column(Integer)
+    step_number: Mapped[int | None] = mapped_column(Integer)
+    request: Mapped[dict[str, JsonValue]] = mapped_column(JSONB)
+    result: Mapped[dict[str, JsonValue] | None] = mapped_column(JSONB(none_as_null=True))
+    error_code: Mapped[str | None] = mapped_column(String(64))
+    requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+def invocation_constraints(
+    table: str,
+) -> tuple[ForeignKeyConstraint | UniqueConstraint | CheckConstraint, ...]:
+    return (
+        UniqueConstraint("run_id", "id", name=f"uq_{table}_run_id"),
+        UniqueConstraint("run_id", "requested_event_sequence", name=f"uq_{table}_request_event"),
+        UniqueConstraint("run_id", "completed_event_sequence", name=f"uq_{table}_completion_event"),
+        UniqueConstraint("run_id", "step_number", name=f"uq_{table}_step"),
+        ForeignKeyConstraint(
+            ["run_id", "requested_event_sequence"],
+            ["execution_events.run_id", "execution_events.sequence"],
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["run_id", "completed_event_sequence"],
+            ["execution_events.run_id", "execution_events.sequence"],
+            ondelete="RESTRICT",
+            name=f"fk_{table}_completion_event",
+        ),
+        ForeignKeyConstraint(
+            ["run_id", "step_number"],
+            ["checkpoints.run_id", "checkpoints.step_number"],
+            ondelete="RESTRICT",
+        ),
+        CheckConstraint("jsonb_typeof(request) = 'object'", name="request_object"),
+        CheckConstraint("result IS NULL OR jsonb_typeof(result) = 'object'", name="result_object"),
+        CheckConstraint(
+            "error_code IS NULL OR error_code ~ '^[a-z][a-z0-9_]{0,63}$'", name="error_code"
+        ),
+        CheckConstraint(
+            "(status = 'REQUESTED' AND result IS NULL AND error_code IS NULL "
+            "AND completed_at IS NULL AND completed_event_sequence IS NULL "
+            "AND step_number IS NULL) "
+            "OR (status IN ('SUCCEEDED', 'FAILED') AND completed_at IS NOT NULL "
+            "AND completed_event_sequence IS NOT NULL AND step_number IS NOT NULL "
+            "AND ((status = 'SUCCEEDED' AND result IS NOT NULL AND error_code IS NULL) "
+            "OR (status = 'FAILED' AND result IS NULL AND error_code IS NOT NULL)))",
+            name="outcome",
+        ),
+        CheckConstraint(
+            "completed_at IS NULL OR completed_at >= requested_at", name="ordered_time"
+        ),
+        CheckConstraint(
+            "completed_event_sequence IS NULL OR "
+            "completed_event_sequence > requested_event_sequence",
+            name="ordered_events",
+        ),
+    )
+
+
+class ModelInvocationRow(InvocationColumns, Base):
+    __tablename__ = "model_invocations"
+    __table_args__ = (
+        *invocation_constraints("model_invocations"),
+        CheckConstraint(
+            "length(trim(provider)) > 0 AND provider !~ '[[:cntrl:]]'", name="provider"
+        ),
+        CheckConstraint("length(trim(model)) > 0 AND model !~ '[[:cntrl:]]'", name="model"),
+    )
+    provider: Mapped[str] = mapped_column(String(200))
+    model: Mapped[str] = mapped_column(String(200))
+
+
+class ToolCallRow(InvocationColumns, Base):
+    __tablename__ = "tool_calls"
+    __table_args__ = (
+        *invocation_constraints("tool_calls"),
+        ForeignKeyConstraint(
+            ["run_id", "model_invocation_id"],
+            ["model_invocations.run_id", "model_invocations.id"],
+            ondelete="RESTRICT",
+        ),
+        CheckConstraint(
+            "length(trim(tool_name)) > 0 AND tool_name !~ '[[:cntrl:]]'", name="tool_name"
+        ),
+    )
+    tool_name: Mapped[str] = mapped_column(String(200))
+    model_invocation_id: Mapped[UUID | None] = mapped_column()
