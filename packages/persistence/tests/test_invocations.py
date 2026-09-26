@@ -6,7 +6,15 @@ from alembic import command
 from conftest import migration_config
 from runveil_core.errors import InvalidTransition, NotFound, RevisionConflict
 from runveil_core.invocations import InvocationStatus, ModelInvocation
+from runveil_core.models import (
+    FinishAction,
+    Message,
+    ModelRequest,
+    ModelResponse,
+    validate_response,
+)
 from runveil_core.runs import Run, RunStatus
+from runveil_core.scripted import ScriptedProvider
 from runveil_persistence.database import create_engine
 from runveil_persistence.history import HistoryRepository
 from runveil_persistence.invocations import InvocationRepository
@@ -355,3 +363,51 @@ async def test_populated_1b_upgrade_and_downgrade(empty_database: AsyncEngine) -
         assert await HistoryRepository(session).events(run.id) == events
         with pytest.raises(NotFound):
             await InvocationRepository(session).get_model(run.id, record.id)
+
+
+async def test_normalized_provider_contract_survives_persistence(database: AsyncEngine) -> None:
+    run = await start(database)
+    sessions = async_sessionmaker(database)
+    request = ModelRequest(model="fixture", messages=(Message(role="user", content="Finish"),))
+    async with sessions.begin() as session:
+        recorded = await InvocationRepository(session).request_model(
+            run.id,
+            invocation_id=uuid4(),
+            provider="scripted",
+            model=request.model,
+            request=request.model_dump(mode="json"),
+            expected_revision=1,
+            expected_sequence=2,
+        )
+    # Intent is committed and no transaction spans the provider call.
+    restored = ModelRequest.model_validate_json(recorded.request_json)
+    provider = ScriptedProvider(
+        [
+            ModelResponse(
+                model="fixture",
+                content='{"action":"finish","result":{"summary":"Done","artifacts":[]}}',
+                finish_reason="stop",
+                latency_ms=0.0,
+            )
+        ]
+    )
+    response = await provider.generate(restored)
+    action = validate_response(restored, response)
+    assert isinstance(action, FinishAction)
+    async with sessions.begin() as session:
+        completed = await InvocationRepository(session).complete_model(
+            run.id,
+            recorded.id,
+            result=response.model_dump(mode="json"),
+            state={"action": action.model_dump(mode="json")},
+            expected_revision=1,
+            expected_sequence=recorded.requested_event_sequence,
+        )
+    async with sessions() as session:
+        loaded = await InvocationRepository(session).get_model(run.id, recorded.id)
+        assert loaded == completed and loaded.result_json is not None
+        restored_response = ModelResponse.model_validate_json(loaded.result_json)
+        assert restored_response == response and restored_response.usage.input_tokens is None
+        checkpoint = await HistoryRepository(session).latest_checkpoint(run.id)
+        assert checkpoint is not None and checkpoint.event_sequence == 6
+        assert checkpoint.state == {"action": action.model_dump(mode="json")}
