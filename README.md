@@ -2,15 +2,16 @@
 
 A production-style runtime for reliable, observable and evaluable AI agents.
 
-**Working name · Phase 1C implemented, awaiting review.** This repository contains
+**Working name · Phase 2A implemented, awaiting review.** This repository contains
 immutable agent versions, persisted runs with validated lifecycle transitions,
 ordered execution history, checkpoint snapshots, model/tool request and outcome
-records, PostgreSQL migrations and
-integration tests, plus the Phase 0 API/web foundation.
+records, PostgreSQL migrations and integration tests, plus normalized model
+contracts, structured action validation, an offline scripted provider and the
+Phase 0 API/web foundation. Hosted model calls remain Phase 2B work.
 It does not execute agents. No live demo or benchmark results exist.
 
 [Architecture](ARCHITECTURE.md) · [Roadmap](ROADMAP.md) ·
-[Project charter](docs/PROJECT_PLAN.md) · [Verification](docs/operations/PHASE_1C.md)
+[Project charter](docs/PROJECT_PLAN.md) · [Verification](docs/operations/PHASE_2A.md)
 
 ## Purpose
 
@@ -101,7 +102,7 @@ No model keys, paid services or AWS credentials are needed.
 
 - `apps/api`: installable Python API package in the uv workspace.
 - `apps/web`: Next.js App Router application in the npm workspace.
-- `packages/agent_core`: immutable domain snapshots and lifecycle rules.
+- `packages/agent_core`: domain snapshots, lifecycle rules, model contracts and scripted provider.
 - `packages/persistence`: PostgreSQL repositories, mappings, migrations and tests.
 - `scripts`: process-level smoke verification.
 - `docs`: original charter, decisions, naming research and verification record.
@@ -113,8 +114,9 @@ phases supply actual behavior. See the architecture for the intended boundaries.
 
 ## Evidence and limitations
 
-Current verification is recorded in [the Phase 1C handoff](docs/operations/PHASE_1C.md);
+Current verification is recorded in [the Phase 2A handoff](docs/operations/PHASE_2A.md);
 [Phase 0 evidence](docs/operations/PHASE_0.md) is retained.
+Model contract usage is documented in [model operations](docs/operations/MODELS.md).
 Repository usage and state rules are documented in [persistence operations](docs/operations/PERSISTENCE.md).
 Reliability, evaluation, security, inference benchmarks and AWS deployment remain
 planned work. Application containers and production delivery are not implemented.

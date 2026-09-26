@@ -1,6 +1,6 @@
 # Architecture
 
-## Implemented through Phase 1C
+## Implemented through Phase 2A
 
 ```mermaid
 flowchart LR
@@ -10,6 +10,7 @@ flowchart LR
     API -->|readiness query| PG
     Persistence[Async repositories and Alembic] --> PG
     Persistence --> Domain[Immutable versions, run lifecycle and history snapshots]
+    Scripted[Offline scripted provider] --> Contracts[Model contracts and action validation]
 ```
 
 Both applications expose `GET /health` with a typed/structured service identity.
@@ -93,8 +94,20 @@ in the same run. Migration 0003 adds the two tables and integrity guards without
 rewriting Phase 1B history. See [ADR 0005](docs/adr/0005-invocation-records.md).
 
 A requested record is evidence of intent, not a worker claim or proof of dispatch.
-Providers, workers, authorization and execution remain later phases. No new
-packages or HTTP routes were needed.
+Workers, authorization and execution remain later phases. No new
+packages or HTTP routes were needed for Phase 1C.
+
+Phase 2A adds provider-neutral Pydantic contracts and an async `ModelProvider`
+protocol in `runveil_core`. `ScriptedProvider` consumes detached response/error
+fixtures without network or retries. Responses normalize content, finish reason,
+nullable usage and latency. A separate validator accepts exactly one structured
+`tool_call` or `finish`, rejecting malformed/incomplete output and unadvertised
+tool names. This does not authorize tools or validate arguments against tool
+schemas. Contract JSON fits Phase 1C invocation records without a migration;
+an integration test commits intent, calls outside a transaction, validates, then
+persists/restores the outcome and checkpoint. See
+[ADR 0006](docs/adr/0006-model-contracts.md). Hosted transport, actual timeout
+handling and live verification are Phase 2B; the runtime loop remains Phase 3.
 
 Queue consistency, approvals and sandbox boundaries still require future ADRs and
 tests; the target diagram does not claim those properties exist.
@@ -102,7 +115,7 @@ tests; the target diagram does not claim those properties exist.
 ## Open decisions
 
 - Public product/repository name and license.
-- Provider normalization and structured actions (Phase 2).
+- Hosted provider mapping, capabilities and opt-in live verification (Phase 2B).
 - Queue/database consistency and worker claim semantics.
 - Sandbox threat model and AWS cost/deployment details.
 
