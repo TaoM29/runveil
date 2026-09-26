@@ -66,7 +66,8 @@ This example records state only; it does not execute an agent. Repository method
 flush but never commit. Exceptions escaping `sessions.begin()` roll back all work
 in that transaction. Domain results are detached, frozen snapshots; configuration
 access returns a fresh nested copy. Persisted configuration is opaque JSON and
-must not contain credentials. Typed provider/tool configuration arrives later.
+must not contain credentials. Phase 2A model contracts can be stored inside invocation JSON; agent-version
+configuration and tool policy remain opaque.
 
 `NotFound` means an entity/reference is absent. `InvalidTransition` means the
 lifecycle edge is forbidden. `RevisionConflict` means a stale caller must reload
@@ -244,3 +245,17 @@ record and checkpoint become visible together at commit. Inputs are detached and
 validated before writes. JSON objects are still opaque selected data; do not place
 credentials or hidden reasoning in them. See
 [ADR 0005](../adr/0005-invocation-records.md) for limits and migration trade-offs.
+
+## Phase 2A normalized model payloads
+
+See [model operations](MODELS.md) for the versioned request/response contracts.
+Pass `request.model_dump(mode="json")` into `request_model`, and the validated
+response's dump into `complete_model`. Restore with
+`ModelRequest.model_validate_json(record.request_json)` or
+`ModelResponse.model_validate_json(record.result_json)` (after checking for a
+successful result). Existing Phase 1 payloads are not automatically converted.
+Commit intent before calling the provider; validate its action outside transactions
+and persist a selected outcome with the current revision/sequence. Validation does
+not authorize tool execution. Neither provider calls nor action parsing are added
+to repository methods. The integration test demonstrates this boundary without
+implementing runtime orchestration.
