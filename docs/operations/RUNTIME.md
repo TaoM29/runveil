@@ -79,5 +79,6 @@ be committed, although the remote call may have happened or been billed. This
 runtime starts queued runs only: no recovery, replay, leases or exactly-once claim.
 Reconstruction of evidence does not resume work. Phase 5 owns durable recovery.
 
-The Phase 2 hosted live acceptance check remains pending. Running this offline demo
-cannot close that gate; see [model operations](MODELS.md).
+The Phase 2 hosted live acceptance gate was closed by a separate user-reported
+invocation; see [the evidence](PHASE_2B.md#subsequent-hosted-live-acceptance--complete).
+Running this offline demo is not hosted acceptance evidence.

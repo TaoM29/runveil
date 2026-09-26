@@ -8,7 +8,8 @@ Inspected clean repository state, root instructions, charter, architecture, road
 accepted ADRs, existing model/provider and persistence code/tests, previous handoff,
 README and CI. The charter's historical opening “Phase 0 only” instruction and the
 previous handoff's live-gate sequencing are superseded for this slice by the user's
-explicit Phase 3 request. Hosted live acceptance remains pending, not waived.
+explicit Phase 3 request. Hosted live acceptance was pending at implementation
+time, not waived; it has since [passed](PHASE_2B.md#subsequent-hosted-live-acceptance--complete).
 Recorded [ADR 0008](../adr/0008-minimal-runtime.md) before implementation.
 
 Implemented the planned deterministic task → model → fixed read-only fixture tool
@@ -101,9 +102,9 @@ preserved. The smoke scripts stopped their own application processes.
 
 ## Remaining concerns and next slice
 
-Hosted Phase 2 acceptance remains pending and requires the separate opt-in command
-with explicitly selected model/credentials. Offline success does not prove live
-provider compatibility or billing behavior.
+Hosted Phase 2 acceptance is now complete through a separately reported live
+invocation; see [the evidence](PHASE_2B.md#subsequent-hosted-live-acceptance--complete).
+The offline results in this handoff remain distinct from that hosted evidence.
 
 A checkpoint is reconstruction evidence, not a recovery mechanism. Interruption
 can leave a RUNNING run with REQUESTED work; this implementation refuses resume.
