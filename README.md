@@ -2,14 +2,15 @@
 
 A production-style runtime for reliable, observable and evaluable AI agents.
 
-**Working name · Phase 1B implemented, awaiting review.** This repository contains
+**Working name · Phase 1C implemented, awaiting review.** This repository contains
 immutable agent versions, persisted runs with validated lifecycle transitions,
-ordered execution history and checkpoint snapshots, PostgreSQL migrations and
+ordered execution history, checkpoint snapshots, model/tool request and outcome
+records, PostgreSQL migrations and
 integration tests, plus the Phase 0 API/web foundation.
 It does not execute agents. No live demo or benchmark results exist.
 
 [Architecture](ARCHITECTURE.md) · [Roadmap](ROADMAP.md) ·
-[Project charter](docs/PROJECT_PLAN.md) · [Verification](docs/operations/PHASE_1B.md)
+[Project charter](docs/PROJECT_PLAN.md) · [Verification](docs/operations/PHASE_1C.md)
 
 ## Purpose
 
@@ -112,7 +113,7 @@ phases supply actual behavior. See the architecture for the intended boundaries.
 
 ## Evidence and limitations
 
-Current verification is recorded in [the Phase 1B handoff](docs/operations/PHASE_1B.md);
+Current verification is recorded in [the Phase 1C handoff](docs/operations/PHASE_1C.md);
 [Phase 0 evidence](docs/operations/PHASE_0.md) is retained.
 Repository usage and state rules are documented in [persistence operations](docs/operations/PERSISTENCE.md).
 Reliability, evaluation, security, inference benchmarks and AWS deployment remain

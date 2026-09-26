@@ -7,7 +7,7 @@ commit or push is authorized.
 | Phase | Scope                                                     | Status                                |
 | ----- | --------------------------------------------------------- | ------------------------------------- |
 | 0     | Charter, workspaces, health, quality tooling, Compose, CI | Implemented; see verification record  |
-| 1     | Domain model, immutable versions, persistence, migrations | Phase 1B implemented; records pending |
+| 1     | Domain model, immutable versions, persistence, migrations | Phase 1C implemented; awaiting review |
 | 2     | Provider protocol, scripted and hosted providers          | Planned                               |
 | 3     | Minimal persisted execution loop                          | Planned                               |
 | 4     | Typed tools and authorization                             | Planned                               |
@@ -32,19 +32,21 @@ commit or push is authorized.
   deterministic unit and PostgreSQL integration tests. See the
   [verification record](docs/operations/PHASE_1A.md) and
   [ADR 0003](docs/adr/0003-phase-1a-persistence.md).
-- **1B — Implemented, awaiting review:** ordered steps and execution events;
+- **1B — Implemented:** ordered steps and execution events;
   atomic lifecycle history; versioned full checkpoint snapshots; stale-history
   checks, rollback/concurrency/restore tests and populated 1A migration tests. See
   [ADR 0004](docs/adr/0004-execution-history.md) and the
   [verification record](docs/operations/PHASE_1B.md).
-- **1C — Next, after review:** model-invocation and tool-call records with durable
-  identities and run/step correlation. No model calls, tool execution or worker.
-  This completes the remaining Phase 1 domain-record scope before Phase 2.
+- **1C — Implemented, awaiting review:** durable model-invocation and tool-call
+  requests; one-time success/failure outcomes; same-run model provenance; atomic
+  outcome/event/step/checkpoint recording; migration and integration tests. See
+  [ADR 0005](docs/adr/0005-invocation-records.md) and the
+  [verification record](docs/operations/PHASE_1C.md).
 
 ## Recommended next slice
 
-After Phase 1B review, define and persist model-invocation and tool-call records,
-including their relationship to recorded execution boundaries. Keep provider and
-execution behavior for later phases. Phase 1 is incomplete until those records and
-all charter acceptance criteria are covered; event ordering and checkpoint snapshot
-restoration are now verified, while executable recovery is still future work.
+After Phase 1C review, begin Phase 2 with normalized model request/response and
+structured-action contracts plus a deterministic scripted provider. Then add the
+hosted adapter and an explicit opt-in live verification path within Phase 2.
+All Phase 1 record types and acceptance tests are now implemented; actual model
+calls, runtime execution, tool authorization and worker recovery remain later work.

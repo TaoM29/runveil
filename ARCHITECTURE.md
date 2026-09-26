@@ -1,6 +1,6 @@
 # Architecture
 
-## Implemented through Phase 1B
+## Implemented through Phase 1C
 
 ```mermaid
 flowchart LR
@@ -85,8 +85,16 @@ Read APIs use bounded cursor pagination and latest-checkpoint lookup. See
 
 Checkpoint loading restores opaque versioned JSON state and its event watermark;
 it does not resume execution. The current run may have advanced since that snapshot.
-Model-invocation/tool-call records remain Phase 1C; providers, workers and execution
-loops remain later phases. No new packages or HTTP routes were needed.
+Phase 1C adds `ModelInvocation` and `ToolCall`: persisted request identities and
+one-time outcomes. Both use the run's revision/sequence boundary. Completion writes
+an outcome event, then a correlated step/checkpoint, and finalizes the record in
+one transaction. Optional tool provenance references a succeeded model invocation
+in the same run. Migration 0003 adds the two tables and integrity guards without
+rewriting Phase 1B history. See [ADR 0005](docs/adr/0005-invocation-records.md).
+
+A requested record is evidence of intent, not a worker claim or proof of dispatch.
+Providers, workers, authorization and execution remain later phases. No new
+packages or HTTP routes were needed.
 
 Queue consistency, approvals and sandbox boundaries still require future ADRs and
 tests; the target diagram does not claim those properties exist.
@@ -94,7 +102,7 @@ tests; the target diagram does not claim those properties exist.
 ## Open decisions
 
 - Public product/repository name and license.
-- Invocation/tool-call records and their execution-boundary correlation (Phase 1C).
+- Provider normalization and structured actions (Phase 2).
 - Queue/database consistency and worker claim semantics.
 - Sandbox threat model and AWS cost/deployment details.
 
