@@ -125,7 +125,8 @@ response fields and normalizes refusal, truncation, usage and latency. Native to
 calling, streaming and vendor-specific capability negotiation are not implemented.
 See [ADR 0007](docs/adr/0007-hosted-provider.md) and
 [provider operations](docs/operations/MODELS.md). An opt-in live command is available;
-manual hosted acceptance is pending.
+manual hosted acceptance is complete, with
+[user-reported evidence](docs/operations/PHASE_2B.md#subsequent-hosted-live-acceptance--complete).
 
 Phase 3 adds a bounded loop and storage protocol in `runveil_core.runtime`, with a
 `PostgresExecutionStore` adapter in the persistence package. It starts only queued
@@ -146,7 +147,7 @@ tests; the target diagram does not claim those properties exist.
 ## Open decisions
 
 - Public product/repository name and license.
-- Manual hosted acceptance and future additional provider profiles/capabilities.
+- Future additional provider profiles/capabilities.
 - Queue/database consistency and worker claim semantics.
 - Sandbox threat model and AWS cost/deployment details.
 
