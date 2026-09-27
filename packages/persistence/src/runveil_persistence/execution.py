@@ -1,6 +1,7 @@
 """Short committed runtime boundaries backed by the existing repositories."""
 
 import json
+from datetime import datetime, timedelta
 from typing import Literal
 from uuid import UUID, uuid4
 
@@ -15,8 +16,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from runveil_persistence.history import HistoryRepository
 from runveil_persistence.invocations import InvocationRepository
-from runveil_persistence.jobs import Claim, fence
-from runveil_persistence.models import EventRow, ModelInvocationRow, ToolCallRow
+from runveil_persistence.jobs import Claim, database_now, fence
+from runveil_persistence.models import EventRow, JobRow, ModelInvocationRow, ToolCallRow
 from runveil_persistence.repositories import AgentRepository, RunRepository
 
 
@@ -38,7 +39,7 @@ class PostgresExecutionStore:
             runs = RunRepository(session)
             run = await runs.get(run_id)
             if run.status != RunStatus.QUEUED and not (
-                self.claim is not None and run.status == RunStatus.RUNNING
+                self.claim is not None and run.status in (RunStatus.RUNNING, RunStatus.RETRYING)
             ):
                 raise InvalidTransition("Execution requires a queued run or claimed recovery")
             if self.claim is not None and task != self.claim.task:
@@ -47,10 +48,11 @@ class PostgresExecutionStore:
             try:
                 config = RuntimeConfig.model_validate_json(version.configuration_json)
                 state = RuntimeState(
+                    schema_version=config.schema_version,
                     messages=(
                         Message(role="system", content=config.system_prompt),
                         Message(role="user", content=task),
-                    )
+                    ),
                 )
             except ValidationError:
                 raise ValueError("Invalid runtime configuration or task") from None
@@ -58,8 +60,12 @@ class PostgresExecutionStore:
                 raise ValueError("Provider binding does not match the pinned configuration")
             if self.expected_config is not None and config != self.expected_config:
                 raise ValueError("Runtime configuration does not match worker profile")
-            if run.status == RunStatus.RUNNING:
-                return await self._resume(session, run_id, run.revision, config)
+            if config.model_retry.max_retries and self.claim is None:
+                raise ValueError("Durable model retries require a worker claim")
+            if run.status in (RunStatus.RUNNING, RunStatus.RETRYING):
+                return await self._resume(
+                    session, run_id, run.revision, config, retrying=run.status == RunStatus.RETRYING
+                )
             sequence = await session.scalar(
                 select(func.max(EventRow.sequence)).where(EventRow.run_id == run_id)
             )
@@ -84,14 +90,22 @@ class PostgresExecutionStore:
             return Started(Cursor(run_id, run.revision, checkpoint.event_sequence), config, state)
 
     async def _resume(
-        self, session: AsyncSession, run_id: UUID, revision: int, config: RuntimeConfig
+        self,
+        session: AsyncSession,
+        run_id: UUID,
+        revision: int,
+        config: RuntimeConfig,
+        *,
+        retrying: bool = False,
     ) -> Started:
         checkpoint = await HistoryRepository(session).latest_checkpoint(run_id)
-        if checkpoint is None or checkpoint.run_revision != revision:
+        if checkpoint is None or checkpoint.run_revision != revision - int(retrying):
             raise ValueError("Recovery requires a checkpoint at the current revision")
         state = RuntimeState.model_validate_json(json.dumps(checkpoint.state))
         if (
-            state.schema_version != 2
+            state.schema_version != config.schema_version
+            or state.retries_scheduled > config.model_retry.max_retries
+            or (state.retry_source_id is not None and state.next_tool is not None)
             or state.final_result is not None
             or state.error_code is not None
             or state.steps_used > config.max_steps
@@ -114,6 +128,27 @@ class PostgresExecutionStore:
             )
             if action != state.next_tool:
                 raise ValueError("Checkpoint action differs from its committed model outcome")
+        retry_events = list(
+            await session.scalars(
+                select(EventRow)
+                .where(EventRow.run_id == run_id, EventRow.kind == "retry.scheduled")
+                .order_by(EventRow.sequence)
+            )
+        )
+        if len(retry_events) != state.retries_scheduled:
+            raise ValueError("Checkpoint retry count differs from history")
+        if state.retry_source_id is not None:
+            source = await session.get(ModelInvocationRow, state.retry_source_id)
+            if (
+                not retry_events
+                or source is None
+                or source.run_id != run_id
+                or source.status != "FAILED"
+                or source.error_code != "provider_rate_limited"
+                or retry_events[-1].payload.get("record_id") != str(source.id)
+                or retry_events[-1].payload.get("retry_count") != state.retries_scheduled
+            ):
+                raise ValueError("Invalid retry provenance")
         sequence = await session.scalar(
             select(func.max(EventRow.sequence)).where(EventRow.run_id == run_id)
         )
@@ -147,12 +182,51 @@ class PostgresExecutionStore:
             raise ValueError("Checkpoint invocation count differs from history")
         if outstanding:
             if (
-                len(outstanding) != 1
+                retrying
+                or len(outstanding) != 1
                 or cursor.sequence != checkpoint.event_sequence + 1
                 or state.steps_used >= config.max_steps
             ):
                 raise ValueError("Ambiguous interrupted execution history")
             return Started(cursor, config, state, outstanding[0])
+        if retrying:
+            job = await session.get(JobRow, run_id)
+            tail = await HistoryRepository(session).events(
+                run_id, after_sequence=checkpoint.event_sequence, limit=3
+            )
+            if (
+                state.schema_version != 3
+                or state.retry_source_id is None
+                or job is None
+                or len(tail) != 2
+                or tail[0].kind != "retry.scheduled"
+                or tail[0].run_revision != revision - 1
+                or tail[0].payload.get("record_id") != str(state.retry_source_id)
+                or tail[0].payload.get("retry_count") != state.retries_scheduled
+                or tail[1].kind != "run.transitioned"
+                or tail[1].run_revision != revision
+                or tail[1].payload.get("from_status") != "RUNNING"
+                or tail[1].payload.get("status") != "RETRYING"
+                or datetime.fromisoformat(str(tail[0].payload.get("available_at")))
+                != job.available_at
+                or job.available_at > await database_now(session)
+            ):
+                raise ValueError("Retry schedule is inconsistent or not yet due")
+            run = await RunRepository(session).transition(
+                run_id,
+                RunStatus.RUNNING,
+                expected_revision=revision,
+                expected_sequence=cursor.sequence,
+            )
+            resumed = await HistoryRepository(session).record_step(
+                run_id,
+                kind="runtime.retry_resumed",
+                details={},
+                state=state.model_dump(mode="json"),
+                expected_revision=run.revision,
+                expected_sequence=cursor.sequence + 1,
+            )
+            return Started(Cursor(run_id, run.revision, resumed.event_sequence), config, state)
         if cursor.sequence != checkpoint.event_sequence:
             raise ValueError("Unexpected history after checkpoint")
         return Started(cursor, config, state)
@@ -174,12 +248,14 @@ class PostgresExecutionStore:
             invocations = InvocationRepository(session)
             record_id = uuid4()
             if kind == "model":
+                state = await load_runtime_state(session, cursor.run_id)
                 model = await invocations.request_model(
                     cursor.run_id,
                     invocation_id=record_id,
                     provider=config.provider,
                     model=config.model,
                     request=payload,
+                    retry_of=state.retry_source_id if state is not None else None,
                     expected_revision=cursor.revision,
                     expected_sequence=cursor.sequence,
                 )
@@ -233,6 +309,70 @@ class PostgresExecutionStore:
                     expected_sequence=cursor.sequence,
                 )
             return cursor
+
+    async def schedule_retry(
+        self, pending: Pending, state: RuntimeState, *, error_code: str
+    ) -> None:
+        cursor = pending.cursor
+        async with self.sessions.begin() as session:
+            await fence(session, cursor.run_id, self.claim)
+            run = await RunRepository(session).get(cursor.run_id)
+            version = await AgentRepository(session).get_version(run.agent_version_id)
+            config = RuntimeConfig.model_validate_json(version.configuration_json)
+            previous = await load_runtime_state(session, cursor.run_id)
+            if (
+                self.claim is None
+                or config.schema_version != 3
+                or pending.kind != "model"
+                or error_code != "provider_rate_limited"
+                or previous is None
+                or previous.final_result is not None
+                or previous.error_code is not None
+                or previous.next_tool is not None
+                or state.steps_used >= config.max_steps
+                or state
+                != previous.model_copy(
+                    update={
+                        "steps_used": previous.steps_used + 1,
+                        "retries_scheduled": previous.retries_scheduled + 1,
+                        "retry_source_id": pending.id,
+                    }
+                )
+            ):
+                raise ValueError("Invalid retry boundary")
+            delay = config.model_retry.delay(state.retries_scheduled)
+            await InvocationRepository(session).complete_model(
+                cursor.run_id,
+                pending.id,
+                state=state.model_dump(mode="json"),
+                error_code=error_code,
+                expected_revision=cursor.revision,
+                expected_sequence=cursor.sequence,
+            )
+            job = await session.get(JobRow, cursor.run_id)
+            assert job is not None
+            job.available_at = await database_now(session) + timedelta(seconds=delay)
+            event = EventRow(
+                run_id=cursor.run_id,
+                kind="retry.scheduled",
+                run_revision=cursor.revision,
+                payload={
+                    "record_id": str(pending.id),
+                    "retry_count": state.retries_scheduled,
+                    "available_at": job.available_at.isoformat(),
+                },
+            )
+            session.add(event)
+            await session.flush()
+            await RunRepository(session).transition(
+                cursor.run_id,
+                RunStatus.RETRYING,
+                expected_revision=cursor.revision,
+                expected_sequence=event.sequence,
+            )
+            job.token = None
+            job.expires_at = None
+            await session.flush()
 
     async def exhaust(self, cursor: Cursor, state: RuntimeState) -> None:
         async with self.sessions.begin() as session:

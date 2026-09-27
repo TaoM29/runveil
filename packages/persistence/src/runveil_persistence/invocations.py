@@ -67,6 +67,7 @@ class InvocationRepository:
         provider: str,
         model: str,
         request: dict[str, JsonValue],
+        retry_of: UUID | None = None,
         expected_revision: int,
         expected_sequence: int,
     ) -> ModelInvocation:
@@ -79,7 +80,7 @@ class InvocationRepository:
             model=model,
             request=json.loads(configuration_json(request)),
         )
-        await self._request(row, expected_revision, expected_sequence)
+        await self._request(row, expected_revision, expected_sequence, retry_of=retry_of)
         return model_snapshot(row)
 
     async def request_tool(
@@ -109,6 +110,8 @@ class InvocationRepository:
         row: ModelInvocationRow | ToolCallRow,
         revision: int,
         sequence: int,
+        *,
+        retry_of: UUID | None = None,
     ) -> None:
         run = await lock_running_run(
             self.session,
@@ -124,12 +127,27 @@ class InvocationRepository:
                 raise NotFound("Source model invocation not found in this run")
             if source.status != InvocationStatus.SUCCEEDED:
                 raise InvalidTransition("Tool source must be a succeeded model invocation")
+        payload: dict[str, JsonValue] = {"record_id": str(row.id)}
+        if retry_of is not None:
+            source = await self.session.get(ModelInvocationRow, retry_of)
+            if (
+                not isinstance(row, ModelInvocationRow)
+                or source is None
+                or source.run_id != row.run_id
+                or source.status != InvocationStatus.FAILED
+                or source.error_code != "provider_rate_limited"
+                or source.request != row.request
+                or source.provider != row.provider
+                or source.model != row.model
+            ):
+                raise ValueError("Retry must repeat a known failed model request in this run")
+            payload["retry_of"] = str(retry_of)
         prefix = "model" if isinstance(row, ModelInvocationRow) else "tool"
         event = EventRow(
             run_id=row.run_id,
             kind=f"{prefix}.requested",
             run_revision=run.revision,
-            payload={"record_id": str(row.id)},
+            payload=payload,
         )
         self.session.add(event)
         await self.session.flush()

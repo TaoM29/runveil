@@ -39,6 +39,16 @@ async def test_migration_round_trip_and_metadata(empty_database: AsyncEngine) ->
     async with empty_database.begin() as connection:
         await connection.run_sync(lambda conn: command.upgrade(migration_config(conn), "0003"))
     old_version, old_run = await seed(empty_database)
+    _, enrolled_run = await seed(empty_database)
+    async with empty_database.begin() as connection:
+        await connection.run_sync(lambda conn: command.upgrade(migration_config(conn), "0004"))
+        await connection.execute(
+            text(
+                "INSERT INTO worker_jobs (run_id, task, profile) "
+                "VALUES (:id, 'Public task', 'fixture-v1')"
+            ),
+            {"id": enrolled_run.id},
+        )
     async with empty_database.begin() as connection:
         await connection.run_sync(lambda conn: command.upgrade(migration_config(conn), "head"))
         await connection.run_sync(lambda conn: command.check(migration_config(conn)))
@@ -55,7 +65,17 @@ async def test_migration_round_trip_and_metadata(empty_database: AsyncEngine) ->
             "tool_calls",
             "worker_jobs",
         }
-        assert await connection.scalar(text("SELECT count(*) FROM worker_jobs")) == 0
+        assert await connection.scalar(text("SELECT count(*) FROM worker_jobs")) == 1
+        assert (
+            await connection.scalar(
+                text(
+                    "SELECT available_at <= clock_timestamp() AND task='Public task' "
+                    "AND profile='fixture-v1' AND token IS NULL FROM worker_jobs WHERE run_id=:id"
+                ),
+                {"id": enrolled_run.id},
+            )
+            is True
+        )
         for table in Base.metadata.sorted_tables:
             checks = await connection.run_sync(check_constraint_names, table.name)
             assert checks == {
