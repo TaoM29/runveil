@@ -7,7 +7,7 @@ from uuid import UUID
 from runveil_persistence.database import create_engine, database_url
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from runveil_worker.worker import submit, work_once
+from runveil_worker.worker import PROFILE, RETRY_PROFILE, submit, work_once
 
 
 async def main() -> int:
@@ -15,6 +15,7 @@ async def main() -> int:
     parser.add_argument("command", choices=("submit", "work"))
     parser.add_argument("--once", action="store_true", help="Check for at most one eligible run")
     parser.add_argument("--run-id", type=UUID, help="Select one enrolled run")
+    parser.add_argument("--profile", choices=(PROFILE, RETRY_PROFILE), default=PROFILE)
     args = parser.parse_args()
     if args.command == "submit" and (args.once or args.run_id):
         parser.error("Worker options apply only to work")
@@ -22,14 +23,22 @@ async def main() -> int:
     try:
         sessions = async_sessionmaker(engine)
         if args.command == "submit":
-            print(f"run_id={await submit(sessions)}")
+            print(f"run_id={await submit(sessions, profile=args.profile)}")
             return 0
         while True:
-            outcome = await work_once(sessions, run_id=args.run_id)
+            outcome = await work_once(sessions, run_id=args.run_id, profile=args.profile)
             if outcome is not None:
                 run_id, state = outcome
-                status = "FAILED" if state.error_code else "SUCCEEDED"
-                print(f"run_id={run_id} status={status} steps={state.steps_used}", flush=True)
+                status = (
+                    "FAILED"
+                    if state.error_code
+                    else ("SUCCEEDED" if state.final_result else "RETRYING")
+                )
+                print(
+                    f"run_id={run_id} status={status} steps={state.steps_used} "
+                    f"retries={state.retries_scheduled}",
+                    flush=True,
+                )
             if args.once:
                 if outcome is None:
                     print("no_eligible_work")
