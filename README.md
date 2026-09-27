@@ -2,7 +2,7 @@
 
 A production-style runtime for reliable, observable and evaluable AI agents.
 
-**Working name · Phase 3 implemented; awaiting review. Phase 2 hosted acceptance complete.** This repository contains
+**Working name · Phase 4A implemented; awaiting review. Phase 2 hosted acceptance complete.** This repository contains
 immutable agent versions, persisted runs with validated lifecycle transitions,
 ordered execution history, checkpoint snapshots, model/tool request and outcome
 records, PostgreSQL migrations and integration tests, plus normalized model
@@ -10,11 +10,11 @@ contracts, structured action validation, scripted and OpenAI-compatible HTTP
 providers, and the Phase 0 API/web foundation. The opt-in hosted acceptance check
 [passed](docs/operations/PHASE_2B.md#subsequent-hosted-live-acceptance--complete),
 based on user-reported evidence.
-A bounded in-process runtime executes a persisted model → fixture tool → model →
-finish loop. No durable worker, live demo or benchmark results exist.
+A bounded in-process runtime executes a persisted model → typed, authorized fixture
+tool → model → finish loop. Tool grants default to deny; repository tools are Phase 4B. No durable worker, live demo or benchmark results exist.
 
 [Architecture](ARCHITECTURE.md) · [Roadmap](ROADMAP.md) ·
-[Project charter](docs/PROJECT_PLAN.md) · [Verification](docs/operations/PHASE_3.md)
+[Project charter](docs/PROJECT_PLAN.md) · [Verification](docs/operations/PHASE_4A.md)
 
 ## Purpose
 
@@ -120,7 +120,7 @@ phases supply actual behavior. See the architecture for the intended boundaries.
 
 ## Evidence and limitations
 
-Current verification is recorded in [the Phase 3 handoff](docs/operations/PHASE_3.md);
+Current verification is recorded in [the Phase 4A handoff](docs/operations/PHASE_4A.md);
 [Phase 0 evidence](docs/operations/PHASE_0.md) is retained.
 Run the offline persisted demonstration with `uv run python scripts/runtime_demo.py`
 after migration and database configuration. It creates and retains one new run; see

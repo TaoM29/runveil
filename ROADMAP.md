@@ -4,25 +4,25 @@ The [original charter](docs/PROJECT_PLAN.md) is the source of truth. Each phase 
 be independently reviewed before the next begins. No automatic continuation,
 commit or push is authorized.
 
-| Phase | Scope                                                     | Status                                  |
-| ----- | --------------------------------------------------------- | --------------------------------------- |
-| 0     | Charter, workspaces, health, quality tooling, Compose, CI | Implemented; see verification record    |
-| 1     | Domain model, immutable versions, persistence, migrations | Implemented through Phase 1C            |
-| 2     | Provider protocol, scripted and hosted providers          | Implemented; hosted acceptance complete |
-| 3     | Minimal persisted execution loop                          | Implemented; awaiting review            |
-| 4     | Typed tools and authorization                             | Planned                                 |
-| 5     | Durable worker, retries, idempotency and budgets          | Planned                                 |
-| 6     | Human approval and controlled mutations                   | Planned                                 |
-| 7     | Telemetry and trace UI                                    | Planned                                 |
-| 8     | Deterministic evaluation harness                          | Planned                                 |
-| 9     | Statistical comparison                                    | Planned                                 |
-| 10    | Sandboxed software engineering application                | Planned                                 |
-| 11    | MCP adapter through existing policy                       | Planned                                 |
-| 12    | AWS infrastructure with Terraform                         | Planned                                 |
-| 13    | Production CI/CD                                          | Planned                                 |
-| 14    | Temporary self-hosted inference and benchmarks            | Planned                                 |
-| 15    | Security hardening                                        | Planned                                 |
-| 16    | Public demo and portfolio release                         | Planned                                 |
+| Phase | Scope                                                     | Status                                    |
+| ----- | --------------------------------------------------------- | ----------------------------------------- |
+| 0     | Charter, workspaces, health, quality tooling, Compose, CI | Implemented; see verification record      |
+| 1     | Domain model, immutable versions, persistence, migrations | Implemented through Phase 1C              |
+| 2     | Provider protocol, scripted and hosted providers          | Implemented; hosted acceptance complete   |
+| 3     | Minimal persisted execution loop                          | Implemented; continued by Phase 4 request |
+| 4     | Typed tools and authorization                             | 4A implemented; awaiting review           |
+| 5     | Durable worker, retries, idempotency and budgets          | Planned                                   |
+| 6     | Human approval and controlled mutations                   | Planned                                   |
+| 7     | Telemetry and trace UI                                    | Planned                                   |
+| 8     | Deterministic evaluation harness                          | Planned                                   |
+| 9     | Statistical comparison                                    | Planned                                   |
+| 10    | Sandboxed software engineering application                | Planned                                   |
+| 11    | MCP adapter through existing policy                       | Planned                                   |
+| 12    | AWS infrastructure with Terraform                         | Planned                                   |
+| 13    | Production CI/CD                                          | Planned                                   |
+| 14    | Temporary self-hosted inference and benchmarks            | Planned                                   |
+| 15    | Security hardening                                        | Planned                                   |
+| 16    | Public demo and portfolio release                         | Planned                                   |
 
 ## Phase 1 review gates
 
@@ -60,7 +60,7 @@ commit or push is authorized.
 
 ## Phase 3 review gate
 
-- **Implemented, awaiting review:** pinned runtime configuration, bounded execution
+- **Implemented; Phase 4 continuation authorized:** pinned runtime configuration, bounded execution
   loop, one fixed read-only fixture tool, ordered context, committed request intent,
   atomic outcomes/checkpoints/terminal transitions and database reconstruction.
   Integration coverage includes step limits, safe failures, stale results and
@@ -71,9 +71,21 @@ commit or push is authorized.
   live gate was pending. That gate is now complete through the separately reported
   hosted invocation, not the offline demo or tests.
 
+## Phase 4 review gates
+
+- **4A — Implemented, awaiting review:** typed registry, strict bounded input/output
+  validation, intersected pinned/operator grants, permission and side-effect
+  classification, cooperative deadlines, safe errors and persisted dispatch through
+  the registered fixture. See [ADR 0009](docs/adr/0009-typed-tool-dispatch.md) and
+  [verification record](docs/operations/PHASE_4A.md).
+- **4B — Planned:** repository read/search tools using this dispatch path, with
+  explicit root/file disclosure policy, path/symlink containment, bounded reads and
+  search results, and filesystem boundary tests. Phase 4 is not complete until
+  this native repository-tool slice passes review.
+
 ## Recommended next slice
 
-Review Phase 3, then begin Phase 4 with a small typed tool registry, validated input
-and output contracts, and explicit authorization around native read-only tools.
-Keep worker recovery, retries, mutations and approvals in their planned phases.
-The separate Phase 2 hosted acceptance gate is complete.
+Review Phase 4A, then implement Phase 4B repository read/search tools. Keep worker
+recovery, retries, mutations and approvals in their planned phases. The user's
+Phase 4 request authorized continuation beyond the Phase 3 review stop; the
+separate Phase 2 hosted acceptance gate is complete.
