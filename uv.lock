@@ -9,6 +9,7 @@ members = [
     "runveil-model-providers",
     "runveil-persistence",
     "runveil-tool-runtime",
+    "runveil-worker",
     "runveil-workspace",
 ]
 
@@ -508,6 +509,21 @@ dependencies = [
 requires-dist = [
     { name = "pydantic", specifier = ">=2.11,<3" },
     { name = "runveil-agent-core", editable = "packages/agent_core" },
+]
+
+[[package]]
+name = "runveil-worker"
+version = "0.1.0"
+source = { editable = "apps/worker" }
+dependencies = [
+    { name = "runveil-agent-core" },
+    { name = "runveil-persistence" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "runveil-agent-core", editable = "packages/agent_core" },
+    { name = "runveil-persistence", editable = "packages/persistence" },
 ]
 
 [[package]]

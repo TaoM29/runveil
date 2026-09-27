@@ -8,7 +8,7 @@ dependencies = []
 package = false
 
 [tool.uv.workspace]
-members = ["apps/api", "packages/agent_core", "packages/persistence", "packages/model_providers", "packages/tool_runtime"]
+members = ["apps/api", "apps/worker", "packages/agent_core", "packages/persistence", "packages/model_providers", "packages/tool_runtime"]
 
 [dependency-groups]
 dev = [
@@ -29,7 +29,7 @@ select = ["E", "F", "I", "B", "UP"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
-files = ["apps/api/src", "apps/api/tests", "packages", "scripts"]
+files = ["apps/api/src", "apps/worker/src", "apps/api/tests", "packages", "scripts"]
 
 [tool.pytest.ini_options]
 testpaths = ["apps/api/tests", "packages/agent_core/tests", "packages/persistence/tests", "packages/model_providers/tests", "packages/tool_runtime/tests"]
