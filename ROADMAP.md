@@ -11,7 +11,7 @@ commit or push is authorized.
 | 2     | Provider protocol, scripted and hosted providers          | Implemented; hosted acceptance complete   |
 | 3     | Minimal persisted execution loop                          | Implemented; continued by Phase 4 request |
 | 4     | Typed tools and authorization                             | Implemented through Phase 4B              |
-| 5     | Durable worker, retries, idempotency and budgets          | 5B implemented; awaiting review           |
+| 5     | Durable worker, retries, idempotency and budgets          | 5C implemented; awaiting review           |
 | 6     | Human approval and controlled mutations                   | Planned                                   |
 | 7     | Telemetry and trace UI                                    | Planned                                   |
 | 8     | Deterministic evaluation harness                          | Planned                                   |
@@ -93,7 +93,7 @@ commit or push is authorized.
   safety for a fixed scripted/fixture profile. See [ADR 0011](docs/adr/0011-durable-fixture-worker.md),
   [worker operations](docs/operations/WORKER.md) and [handoff](docs/operations/PHASE_5A.md).
   No general retries, broker, repository replay or expanded budgets are claimed.
-- **5B — Implemented; awaiting review:** bounded model retries for the opt-in
+- **5B — Implemented; Phase 5C continuation authorized:** bounded model retries for the opt-in
   `fixture-retry-v1` profile, atomic failed-attempt/schedule/RETRYING boundaries,
   database-clock backoff, new invocation provenance, due-time recovery and run-wide
   retry/step accounting. Existing profiles retain their behavior. See
@@ -101,12 +101,20 @@ commit or push is authorized.
   and [handoff](docs/operations/PHASE_5B.md). Unknown/uncertain failures are not retried;
   hosted replay, tool retries and broader budgets remain deferred.
 
+- **5C — Implemented; awaiting review:** durable elapsed budget from first start,
+  immutable deadline, budget checks at execution boundaries, cooperative call
+  timeouts, expired-backoff cleanup and atomic budget failure. New offline
+  `fixture-budget-v1` profile; existing profiles unchanged. See
+  [ADR 0013](docs/adr/0013-durable-elapsed-budget.md), [operations](docs/operations/WORKER.md)
+  and [handoff](docs/operations/PHASE_5C.md). This is not a hard real-time sandbox;
+  live leases may delay crash cleanup.
+
 ## Recommended next slice
 
-Review Phase 5B, then add a durable elapsed-time budget spanning execution, retry
-waits and worker restarts. Persist the deadline and stop expired runs before new
-external dispatch; verify interaction with claims, cancellation and backoff.
-Token/cost accounting needs explicit unknown-usage semantics in a subsequent slice.
-Repository recovery still requires workspace and implementation identity; hosted
-retry requires provider idempotency/safety policy. Mutations, approvals and MCP
-stay in their planned phases.
+Review Phase 5C, then implement durable token accounting and a bounded token budget
+with explicit unknown-usage handling. Include failed/uncertain attempts without
+treating missing provider usage as zero, and preserve accounting across retries
+and restarts. Cost budgets need pinned pricing semantics in a subsequent slice.
+Repository recovery still requires workspace/implementation identity; hosted retry
+requires provider idempotency/safety policy. Mutations, approvals and MCP remain
+in their planned phases.

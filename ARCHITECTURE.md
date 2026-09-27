@@ -1,6 +1,6 @@
 # Architecture
 
-## Implemented through Phase 5B
+## Implemented through Phase 5C
 
 ```mermaid
 flowchart LR
@@ -188,7 +188,15 @@ new claim; retry request events link the prior failure. Unknown/uncertain failur
 remain terminal. Version-2 profiles keep retries disabled. See
 [ADR 0012](docs/adr/0012-persisted-model-retries.md).
 
-Broker consistency, general/hosted retries, additional budgets, approvals and sandbox
+Phase 5C adds immutable worker-job deadlines in migration 0006 and the offline
+`fixture-budget-v1` profile. Configuration/checkpoint version 4 pins elapsed time
+from first start, including retries and process downtime. Database-clock checks
+fence request/outcome/schedule boundaries, and cooperative model/tool deadlines
+shrink to remaining time. Expiry commits a failed outcome/checkpoint, budget event
+and terminal transition. Expired backoff is selectable without stealing live
+leases. See [ADR 0013](docs/adr/0013-durable-elapsed-budget.md).
+
+Broker consistency, general/hosted retries, token/cost budgets, approvals and sandbox
 boundaries remain future slices; the target diagram does not claim they exist.
 
 ## Open decisions
