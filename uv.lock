@@ -8,6 +8,7 @@ members = [
     "runveil-api",
     "runveil-model-providers",
     "runveil-persistence",
+    "runveil-tool-runtime",
     "runveil-workspace",
 ]
 
@@ -492,6 +493,21 @@ requires-dist = [
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2,<4" },
     { name = "runveil-agent-core", editable = "packages/agent_core" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.40,<2.1" },
+]
+
+[[package]]
+name = "runveil-tool-runtime"
+version = "0.1.0"
+source = { editable = "packages/tool_runtime" }
+dependencies = [
+    { name = "pydantic" },
+    { name = "runveil-agent-core" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pydantic", specifier = ">=2.11,<3" },
+    { name = "runveil-agent-core", editable = "packages/agent_core" },
 ]
 
 [[package]]
