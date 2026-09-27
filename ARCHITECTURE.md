@@ -1,6 +1,6 @@
 # Architecture
 
-## Implemented through Phase 3
+## Implemented through Phase 4A
 
 ```mermaid
 flowchart LR
@@ -16,7 +16,8 @@ flowchart LR
     Runtime[Bounded core execution loop] --> Contracts
     Runtime --> Store[PostgreSQL execution store]
     Store --> Persistence
-    Runtime --> Fixture[Fixed read-only fixture tool]
+    Runtime --> Tools[Typed registry and explicit grants]
+    Tools --> Fixture[Registered read-only fixture tool]
 ```
 
 Both applications expose `GET /health` with a typed/structured service identity.
@@ -100,8 +101,8 @@ in the same run. Migration 0003 adds the two tables and integrity guards without
 rewriting Phase 1B history. See [ADR 0005](docs/adr/0005-invocation-records.md).
 
 A requested record is evidence of intent, not a worker claim or proof of dispatch.
-Durable workers and general tool authorization remain later phases. No new
-packages or HTTP routes were needed for Phase 1C.
+Phase 1C deferred durable workers and general tool authorization to later phases.
+No new packages or HTTP routes were needed for Phase 1C.
 
 Phase 2A adds provider-neutral Pydantic contracts and an async `ModelProvider`
 protocol in `runveil_core`. `ScriptedProvider` consumes detached response/error
@@ -140,6 +141,17 @@ has no filesystem/network capability. Runtime checkpoint state can be restored f
 inspection independently of execution. See [ADR 0008](docs/adr/0008-minimal-runtime.md)
 and [runtime operations](docs/operations/RUNTIME.md). No migration or domain HTTP
 endpoint was needed; the CLI demonstration uses the same persisted loop.
+
+Phase 4A replaces fixed dispatch with `runveil_core.tools`: Pydantic-derived
+input/output schemas, a typed native handler binding and registry, 64 KiB payload
+bounds, safe error codes and cooperative tool deadlines. Runtime configuration
+version 2 pins tool names/permissions; a separate operator policy must also grant
+them. Both default to deny. Only READ + PURE/READ_ONLY bindings are executable.
+Tool offers are filtered and dispatch rechecks policy; persisted calls use the
+selected name and existing atomic outcome/event/checkpoint boundaries. The fixture
+is the sole built-in tool. No migration, dependency or package is added. See
+[ADR 0009](docs/adr/0009-typed-tool-dispatch.md). Repository tools and filesystem
+boundaries remain Phase 4B; trusted in-process handlers are not sandboxed.
 
 Queue consistency, approvals and sandbox boundaries still require future ADRs and
 tests; the target diagram does not claim those properties exist.
