@@ -1,7 +1,8 @@
 # Durable fixture worker
 
-Phase 5A introduces one offline `fixture-v1` worker profile. It uses the built-in
-public fixture, never repository files, hosted models, arbitrary tools or secrets.
+Phase 5A introduced `fixture-v1`; Phase 5B adds the opt-in `fixture-retry-v1`
+profile. Both use the built-in public fixture, never repository files, hosted
+models, arbitrary tools or secrets.
 See [ADR 0011](../adr/0011-durable-fixture-worker.md) for ownership and recovery rules.
 
 ## Run locally
@@ -28,6 +29,49 @@ The task, execution profile and configuration are durable. Provider response
 selection uses persisted context, so restarting a process does not reset an
 in-memory script index. Profile semantics are versioned in application code;
 change the profile ID when changing those semantics.
+
+## Persisted model retries
+
+After migration 0005, submit and process the new profile explicitly:
+
+```sh
+uv run python -m runveil_worker submit --profile fixture-retry-v1
+uv run python -m runveil_worker work --once --profile fixture-retry-v1
+```
+
+The first two attempts deliberately return a known pre-response rate-limit error.
+They print `status=RETRYING`, with persisted step/retry counts, and exit successfully.
+Repeat the work command after the first one-second delay and then the two-second
+delay; the third eligible invocation finishes with `status=SUCCEEDED steps=5
+retries=2`. Early delivery prints `no_eligible_work`. Alternatively, omit `--once`
+to poll continuously; interrupt the process when done. A worker selects only its
+chosen profile, which defaults to the unchanged `fixture-v1`.
+
+The new profile pins configuration version 3, a run-wide limit of two retries,
+one-second base backoff and five invocation steps. Core policy supports at most
+three retries and a 1–60 second base, with exponential delay capped by those bounds
+at 240 seconds. Successful operations do not reset the retry count. Both pinned
+configuration and `execute(allow_model_retries=True)` are required; the latter is
+a trusted operator assertion that this provider's explicit rate-limit failure is
+safe to repeat. The grant is checked again before resuming a scheduled retry;
+withdrawing it prevents dispatch. The CLI grants it only to the new offline profile. A hosted HTTP
+error code alone does not establish safe replay.
+
+Scheduling atomically retains the failed model invocation, checkpoints the count,
+records `retry.scheduled` with source ID and database-clock eligibility, transitions
+to RETRYING and releases the lease. A different process may claim it when due.
+Resumption checks the schedule and source, transitions back to RUNNING and saves a
+new checkpoint. The new invocation has a distinct ID and the same request; its
+`model.requested` event links the failed predecessor through `retry_of`. The retry
+counter and prior failed attempts remain in history after eventual success.
+
+Only explicit rate-limit failures are eligible. Timeouts, unavailable providers,
+invalid responses, unexpected exceptions, tool errors and uncertain dispatch fail
+without retry. When the retry or step limit is reached, the last provider error
+is terminal and no further schedule is created. Every attempt consumes one step.
+A crash before the scheduling transaction commits leaves uncertain intent, which
+still fails as `execution_interrupted`; a crash after commit preserves the schedule.
+Cancellation during backoff prevents further execution. See [ADR 0012](../adr/0012-persisted-model-retries.md).
 
 ## Ownership and restart
 
@@ -66,7 +110,7 @@ Database writes are fenced; external execution cannot be made atomic with a clai
 A paused old process may still execute its pure fixture after losing ownership,
 but cannot commit its result. This is not exactly-once execution.
 
-Automatic retries/backoff and token/cost/wall-time budgets are deferred. Existing
+General/hosted retries and token/cost/wall-time budgets are deferred. Existing
 step limits and cooperative per-call deadlines remain active across recovery.
 Repository and hosted-provider recovery need explicit workspace/implementation
 identity and attempt/idempotency policies before being exposed by a worker.

@@ -73,7 +73,8 @@ configuration and tool policy remain opaque.
 lifecycle edge is forbidden. `RevisionConflict` means a stale caller must reload
 and reconsider its requested operation. Do not blindly retry a stale decision.
 Unexpected constraint/database failures propagate from SQLAlchemy; rollback the
-transaction before reuse. No transaction retry or queue delivery logic exists yet.
+transaction before reuse. These repositories do not retry transactions. Durable
+queue selection and execution fences are provided by the [worker/store layer](WORKER.md).
 
 ## Lifecycle and invariant boundaries
 
@@ -228,17 +229,22 @@ earlier remains REQUESTED; reload by ID to inspect the latest persisted outcome.
 Tool methods use the same contract, with `tool_call_id`, `tool_name` and `arguments`
 at request time. An optional `model_invocation_id` must refer to a succeeded model
 record in this run. This is provenance only: it does not prove the model selected
-that exact tool or authorize execution. Provider/tool-specific validation remains
-future work. A source-less tool request is permitted for future native callers.
+that exact tool or authorize execution. Provider/tool-specific validation belongs
+to the core runtime and tool registry. A source-less tool request is permitted for future native callers.
 
 Both request and outcome writes require RUNNING plus matching revision/sequence.
 A pending request remains visible after cancellation; late completion is rejected.
-There are no claims, leases, automatic retries, attempt tracking or reconciliation.
+These low-level repositories do not enforce worker ownership or retry policy; use
+`PostgresExecutionStore` for enrolled execution. The worker layer owns claims,
+leases and bounded model retry scheduling.
 The operation status REQUESTED does not say whether an external call started.
 Recorded timestamps are persistence times, not measured model/tool latency.
 
-Request/outcome events contain record identity only, without duplicating request,
-result or error content. They have no step number because the completed boundary
+Request/outcome events contain record identity without duplicating request,
+result or error content. A retry model request additionally stores `retry_of` in
+its event; the repository verifies a failed rate-limited model source in the same
+run and identical provider/model/request. It still requires the caller to enforce
+scheduling and retry limits. They have no step number because the completed boundary
 is allocated afterwards; the record's `step_number` and step's `record_id` details
 supply correlation. The checkpoint watermark includes the outcome event, and the
 record and checkpoint become visible together at commit. Inputs are detached and

@@ -58,8 +58,12 @@ configuration, task or provider binding is rejected before lifecycle writes.
 `max_steps` counts model and tool invocations together. The normal demonstration
 uses five: model → search → model → read → model finish. A finish at the limit succeeds; an action
 requiring another invocation beyond the limit fails with `step_limit_exceeded`.
-The start and limit-failure checkpoints are bookkeeping, so persisted step-row
-count can exceed consumed invocation count. There is no retry or context compaction.
+The start, retry-resume and limit-failure checkpoints are bookkeeping, so persisted
+step-row count can exceed consumed invocation count. Version-2 configurations keep
+retries disabled. Version 3 adds `model_retry` (`max_retries`, `base_delay_seconds`)
+and requires a worker claim when retries are enabled. The opt-in operator grant
+and durable scheduling rules are documented in [worker operations](WORKER.md).
+There is no context compaction.
 
 Only explicitly granted registered tools are advertised. The built-in `fixture.info`
 is available through `fixture_registry()`. Its arguments must be `{}` and its output is
@@ -103,8 +107,9 @@ model/tool requested/outcome, checkpoint and lifecycle events. Invocation record
 retain normalized requests/responses, safe errors, and tool-to-model provenance.
 `load_runtime_state(session, run_id)` validates the latest checkpoint's inner
 runtime schema and returns conversation, consumed steps, final result and error.
-New version-2 snapshots also retain the next tool action and source model ID;
-version-1 snapshots remain readable for inspection.
+Version-2 snapshots retain the next tool action and source model ID. Version-3
+snapshots additionally retain the run-wide retry count and failed model source ID.
+Version-1 snapshots remain readable for inspection.
 Read lifecycle separately: a terminal checkpoint is recorded at RUNNING revision,
 with the terminal transition immediately after it in the same transaction.
 Malformed or unsupported checkpoint state is rejected, not treated as empty.
@@ -114,8 +119,9 @@ unexpected provider exceptions become `provider_unavailable` without raw details
 Tool failures use `invalid_tool_arguments`, `invalid_tool_output`, `tool_timeout`
 or `tool_failed`, without raw exception details. Native repository handlers also
 use fixed resource unavailable/limit/invalid codes and file-policy denial. Tool requests commit before handler
-execution outside database transactions; failures become failed tool outcomes. Each failure outcome and
-FAILED transition commits atomically. Invalid response content is not retained.
+execution outside database transactions; failures become failed tool outcomes. Terminal failure outcomes and
+FAILED transitions commit atomically. An explicitly eligible model retry instead
+commits its failed outcome, schedule and RETRYING transition atomically. Invalid response content is not retained.
 Valid task/conversation/action content **is persisted**: callers must exclude
 secrets and hidden reasoning. Persistence is not an arbitrary-content redactor.
 
