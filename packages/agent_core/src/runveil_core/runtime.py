@@ -24,7 +24,7 @@ from runveil_core.models import (
     ToolAction,
     validate_response,
 )
-from runveil_core.tools import ToolError, ToolPolicy, ToolRegistry
+from runveil_core.tools import ToolError, ToolErrorCode, ToolPolicy, ToolRegistry
 
 
 class ModelRetryPolicy(Contract):
@@ -38,7 +38,8 @@ class ModelRetryPolicy(Contract):
 
 
 class RuntimeConfig(Contract):
-    schema_version: Literal[2, 3] = 2
+    schema_version: Literal[2, 3, 4] = 2
+    max_elapsed_seconds: Annotated[int, Field(ge=1, le=86400)] | None = None
     model_retry: ModelRetryPolicy = Field(default_factory=ModelRetryPolicy)
     tool_policy: ToolPolicy = Field(default_factory=ToolPolicy)
     provider: Name
@@ -53,11 +54,13 @@ class RuntimeConfig(Contract):
     def versioned_retry_policy(self) -> RuntimeConfig:
         if self.schema_version == 2 and self.model_retry != ModelRetryPolicy():
             raise ValueError("Model retry policy requires configuration version 3")
+        if (self.schema_version == 4) != (self.max_elapsed_seconds is not None):
+            raise ValueError("Elapsed budget requires configuration version 4 and a limit")
         return self
 
 
 class RuntimeState(Contract):
-    schema_version: Literal[1, 2, 3] = 2
+    schema_version: Literal[1, 2, 3, 4] = 2
     retries_scheduled: Annotated[int, Field(ge=0, le=3)] = 0
     retry_source_id: UUID | None = None
     messages: tuple[Message, ...]
@@ -66,6 +69,14 @@ class RuntimeState(Contract):
     error_code: str | None = None
     next_tool: ToolAction | None = None
     source_model_id: UUID | None = None
+
+
+class ElapsedBudgetExceeded(Exception):
+    """Storage committed an elapsed-budget terminal state before raising this."""
+
+    def __init__(self, state: RuntimeState) -> None:
+        self.state = state
+        super().__init__("elapsed_time_exceeded")
 
 
 @dataclass(frozen=True)
@@ -92,6 +103,10 @@ class Pending:
 
 class ExecutionStore(Protocol):
     async def start(self, run_id: UUID, task: str, provider: str) -> Started: ...
+
+    async def remaining_seconds(
+        self, cursor: Cursor, *, pending: Pending | None = None
+    ) -> float | None: ...
 
     async def request(
         self,
@@ -132,10 +147,46 @@ async def execute(
     allow_model_retries: bool = False,
 ) -> RuntimeState:
     """Execute from the store's validated start/resume boundary; never replay intent."""
+    try:
+        return await _execute(
+            run_id,
+            task,
+            provider_name=provider_name,
+            provider=provider,
+            store=store,
+            tools=tools,
+            tool_policy=tool_policy,
+            allow_model_retries=allow_model_retries,
+        )
+    except ElapsedBudgetExceeded as exc:
+        return exc.state
+
+
+async def _execute(
+    run_id: UUID,
+    task: str,
+    *,
+    provider_name: str,
+    provider: ModelProvider,
+    store: ExecutionStore,
+    tools: ToolRegistry | None = None,
+    tool_policy: ToolPolicy | None = None,
+    allow_model_retries: bool = False,
+) -> RuntimeState:
+    """Execute from the store's validated start/resume boundary; never replay intent."""
     registry = tools if tools is not None else ToolRegistry()
     operator_policy = tool_policy if tool_policy is not None else ToolPolicy()
     started = await store.start(run_id, task, provider_name)
     cursor, config, state = started.cursor, started.config, started.state
+
+    async def remaining(pending: Pending | None = None) -> float | None:
+        if config.max_elapsed_seconds is None:
+            return None
+        return await store.remaining_seconds(
+            pending.cursor if pending is not None else cursor, pending=pending
+        )
+
+    await remaining(started.interrupted)
     if started.interrupted is not None:
         state = state.model_copy(
             update={"steps_used": state.steps_used + 1, "error_code": "execution_interrupted"}
@@ -145,6 +196,7 @@ async def execute(
     if state.retry_source_id is not None and not allow_model_retries:
         raise ValueError("Resuming model retries requires the operator retry grant")
     while True:
+        await remaining()
         if state.steps_used >= config.max_steps:
             state = state.model_copy(update={"error_code": "step_limit_exceeded"})
             await store.exhaust(cursor, state)
@@ -160,14 +212,23 @@ async def execute(
                 tool_name=action.tool_name,
             )
             state = state.model_copy(update={"steps_used": state.steps_used + 1})
+            seconds = await remaining(pending)
             try:
-                observation = await registry.dispatch(
-                    action.tool_name, action.arguments, config.tool_policy, operator_policy
-                )
+                async with asyncio.timeout(seconds):
+                    observation = await registry.dispatch(
+                        action.tool_name, action.arguments, config.tool_policy, operator_policy
+                    )
+            except TimeoutError:
+                await remaining(pending)
+                state = state.model_copy(update={"error_code": ToolErrorCode.TIMEOUT.value})
+                await store.complete(pending, state, error_code=ToolErrorCode.TIMEOUT.value)
+                return state
             except ToolError as exc:
+                await remaining(pending)
                 state = state.model_copy(update={"error_code": exc.code.value})
                 await store.complete(pending, state, error_code=exc.code.value)
                 return state
+            await remaining(pending)
             state = state.model_copy(
                 update={
                     "messages": (
@@ -194,10 +255,16 @@ async def execute(
             cursor, kind="model", payload=request.model_dump(mode="json"), config=config
         )
         state = state.model_copy(update={"steps_used": state.steps_used + 1})
+        seconds = await remaining(pending)
+        timeout = (
+            min(request.timeout_seconds, seconds)
+            if seconds is not None
+            else request.timeout_seconds
+        )
         failure: str | None = None
         retryable = False
         try:
-            async with asyncio.timeout(request.timeout_seconds):
+            async with asyncio.timeout(timeout):
                 response = await provider.generate(request)
             model_action = validate_response(request, response)
         except ProviderError as exc:
@@ -208,11 +275,12 @@ async def execute(
         except Exception:
             # Only the provider/response boundary is normalized; storage errors propagate.
             failure = ProviderErrorCode.UNAVAILABLE.value
+        await remaining(pending)
         if failure is not None:
             if (
                 retryable
                 and allow_model_retries
-                and config.schema_version == 3
+                and config.schema_version >= 3
                 and state.retries_scheduled < config.model_retry.max_retries
                 and state.steps_used < config.max_steps
             ):

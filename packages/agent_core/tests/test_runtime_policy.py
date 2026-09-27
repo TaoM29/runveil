@@ -1,3 +1,5 @@
+import json
+
 import pytest
 from pydantic import ValidationError
 from runveil_core.runtime import ModelRetryPolicy, RuntimeConfig
@@ -20,3 +22,17 @@ def test_retry_policy_bounds_and_explicit_configuration_version() -> None:
         '{"schema_version":2,"provider":"scripted","model":"fixture","system_prompt":"Public"}'
     )
     assert legacy.model_retry.max_retries == 0
+
+
+def test_elapsed_budget_requires_version_and_bounded_limit() -> None:
+    base = {"provider": "scripted", "model": "fixture", "system_prompt": "Public"}
+    for version, limit in ((4, None), (3, 30), (4, 0), (4, 86401), (4, True)):
+        with pytest.raises(ValidationError):
+            RuntimeConfig.model_validate_json(
+                json.dumps(base | {"schema_version": version, "max_elapsed_seconds": limit})
+            )
+    for limit in (1, 86400):
+        config = RuntimeConfig.model_validate_json(
+            json.dumps(base | {"schema_version": 4, "max_elapsed_seconds": limit})
+        )
+        assert config.max_elapsed_seconds == limit
