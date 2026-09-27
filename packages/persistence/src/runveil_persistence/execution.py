@@ -73,7 +73,10 @@ class PostgresExecutionStore:
         payload: dict[str, JsonValue],
         config: RuntimeConfig,
         model_invocation_id: UUID | None = None,
+        tool_name: str | None = None,
     ) -> Pending:
+        if (kind == "tool") != (tool_name is not None):
+            raise ValueError("Only tool requests require a tool name")
         async with self.sessions.begin() as session:
             invocations = InvocationRepository(session)
             record_id = uuid4()
@@ -89,10 +92,11 @@ class PostgresExecutionStore:
                 )
                 sequence = model.requested_event_sequence
             else:
+                assert tool_name is not None
                 tool = await invocations.request_tool(
                     cursor.run_id,
                     tool_call_id=record_id,
-                    tool_name="fixture.info",
+                    tool_name=tool_name,
                     arguments=payload,
                     model_invocation_id=model_invocation_id,
                     expected_revision=cursor.revision,
