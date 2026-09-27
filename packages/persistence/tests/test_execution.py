@@ -1,5 +1,6 @@
 import asyncio
 import json
+from pathlib import Path
 from uuid import UUID
 
 import pytest
@@ -24,6 +25,7 @@ from runveil_persistence.execution import PostgresExecutionStore, load_runtime_s
 from runveil_persistence.history import HistoryRepository
 from runveil_persistence.invocations import InvocationRepository
 from runveil_persistence.repositories import AgentRepository, RunRepository
+from runveil_tools.repository import RepositoryAccess, RepositoryTools
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
 
@@ -442,3 +444,79 @@ async def test_registered_tool_commits_intent_and_atomic_outcome(
             assert record.result is None and len(provider.requests) == 1
             events = await HistoryRepository(session).events(run_id)
             assert any(e.kind == "tool.failed" for e in events)
+
+
+@pytest.mark.parametrize("denied", [False, True])
+async def test_repository_search_read_persisted_boundary(
+    database: AsyncEngine, tmp_path: Path, denied: bool
+) -> None:
+    (tmp_path / "public.txt").write_text("Runveil public fixture\n", encoding="utf-8")
+    (tmp_path / "private.txt").write_text("not-disclosed-sentinel", encoding="utf-8")
+    policy = ToolPolicy(
+        allowed_tools=("repository.search", "repository.read_file"), permissions=(Permission.READ,)
+    )
+    run_id = await seed_run(database, tool_policy=policy.model_dump(mode="json"), max_steps=5)
+    search = response(tool=True).model_copy(
+        update={
+            "content": json.dumps(
+                {
+                    "action": "tool_call",
+                    "tool_name": "repository.search",
+                    "arguments": {"query": "Runveil"},
+                    "decision_summary": "Locate public source.",
+                }
+            )
+        }
+    )
+    read = response(tool=True).model_copy(
+        update={
+            "content": json.dumps(
+                {
+                    "action": "tool_call",
+                    "tool_name": "repository.read_file",
+                    "arguments": {"path": "private.txt" if denied else "public.txt"},
+                    "decision_summary": "Inspect the file.",
+                }
+            )
+        }
+    )
+    provider = ScriptedProvider([search, read, response()])
+    sessions = async_sessionmaker(database)
+    with RepositoryTools(tmp_path, access=RepositoryAccess(files=("public.txt",))) as repository:
+        state = await execute(
+            run_id,
+            "Inspect the public fixture.",
+            provider_name="scripted",
+            provider=provider,
+            store=PostgresExecutionStore(sessions),
+            tools=ToolRegistry(repository.bindings()),
+            tool_policy=policy,
+        )
+    async with sessions.begin() as session:
+        assert await load_runtime_state(session, run_id) == state
+        assert (await RunRepository(session).get(run_id)).status == (
+            RunStatus.FAILED if denied else RunStatus.SUCCEEDED
+        )
+        events = await HistoryRepository(session).events(run_id)
+        tool_ids = [UUID(str(e.payload["record_id"])) for e in events if e.kind == "tool.requested"]
+        records = [await InvocationRepository(session).get_tool(run_id, id) for id in tool_ids]
+        assert [r.tool_name for r in records] == ["repository.search", "repository.read_file"]
+        assert all(r.model_invocation_id is not None for r in records)
+        assert records[0].result == {
+            "matches": [{"path": "public.txt", "line": 1, "excerpt": "Runveil public fixture"}],
+            "truncated": False,
+            "files_scanned": 1,
+        }
+        if denied:
+            assert state.error_code == records[1].error_code == "tool_permission_denied"
+            assert records[1].result is None and len(provider.requests) == 2
+        else:
+            assert state.final_result is not None and state.steps_used == 5
+            assert records[1].result == {
+                "path": "public.txt",
+                "content": "Runveil public fixture\n",
+                "next_offset": None,
+            }
+            assert json.loads(provider.requests[2].messages[-1].content) == records[1].result
+        evidence = json.dumps([r.result for r in records]) + state.model_dump_json()
+        assert "not-disclosed-sentinel" not in evidence and str(tmp_path) not in evidence
