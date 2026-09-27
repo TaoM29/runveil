@@ -1,6 +1,8 @@
 """Short committed runtime boundaries backed by the existing repositories."""
 
 import json
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 from typing import Literal
 from uuid import UUID, uuid4
@@ -10,11 +12,18 @@ from runveil_core.agents import JsonValue
 from runveil_core.errors import InvalidTransition
 from runveil_core.models import Message, ModelRequest, ModelResponse, validate_response
 from runveil_core.runs import RunStatus
-from runveil_core.runtime import Cursor, Pending, RuntimeConfig, RuntimeState, Started
+from runveil_core.runtime import (
+    Cursor,
+    ElapsedBudgetExceeded,
+    Pending,
+    RuntimeConfig,
+    RuntimeState,
+    Started,
+)
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from runveil_persistence.history import HistoryRepository
+from runveil_persistence.history import HistoryRepository, lock_running_run
 from runveil_persistence.invocations import InvocationRepository
 from runveil_persistence.jobs import Claim, database_now, fence
 from runveil_persistence.models import EventRow, JobRow, ModelInvocationRow, ToolCallRow
@@ -32,6 +41,92 @@ class PostgresExecutionStore:
         self.sessions = sessions
         self.claim = claim
         self.expected_config = expected_config
+
+    @asynccontextmanager
+    async def _boundary(
+        self, cursor: Cursor, *, pending: Pending | None = None
+    ) -> AsyncIterator[tuple[AsyncSession, float | None]]:
+        expired_state: RuntimeState | None = None
+        async with self.sessions.begin() as session:
+            await fence(session, cursor.run_id, self.claim)
+            await lock_running_run(
+                session,
+                cursor.run_id,
+                expected_revision=cursor.revision,
+                expected_sequence=cursor.sequence,
+            )
+            if pending is not None and pending.cursor != cursor:
+                raise ValueError("Pending invocation cursor does not match")
+            job = await session.get(JobRow, cursor.run_id)
+            seconds = (
+                (job.deadline_at - await database_now(session)).total_seconds()
+                if job is not None and job.deadline_at is not None
+                else None
+            )
+            if seconds is not None and seconds <= 0:
+                expired_state = await self._expire(session, cursor, pending)
+            else:
+                yield session, seconds
+        # Raising within the transaction would roll back the terminal evidence.
+        if expired_state is not None:
+            raise ElapsedBudgetExceeded(expired_state)
+
+    async def remaining_seconds(
+        self, cursor: Cursor, *, pending: Pending | None = None
+    ) -> float | None:
+        async with self._boundary(cursor, pending=pending) as (_, seconds):
+            return seconds
+
+    async def _expire(
+        self, session: AsyncSession, cursor: Cursor, pending: Pending | None
+    ) -> RuntimeState:
+        previous = await load_runtime_state(session, cursor.run_id)
+        if previous is None:
+            raise ValueError("Elapsed expiry requires a runtime checkpoint")
+        state = previous.model_copy(
+            update={
+                "error_code": "elapsed_time_exceeded",
+                "final_result": None,
+                "steps_used": previous.steps_used + int(pending is not None),
+            }
+        )
+        if pending is not None:
+            invocations = InvocationRepository(session)
+            complete = (
+                invocations.complete_model if pending.kind == "model" else invocations.complete_tool
+            )
+            await complete(
+                cursor.run_id,
+                pending.id,
+                state=state.model_dump(mode="json"),
+                error_code="elapsed_time_exceeded",
+                expected_revision=cursor.revision,
+                expected_sequence=cursor.sequence,
+            )
+        else:
+            await HistoryRepository(session).record_step(
+                cursor.run_id,
+                kind="runtime.elapsed_time_exceeded",
+                details={},
+                state=state.model_dump(mode="json"),
+                expected_revision=cursor.revision,
+                expected_sequence=cursor.sequence,
+            )
+        event = EventRow(
+            run_id=cursor.run_id,
+            kind="budget.exceeded",
+            run_revision=cursor.revision,
+            payload={"budget": "elapsed_time", "error_code": "elapsed_time_exceeded"},
+        )
+        session.add(event)
+        await session.flush()
+        await RunRepository(session).transition(
+            cursor.run_id,
+            RunStatus.FAILED,
+            expected_revision=cursor.revision,
+            expected_sequence=event.sequence,
+        )
+        return state
 
     async def start(self, run_id: UUID, task: str, provider: str) -> Started:
         async with self.sessions.begin() as session:
@@ -60,8 +155,18 @@ class PostgresExecutionStore:
                 raise ValueError("Provider binding does not match the pinned configuration")
             if self.expected_config is not None and config != self.expected_config:
                 raise ValueError("Runtime configuration does not match worker profile")
-            if config.model_retry.max_retries and self.claim is None:
-                raise ValueError("Durable model retries require a worker claim")
+            if (
+                config.model_retry.max_retries or config.max_elapsed_seconds
+            ) and self.claim is None:
+                raise ValueError("Durable retries and elapsed budgets require a worker claim")
+            job = await session.get(JobRow, run_id)
+            expected_deadline = (
+                run.started_at + timedelta(seconds=config.max_elapsed_seconds)
+                if run.started_at is not None and config.max_elapsed_seconds is not None
+                else None
+            )
+            if job is not None and job.deadline_at != expected_deadline:
+                raise ValueError("Job deadline does not match the pinned run budget")
             if run.status in (RunStatus.RUNNING, RunStatus.RETRYING):
                 return await self._resume(
                     session, run_id, run.revision, config, retrying=run.status == RunStatus.RETRYING
@@ -75,6 +180,12 @@ class PostgresExecutionStore:
                 expected_revision=run.revision,
                 expected_sequence=sequence or 0,
             )
+            details: dict[str, JsonValue] = {}
+            if config.max_elapsed_seconds is not None:
+                assert job is not None and run.started_at is not None
+                job.deadline_at = run.started_at + timedelta(seconds=config.max_elapsed_seconds)
+                details["deadline_at"] = job.deadline_at.isoformat()
+                await session.flush()
             # The transition holds the run lock; its lifecycle event is now the tail.
             sequence = await session.scalar(
                 select(func.max(EventRow.sequence)).where(EventRow.run_id == run_id)
@@ -82,7 +193,7 @@ class PostgresExecutionStore:
             checkpoint = await HistoryRepository(session).record_step(
                 run_id,
                 kind="runtime.started",
-                details={},
+                details=details,
                 state=state.model_dump(mode="json"),
                 expected_revision=run.revision,
                 expected_sequence=sequence or 0,
@@ -195,7 +306,7 @@ class PostgresExecutionStore:
                 run_id, after_sequence=checkpoint.event_sequence, limit=3
             )
             if (
-                state.schema_version != 3
+                state.schema_version < 3
                 or state.retry_source_id is None
                 or job is None
                 or len(tail) != 2
@@ -209,7 +320,10 @@ class PostgresExecutionStore:
                 or tail[1].payload.get("status") != "RETRYING"
                 or datetime.fromisoformat(str(tail[0].payload.get("available_at")))
                 != job.available_at
-                or job.available_at > await database_now(session)
+                or (
+                    job.available_at > await database_now(session)
+                    and (job.deadline_at is None or job.deadline_at > await database_now(session))
+                )
             ):
                 raise ValueError("Retry schedule is inconsistent or not yet due")
             run = await RunRepository(session).transition(
@@ -243,8 +357,7 @@ class PostgresExecutionStore:
     ) -> Pending:
         if (kind == "tool") != (tool_name is not None):
             raise ValueError("Only tool requests require a tool name")
-        async with self.sessions.begin() as session:
-            await fence(session, cursor.run_id, self.claim)
+        async with self._boundary(cursor) as (session, _):
             invocations = InvocationRepository(session)
             record_id = uuid4()
             if kind == "model":
@@ -283,8 +396,7 @@ class PostgresExecutionStore:
         error_code: str | None = None,
     ) -> Cursor:
         cursor = pending.cursor
-        async with self.sessions.begin() as session:
-            await fence(session, cursor.run_id, self.claim)
+        async with self._boundary(cursor, pending=pending) as (session, _):
             invocations = InvocationRepository(session)
             complete = (
                 invocations.complete_model if pending.kind == "model" else invocations.complete_tool
@@ -314,15 +426,14 @@ class PostgresExecutionStore:
         self, pending: Pending, state: RuntimeState, *, error_code: str
     ) -> None:
         cursor = pending.cursor
-        async with self.sessions.begin() as session:
-            await fence(session, cursor.run_id, self.claim)
+        async with self._boundary(cursor, pending=pending) as (session, _):
             run = await RunRepository(session).get(cursor.run_id)
             version = await AgentRepository(session).get_version(run.agent_version_id)
             config = RuntimeConfig.model_validate_json(version.configuration_json)
             previous = await load_runtime_state(session, cursor.run_id)
             if (
                 self.claim is None
-                or config.schema_version != 3
+                or config.schema_version < 3
                 or pending.kind != "model"
                 or error_code != "provider_rate_limited"
                 or previous is None
@@ -375,8 +486,7 @@ class PostgresExecutionStore:
             await session.flush()
 
     async def exhaust(self, cursor: Cursor, state: RuntimeState) -> None:
-        async with self.sessions.begin() as session:
-            await fence(session, cursor.run_id, self.claim)
+        async with self._boundary(cursor) as (session, _):
             checkpoint = await HistoryRepository(session).record_step(
                 cursor.run_id,
                 kind="runtime.step_limit_exceeded",

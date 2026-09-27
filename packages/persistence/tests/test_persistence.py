@@ -50,6 +50,9 @@ async def test_migration_round_trip_and_metadata(empty_database: AsyncEngine) ->
             {"id": enrolled_run.id},
         )
     async with empty_database.begin() as connection:
+        await connection.run_sync(lambda conn: command.upgrade(migration_config(conn), "0005"))
+        original_eligibility = await connection.scalar(text("SELECT available_at FROM worker_jobs"))
+    async with empty_database.begin() as connection:
         await connection.run_sync(lambda conn: command.upgrade(migration_config(conn), "head"))
         await connection.run_sync(lambda conn: command.check(migration_config(conn)))
         tables = await connection.run_sync(lambda conn: inspect(conn).get_table_names())
@@ -67,10 +70,15 @@ async def test_migration_round_trip_and_metadata(empty_database: AsyncEngine) ->
         }
         assert await connection.scalar(text("SELECT count(*) FROM worker_jobs")) == 1
         assert (
+            await connection.scalar(text("SELECT available_at FROM worker_jobs"))
+            == original_eligibility
+        )
+        assert (
             await connection.scalar(
                 text(
                     "SELECT available_at <= clock_timestamp() AND task='Public task' "
-                    "AND profile='fixture-v1' AND token IS NULL FROM worker_jobs WHERE run_id=:id"
+                    "AND profile='fixture-v1' AND token IS NULL AND deadline_at IS NULL "
+                    "FROM worker_jobs WHERE run_id=:id"
                 ),
                 {"id": enrolled_run.id},
             )
