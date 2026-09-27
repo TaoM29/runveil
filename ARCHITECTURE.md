@@ -1,6 +1,6 @@
 # Architecture
 
-## Implemented through Phase 4A
+## Implemented through Phase 4B
 
 ```mermaid
 flowchart LR
@@ -18,6 +18,8 @@ flowchart LR
     Store --> Persistence
     Runtime --> Tools[Typed registry and explicit grants]
     Tools --> Fixture[Registered read-only fixture tool]
+    Tools --> Repository[Native repository read/search adapter]
+    Repository --> Checkout[Operator-selected local root and exact file allowlist]
 ```
 
 Both applications expose `GET /health` with a typed/structured service identity.
@@ -152,6 +154,17 @@ selected name and existing atomic outcome/event/checkpoint boundaries. The fixtu
 is the sole built-in tool. No migration, dependency or package is added. See
 [ADR 0009](docs/adr/0009-typed-tool-dispatch.md). Repository tools and filesystem
 boundaries remain Phase 4B; trusted in-process handlers are not sandboxed.
+
+Phase 4B adds `runveil_tools` as a real adapter package, depending on core. The
+operator supplies a root and exact file allowlist; model arguments cannot broaden
+it. Descriptor-relative reads refuse symlinks, hard links, special files and
+cross-device paths. File/scan/response limits bound UTF-8 reads and literal search;
+I/O runs in threads with explicit descriptor ownership. Safe native resource errors
+pass through the existing atomic failed-outcome path. No migration or configuration
+schema change is needed. See [ADR 0010](docs/adr/0010-repository-read-tools.md) and
+[repository operations](docs/operations/REPOSITORY_TOOLS.md). Live reads are not
+revision-pinned snapshots or process isolation; cancellation stops waiting but
+cannot kill a filesystem syscall.
 
 Queue consistency, approvals and sandbox boundaries still require future ADRs and
 tests; the target diagram does not claim those properties exist.
