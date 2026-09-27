@@ -11,7 +11,7 @@ commit or push is authorized.
 | 2     | Provider protocol, scripted and hosted providers          | Implemented; hosted acceptance complete   |
 | 3     | Minimal persisted execution loop                          | Implemented; continued by Phase 4 request |
 | 4     | Typed tools and authorization                             | Implemented through Phase 4B              |
-| 5     | Durable worker, retries, idempotency and budgets          | 5A implemented; awaiting review           |
+| 5     | Durable worker, retries, idempotency and budgets          | 5B implemented; awaiting review           |
 | 6     | Human approval and controlled mutations                   | Planned                                   |
 | 7     | Telemetry and trace UI                                    | Planned                                   |
 | 8     | Deterministic evaluation harness                          | Planned                                   |
@@ -87,18 +87,26 @@ commit or push is authorized.
 
 ## Phase 5 review gates
 
-- **5A — Implemented; awaiting review:** PostgreSQL work enrollment and polling,
+- **5A — Implemented; Phase 5B continuation authorized:** PostgreSQL work enrollment and polling,
   leased claims and transactional stale-worker fences, version-2 checkpoint resume,
   conservative failure of uncertain in-flight invocations, and duplicate delivery
   safety for a fixed scripted/fixture profile. See [ADR 0011](docs/adr/0011-durable-fixture-worker.md),
   [worker operations](docs/operations/WORKER.md) and [handoff](docs/operations/PHASE_5A.md).
   No general retries, broker, repository replay or expanded budgets are claimed.
+- **5B — Implemented; awaiting review:** bounded model retries for the opt-in
+  `fixture-retry-v1` profile, atomic failed-attempt/schedule/RETRYING boundaries,
+  database-clock backoff, new invocation provenance, due-time recovery and run-wide
+  retry/step accounting. Existing profiles retain their behavior. See
+  [ADR 0012](docs/adr/0012-persisted-model-retries.md), [operations](docs/operations/WORKER.md)
+  and [handoff](docs/operations/PHASE_5B.md). Unknown/uncertain failures are not retried;
+  hosted replay, tool retries and broader budgets remain deferred.
 
 ## Recommended next slice
 
-Review Phase 5A, then implement bounded, persisted model retry attempts for a
-versioned offline worker profile: classify safe retryable failures, store attempt
-counts and next eligibility time, apply bounded backoff and preserve step accounting
-across restart. Keep uncertain dispatch conservative until provider idempotency is
-explicitly supported. Broader budgets and workspace identity remain subsequent
-Phase 5 work; mutations, approvals and MCP stay in their planned phases.
+Review Phase 5B, then add a durable elapsed-time budget spanning execution, retry
+waits and worker restarts. Persist the deadline and stop expired runs before new
+external dispatch; verify interaction with claims, cancellation and backoff.
+Token/cost accounting needs explicit unknown-usage semantics in a subsequent slice.
+Repository recovery still requires workspace and implementation identity; hosted
+retry requires provider idempotency/safety policy. Mutations, approvals and MCP
+stay in their planned phases.

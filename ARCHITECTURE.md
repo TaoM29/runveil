@@ -1,6 +1,6 @@
 # Architecture
 
-## Implemented through Phase 5A
+## Implemented through Phase 5B
 
 ```mermaid
 flowchart LR
@@ -179,7 +179,16 @@ The context-driven offline provider survives process recreation. Existing runs
 are not adopted; historical checkpoints remain inspectable. See
 [ADR 0011](docs/adr/0011-durable-fixture-worker.md) and [worker operations](docs/operations/WORKER.md).
 
-Broker consistency, automatic retries, additional budgets, approvals and sandbox
+Phase 5B adds a job eligibility timestamp (migration 0005) and an opt-in offline
+`fixture-retry-v1` profile. Configuration/checkpoint version 3 pins retry limits
+and retains retry counts/source IDs. Core classifies known rate-limit failures
+under an explicit operator grant; the store atomically persists the failed attempt,
+backoff schedule, RETRYING transition and lease release. Due work resumes under a
+new claim; retry request events link the prior failure. Unknown/uncertain failures
+remain terminal. Version-2 profiles keep retries disabled. See
+[ADR 0012](docs/adr/0012-persisted-model-retries.md).
+
+Broker consistency, general/hosted retries, additional budgets, approvals and sandbox
 boundaries remain future slices; the target diagram does not claim they exist.
 
 ## Open decisions
