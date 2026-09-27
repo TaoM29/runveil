@@ -63,6 +63,11 @@ step-row count can exceed consumed invocation count. Version-2 configurations ke
 retries disabled. Version 3 adds `model_retry` (`max_retries`, `base_delay_seconds`)
 and requires a worker claim when retries are enabled. The opt-in operator grant
 and durable scheduling rules are documented in [worker operations](WORKER.md).
+Configuration version 4 additionally requires `max_elapsed_seconds` (1–86400)
+and a worker claim. Its immutable deadline starts at first execution and includes
+retry waits/restarts. Expiry yields a persisted `elapsed_time_exceeded` failure;
+see [worker operations](WORKER.md#durable-elapsed-time-budget) for admission,
+timeout and lease limits. Versions 2/3 have no elapsed budget.
 There is no context compaction.
 
 Only explicitly granted registered tools are advertised. The built-in `fixture.info`
@@ -109,7 +114,9 @@ retain normalized requests/responses, safe errors, and tool-to-model provenance.
 runtime schema and returns conversation, consumed steps, final result and error.
 Version-2 snapshots retain the next tool action and source model ID. Version-3
 snapshots additionally retain the run-wide retry count and failed model source ID.
-Version-1 snapshots remain readable for inspection.
+Version-4 snapshots use the same conversation/retry fields with an immutable
+deadline on the worker job; the start step records that deadline. Version-1
+snapshots remain readable for inspection.
 Read lifecycle separately: a terminal checkpoint is recorded at RUNNING revision,
 with the terminal transition immediately after it in the same transaction.
 Malformed or unsupported checkpoint state is rejected, not treated as empty.

@@ -265,3 +265,18 @@ and persist a selected outcome with the current revision/sequence. Validation do
 not authorize tool execution. Neither provider calls nor action parsing are added
 to repository methods. The integration test demonstrates this boundary without
 implementing runtime orchestration.
+
+## Elapsed-budget execution boundaries
+
+Migration 0006 adds an optional immutable `worker_jobs.deadline_at`. Existing jobs
+remain unbudgeted. The execution store initializes the deadline in the first-start
+transaction from immutable configuration and the run's first start timestamp.
+Resume verifies that relationship. Low-level repositories do not enforce elapsed
+policy; use `PostgresExecutionStore` for worker execution.
+
+The store's request/outcome/retry/step-limit boundaries share ownership, history
+and elapsed checks. On expiry, the failed outcome (if pending), checkpoint,
+`budget.exceeded` and FAILED transition commit together. Only after commit does
+`ElapsedBudgetExceeded` carry the persisted state back to the core loop; it must
+not be raised inside the transaction and roll back the evidence. Database errors
+and task cancellation still roll back normally. See [worker operations](WORKER.md).

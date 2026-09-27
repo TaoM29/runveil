@@ -1,8 +1,8 @@
 # Durable fixture worker
 
-Phase 5A introduced `fixture-v1`; Phase 5B adds the opt-in `fixture-retry-v1`
-profile. Both use the built-in public fixture, never repository files, hosted
-models, arbitrary tools or secrets.
+The offline profiles are `fixture-v1`, `fixture-retry-v1` and (Phase 5C)
+`fixture-budget-v1`. All use the built-in public fixture, never repository files,
+hosted models, arbitrary tools or secrets.
 See [ADR 0011](../adr/0011-durable-fixture-worker.md) for ownership and recovery rules.
 
 ## Run locally
@@ -54,7 +54,7 @@ at 240 seconds. Successful operations do not reset the retry count. Both pinned
 configuration and `execute(allow_model_retries=True)` are required; the latter is
 a trusted operator assertion that this provider's explicit rate-limit failure is
 safe to repeat. The grant is checked again before resuming a scheduled retry;
-withdrawing it prevents dispatch. The CLI grants it only to the new offline profile. A hosted HTTP
+withdrawing it prevents dispatch. The CLI grants it only to the retry and budget fixture profiles. A hosted HTTP
 error code alone does not establish safe replay.
 
 Scheduling atomically retains the failed model invocation, checkpoints the count,
@@ -72,6 +72,51 @@ is terminal and no further schedule is created. Every attempt consumes one step.
 A crash before the scheduling transaction commits leaves uncertain intent, which
 still fails as `execution_interrupted`; a crash after commit preserves the schedule.
 Cancellation during backoff prevents further execution. See [ADR 0012](../adr/0012-persisted-model-retries.md).
+
+## Durable elapsed-time budget
+
+After migration 0006, select the budgeted profile explicitly:
+
+```sh
+uv run python -m runveil_worker submit --profile fixture-budget-v1
+uv run python -m runveil_worker work --once --profile fixture-budget-v1
+```
+
+This profile uses the same two known failures and retry delays, with a **30-second
+execution budget**. Repeat `work --once` after the one-/two-second backoffs within
+that budget, or omit `--once` to poll continuously. A normal run succeeds at five
+steps/two retries. `fixture-v1` and `fixture-retry-v1` retain their existing behavior.
+
+Configuration/checkpoint version 4 requires `max_elapsed_seconds` (integer 1–86400).
+The execution store persists `worker_jobs.deadline_at` as the run's first
+`started_at` plus that limit, in the start transaction. Initial queue time does not
+count; every later retry wait, call and process outage does. An assigned deadline
+cannot be changed or cleared. Recovery checks it against pinned configuration and
+the original start time rather than extending it.
+
+The runtime checks database time immediately before dispatch, after each call and
+at every execution-store write boundary. Cooperative calls use the smaller of the
+remaining elapsed duration and their own timeout. Persisted model requests keep
+their original per-call timeout so retry identity remains unchanged.
+
+At or after the deadline, atomically write `elapsed_time_exceeded`, a failed
+checkpoint, `budget.exceeded` and FAILED. A pending invocation receives a failed
+outcome and counts once; no new intent means no additional consumed step. Late
+results are discarded. Expiry takes precedence over step-limit or interrupted-
+intent failure when observed. Existing ownership and history checks take priority:
+an expired budget cannot authorize a stale owner or override cancellation.
+
+An expired retry becomes selectable even before its retry eligibility time. Its
+validated continuation transitions through RUNNING before expiry finalization;
+no new model/tool operation is dispatched. A crash between those transactions is
+recoverable. Polling never steals an active lease, so cleanup after a worker crash
+can wait up to the existing lease expiry. There is no background sweeper.
+
+These are database-clock admission checks and cooperative timeouts, not a hard
+real-time sandbox. A process can pause between a check and dispatch; blocked
+native code or an already-sent remote request cannot be forcibly stopped. Results
+presented to the store after expiry cannot succeed. See
+[ADR 0013](../adr/0013-durable-elapsed-budget.md).
 
 ## Ownership and restart
 
@@ -110,7 +155,7 @@ Database writes are fenced; external execution cannot be made atomic with a clai
 A paused old process may still execute its pure fixture after losing ownership,
 but cannot commit its result. This is not exactly-once execution.
 
-General/hosted retries and token/cost/wall-time budgets are deferred. Existing
+General/hosted retries and token/cost budgets are deferred. Existing
 step limits and cooperative per-call deadlines remain active across recovery.
 Repository and hosted-provider recovery need explicit workspace/implementation
 identity and attempt/idempotency policies before being exposed by a worker.
