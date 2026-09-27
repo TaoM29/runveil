@@ -1,7 +1,9 @@
 # Minimal runtime operations
 
-The Phase 4B runtime executes a new QUEUED run in the calling Python process. It has no HTTP
-endpoint or worker. Migrate PostgreSQL and export `DATABASE_URL` using the README
+The unclaimed embedding executes a new, unenrolled QUEUED run in the calling Python
+process. Phase 5A adds a separate [durable fixture worker](WORKER.md) with leases,
+validated checkpoint resume and conservative interruption failure. There is no
+HTTP execution endpoint. Migrate PostgreSQL and export `DATABASE_URL` using the README
 quickstart, then run:
 
 ```sh
@@ -90,8 +92,9 @@ blocking Python or isolate a handler that ignores cancellation. These classifica
 and grants are an application boundary, not an OS sandbox or authentication system.
 Repository filesystem access uses the separate [native adapter](REPOSITORY_TOOLS.md)
 with an explicit root/file allowlist and bounded reads. Mutation approval remains Phase 6.
-Operator code and implementation bindings are not stored in checkpoints; future
-recovery needs an implementation-version policy before replay.
+Operator code and implementation bindings are not stored in checkpoints. The worker
+therefore admits only a fixed versioned fixture profile; repository recovery still
+needs workspace and implementation identity.
 
 ## Evidence and failure handling
 
@@ -100,6 +103,8 @@ model/tool requested/outcome, checkpoint and lifecycle events. Invocation record
 retain normalized requests/responses, safe errors, and tool-to-model provenance.
 `load_runtime_state(session, run_id)` validates the latest checkpoint's inner
 runtime schema and returns conversation, consumed steps, final result and error.
+New version-2 snapshots also retain the next tool action and source model ID;
+version-1 snapshots remain readable for inspection.
 Read lifecycle separately: a terminal checkpoint is recorded at RUNNING revision,
 with the terminal transition immediately after it in the same transaction.
 Malformed or unsupported checkpoint state is rejected, not treated as empty.
@@ -117,9 +122,11 @@ secrets and hidden reasoning. Persistence is not an arbitrary-content redactor.
 Database failures and stale revision/history conflicts propagate. Do not blindly
 retry `execute`. Task cancellation propagates and can leave RUNNING/REQUESTED
 records. Another actor may cancel a run during generation; its late result cannot
-be committed, although the remote call may have happened or been billed. This
-runtime starts queued runs only: no recovery, replay, leases or exactly-once claim.
-Reconstruction of evidence does not resume work. Phase 5 owns durable recovery.
+be committed, although the remote call may have happened or been billed. The
+unclaimed embedding starts queued runs only. `load_runtime_state` is inspection,
+not recovery. The [worker](WORKER.md) resumes enrolled fixture runs under a live
+claim; uncertain invocations fail without replay. Neither path claims exactly-once
+external execution.
 
 The Phase 2 hosted live acceptance gate was closed by a separate user-reported
 invocation; see [the evidence](PHASE_2B.md#subsequent-hosted-live-acceptance--complete).
