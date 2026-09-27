@@ -257,3 +257,19 @@ class ToolCallRow(InvocationColumns, Base):
     )
     tool_name: Mapped[str] = mapped_column(String(200))
     model_invocation_id: Mapped[UUID | None] = mapped_column()
+
+
+class JobRow(Base):
+    __tablename__ = "worker_jobs"
+    __table_args__ = (
+        CheckConstraint("length(task) BETWEEN 1 AND 16384", name="task_length"),
+        CheckConstraint("length(profile) BETWEEN 1 AND 100", name="profile_length"),
+        CheckConstraint("(token IS NULL) = (expires_at IS NULL)", name="lease_pair"),
+    )
+    run_id: Mapped[UUID] = mapped_column(
+        ForeignKey("runs.id", ondelete="RESTRICT"), primary_key=True
+    )
+    task: Mapped[str] = mapped_column(String(16384))
+    profile: Mapped[str] = mapped_column(String(100))
+    token: Mapped[UUID | None] = mapped_column()
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

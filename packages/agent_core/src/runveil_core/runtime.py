@@ -1,5 +1,7 @@
 """Single-consumer execution; storage owns transactions, core owns decisions."""
 
+from __future__ import annotations
+
 import asyncio
 import json
 from dataclasses import dataclass
@@ -19,6 +21,7 @@ from runveil_core.models import (
     Name,
     ProviderError,
     ProviderErrorCode,
+    ToolAction,
     validate_response,
 )
 from runveil_core.tools import ToolError, ToolPolicy, ToolRegistry
@@ -37,11 +40,13 @@ class RuntimeConfig(Contract):
 
 
 class RuntimeState(Contract):
-    schema_version: Literal[1] = 1
+    schema_version: Literal[1, 2] = 2
     messages: tuple[Message, ...]
     steps_used: Annotated[int, Field(ge=0, le=64)] = 0
     final_result: FinalResult | None = None
     error_code: str | None = None
+    next_tool: ToolAction | None = None
+    source_model_id: UUID | None = None
 
 
 @dataclass(frozen=True)
@@ -56,6 +61,7 @@ class Started:
     cursor: Cursor
     config: RuntimeConfig
     state: RuntimeState
+    interrupted: Pending | None = None
 
 
 @dataclass(frozen=True)
@@ -101,16 +107,55 @@ async def execute(
     tools: ToolRegistry | None = None,
     tool_policy: ToolPolicy | None = None,
 ) -> RuntimeState:
-    """Execute a new queued run once. Never retry, resume or swallow cancellation."""
+    """Execute from the store's validated start/resume boundary; never replay intent."""
     registry = tools if tools is not None else ToolRegistry()
     operator_policy = tool_policy if tool_policy is not None else ToolPolicy()
     started = await store.start(run_id, task, provider_name)
     cursor, config, state = started.cursor, started.config, started.state
+    if started.interrupted is not None:
+        state = state.model_copy(
+            update={"steps_used": state.steps_used + 1, "error_code": "execution_interrupted"}
+        )
+        await store.complete(started.interrupted, state, error_code="execution_interrupted")
+        return state
     while True:
-        if state.steps_used == config.max_steps:
+        if state.steps_used >= config.max_steps:
             state = state.model_copy(update={"error_code": "step_limit_exceeded"})
             await store.exhaust(cursor, state)
             return state
+        if state.next_tool is not None:
+            action = state.next_tool
+            pending = await store.request(
+                cursor,
+                kind="tool",
+                payload=action.arguments,
+                config=config,
+                model_invocation_id=state.source_model_id,
+                tool_name=action.tool_name,
+            )
+            state = state.model_copy(update={"steps_used": state.steps_used + 1})
+            try:
+                observation = await registry.dispatch(
+                    action.tool_name, action.arguments, config.tool_policy, operator_policy
+                )
+            except ToolError as exc:
+                state = state.model_copy(update={"error_code": exc.code.value})
+                await store.complete(pending, state, error_code=exc.code.value)
+                return state
+            state = state.model_copy(
+                update={
+                    "messages": (
+                        *state.messages,
+                        Message(
+                            role="tool", tool_name=action.tool_name, content=json.dumps(observation)
+                        ),
+                    ),
+                    "next_tool": None,
+                    "source_model_id": None,
+                }
+            )
+            cursor = await store.complete(pending, state, result=observation)
+            continue
         request = ModelRequest(
             model=config.model,
             messages=state.messages,
@@ -127,7 +172,7 @@ async def execute(
         try:
             async with asyncio.timeout(request.timeout_seconds):
                 response = await provider.generate(request)
-            action = validate_response(request, response)
+            model_action = validate_response(request, response)
         except ProviderError as exc:
             failure = exc.code.value
         except TimeoutError:
@@ -141,45 +186,14 @@ async def execute(
             return state
         state = state.model_copy(
             update={
-                "messages": (
-                    *state.messages,
-                    Message(role="assistant", content=response.content),
-                ),
-                "final_result": action.result if isinstance(action, FinishAction) else None,
+                "messages": (*state.messages, Message(role="assistant", content=response.content)),
+                "final_result": model_action.result
+                if isinstance(model_action, FinishAction)
+                else None,
+                "next_tool": model_action if isinstance(model_action, ToolAction) else None,
+                "source_model_id": pending.id if isinstance(model_action, ToolAction) else None,
             }
         )
         cursor = await store.complete(pending, state, result=response.model_dump(mode="json"))
-        if isinstance(action, FinishAction):
+        if isinstance(model_action, FinishAction):
             return state
-        if state.steps_used == config.max_steps:
-            state = state.model_copy(update={"error_code": "step_limit_exceeded"})
-            await store.exhaust(cursor, state)
-            return state
-        pending = await store.request(
-            cursor,
-            kind="tool",
-            payload=action.arguments,
-            config=config,
-            model_invocation_id=pending.id,
-            tool_name=action.tool_name,
-        )
-        state = state.model_copy(update={"steps_used": state.steps_used + 1})
-        try:
-            observation = await registry.dispatch(
-                action.tool_name, action.arguments, config.tool_policy, operator_policy
-            )
-        except ToolError as exc:
-            state = state.model_copy(update={"error_code": exc.code.value})
-            await store.complete(pending, state, error_code=exc.code.value)
-            return state
-        state = state.model_copy(
-            update={
-                "messages": (
-                    *state.messages,
-                    Message(
-                        role="tool", tool_name=action.tool_name, content=json.dumps(observation)
-                    ),
-                )
-            }
-        )
-        cursor = await store.complete(pending, state, result=observation)

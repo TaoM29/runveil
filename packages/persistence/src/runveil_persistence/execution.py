@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 from pydantic import ValidationError
 from runveil_core.agents import JsonValue
 from runveil_core.errors import InvalidTransition
-from runveil_core.models import Message
+from runveil_core.models import Message, ModelRequest, ModelResponse, validate_response
 from runveil_core.runs import RunStatus
 from runveil_core.runtime import Cursor, Pending, RuntimeConfig, RuntimeState, Started
 from sqlalchemy import func, select
@@ -15,20 +15,34 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from runveil_persistence.history import HistoryRepository
 from runveil_persistence.invocations import InvocationRepository
-from runveil_persistence.models import EventRow
+from runveil_persistence.jobs import Claim, fence
+from runveil_persistence.models import EventRow, ModelInvocationRow, ToolCallRow
 from runveil_persistence.repositories import AgentRepository, RunRepository
 
 
 class PostgresExecutionStore:
-    def __init__(self, sessions: async_sessionmaker[AsyncSession]) -> None:
+    def __init__(
+        self,
+        sessions: async_sessionmaker[AsyncSession],
+        *,
+        claim: Claim | None = None,
+        expected_config: RuntimeConfig | None = None,
+    ) -> None:
         self.sessions = sessions
+        self.claim = claim
+        self.expected_config = expected_config
 
     async def start(self, run_id: UUID, task: str, provider: str) -> Started:
         async with self.sessions.begin() as session:
+            await fence(session, run_id, self.claim)
             runs = RunRepository(session)
             run = await runs.get(run_id)
-            if run.status != RunStatus.QUEUED:
-                raise InvalidTransition("Execution requires a queued run; resume is unsupported")
+            if run.status != RunStatus.QUEUED and not (
+                self.claim is not None and run.status == RunStatus.RUNNING
+            ):
+                raise InvalidTransition("Execution requires a queued run or claimed recovery")
+            if self.claim is not None and task != self.claim.task:
+                raise ValueError("Task does not match enrollment")
             version = await AgentRepository(session).get_version(run.agent_version_id)
             try:
                 config = RuntimeConfig.model_validate_json(version.configuration_json)
@@ -42,6 +56,10 @@ class PostgresExecutionStore:
                 raise ValueError("Invalid runtime configuration or task") from None
             if config.provider != provider:
                 raise ValueError("Provider binding does not match the pinned configuration")
+            if self.expected_config is not None and config != self.expected_config:
+                raise ValueError("Runtime configuration does not match worker profile")
+            if run.status == RunStatus.RUNNING:
+                return await self._resume(session, run_id, run.revision, config)
             sequence = await session.scalar(
                 select(func.max(EventRow.sequence)).where(EventRow.run_id == run_id)
             )
@@ -65,6 +83,80 @@ class PostgresExecutionStore:
             )
             return Started(Cursor(run_id, run.revision, checkpoint.event_sequence), config, state)
 
+    async def _resume(
+        self, session: AsyncSession, run_id: UUID, revision: int, config: RuntimeConfig
+    ) -> Started:
+        checkpoint = await HistoryRepository(session).latest_checkpoint(run_id)
+        if checkpoint is None or checkpoint.run_revision != revision:
+            raise ValueError("Recovery requires a checkpoint at the current revision")
+        state = RuntimeState.model_validate_json(json.dumps(checkpoint.state))
+        if (
+            state.schema_version != 2
+            or state.final_result is not None
+            or state.error_code is not None
+            or state.steps_used > config.max_steps
+            or (state.next_tool is None) != (state.source_model_id is None)
+        ):
+            raise ValueError("Checkpoint is not resumable")
+        if state.next_tool is not None:
+            source = await session.get(ModelInvocationRow, state.source_model_id)
+            if (
+                source is None
+                or source.run_id != run_id
+                or source.status != "SUCCEEDED"
+                or source.result is None
+                or source.step_number != checkpoint.step_number
+            ):
+                raise ValueError("Invalid checkpoint tool provenance")
+            action = validate_response(
+                ModelRequest.model_validate_json(json.dumps(source.request)),
+                ModelResponse.model_validate_json(json.dumps(source.result)),
+            )
+            if action != state.next_tool:
+                raise ValueError("Checkpoint action differs from its committed model outcome")
+        sequence = await session.scalar(
+            select(func.max(EventRow.sequence)).where(EventRow.run_id == run_id)
+        )
+        cursor = Cursor(run_id, revision, sequence or 0)
+        outstanding: list[Pending] = []
+        completed_count = 0
+        tables: tuple[
+            tuple[type[ModelInvocationRow] | type[ToolCallRow], Literal["model", "tool"]], ...
+        ] = (
+            (ModelInvocationRow, "model"),
+            (ToolCallRow, "tool"),
+        )
+        for table, kind in tables:
+            completed_count += (
+                await session.scalar(
+                    select(func.count())
+                    .select_from(table)
+                    .where(table.run_id == run_id, table.status != "REQUESTED")
+                )
+                or 0
+            )
+            records = await session.scalars(
+                select(table).where(table.run_id == run_id, table.status == "REQUESTED").limit(2)
+            )
+            for record in records:
+                assert isinstance(record, (ModelInvocationRow, ToolCallRow))
+                if record.requested_event_sequence != checkpoint.event_sequence + 1:
+                    raise ValueError("Unexpected history after checkpoint")
+                outstanding.append(Pending(cursor, record.id, kind))
+        if completed_count != state.steps_used:
+            raise ValueError("Checkpoint invocation count differs from history")
+        if outstanding:
+            if (
+                len(outstanding) != 1
+                or cursor.sequence != checkpoint.event_sequence + 1
+                or state.steps_used >= config.max_steps
+            ):
+                raise ValueError("Ambiguous interrupted execution history")
+            return Started(cursor, config, state, outstanding[0])
+        if cursor.sequence != checkpoint.event_sequence:
+            raise ValueError("Unexpected history after checkpoint")
+        return Started(cursor, config, state)
+
     async def request(
         self,
         cursor: Cursor,
@@ -78,6 +170,7 @@ class PostgresExecutionStore:
         if (kind == "tool") != (tool_name is not None):
             raise ValueError("Only tool requests require a tool name")
         async with self.sessions.begin() as session:
+            await fence(session, cursor.run_id, self.claim)
             invocations = InvocationRepository(session)
             record_id = uuid4()
             if kind == "model":
@@ -115,6 +208,7 @@ class PostgresExecutionStore:
     ) -> Cursor:
         cursor = pending.cursor
         async with self.sessions.begin() as session:
+            await fence(session, cursor.run_id, self.claim)
             invocations = InvocationRepository(session)
             complete = (
                 invocations.complete_model if pending.kind == "model" else invocations.complete_tool
@@ -142,6 +236,7 @@ class PostgresExecutionStore:
 
     async def exhaust(self, cursor: Cursor, state: RuntimeState) -> None:
         async with self.sessions.begin() as session:
+            await fence(session, cursor.run_id, self.claim)
             checkpoint = await HistoryRepository(session).record_step(
                 cursor.run_id,
                 kind="runtime.step_limit_exceeded",
