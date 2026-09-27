@@ -276,3 +276,4 @@ class JobRow(Base):
     available_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+    deadline_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

@@ -60,7 +60,7 @@ async def claim_next(
             .join(JobRow, JobRow.run_id == RunRow.id)
             .where(
                 RunRow.status.in_(("QUEUED", "RUNNING", "RETRYING")),
-                JobRow.available_at <= now,
+                or_(JobRow.available_at <= now, JobRow.deadline_at <= now),
                 JobRow.profile == profile,
                 or_(JobRow.token.is_(None), JobRow.expires_at <= now),
             )
@@ -77,7 +77,10 @@ async def claim_next(
         assert job is not None
         now = await database_now(session)
         # Recheck after acquiring locks: another claimant may just have renewed.
-        if job.available_at > now or (job.expires_at is not None and job.expires_at > now):
+        expired = job.deadline_at is not None and job.deadline_at <= now
+        if (job.available_at > now and not expired) or (
+            job.expires_at is not None and job.expires_at > now
+        ):
             return None
         job.token = uuid4()
         job.expires_at = now + timedelta(seconds=LEASE_SECONDS)
