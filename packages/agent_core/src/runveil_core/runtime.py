@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import Annotated, Literal, Protocol
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from runveil_core.agents import JsonValue
 from runveil_core.models import (
@@ -27,8 +27,19 @@ from runveil_core.models import (
 from runveil_core.tools import ToolError, ToolPolicy, ToolRegistry
 
 
+class ModelRetryPolicy(Contract):
+    max_retries: Annotated[int, Field(ge=0, le=3)] = 0
+    base_delay_seconds: Annotated[int, Field(ge=1, le=60)] = 1
+
+    def delay(self, retry_count: int) -> int:
+        if not 1 <= retry_count <= self.max_retries:
+            raise ValueError("Retry count is outside the configured limit")
+        return self.base_delay_seconds * (1 << (retry_count - 1))
+
+
 class RuntimeConfig(Contract):
-    schema_version: Literal[2] = 2
+    schema_version: Literal[2, 3] = 2
+    model_retry: ModelRetryPolicy = Field(default_factory=ModelRetryPolicy)
     tool_policy: ToolPolicy = Field(default_factory=ToolPolicy)
     provider: Name
     model: Name
@@ -38,9 +49,17 @@ class RuntimeConfig(Contract):
     max_output_tokens: Annotated[int, Field(gt=0, le=65536)] = 1024
     timeout_seconds: Annotated[float, Field(gt=0, le=600)] = 60.0
 
+    @model_validator(mode="after")
+    def versioned_retry_policy(self) -> RuntimeConfig:
+        if self.schema_version == 2 and self.model_retry != ModelRetryPolicy():
+            raise ValueError("Model retry policy requires configuration version 3")
+        return self
+
 
 class RuntimeState(Contract):
-    schema_version: Literal[1, 2] = 2
+    schema_version: Literal[1, 2, 3] = 2
+    retries_scheduled: Annotated[int, Field(ge=0, le=3)] = 0
+    retry_source_id: UUID | None = None
     messages: tuple[Message, ...]
     steps_used: Annotated[int, Field(ge=0, le=64)] = 0
     final_result: FinalResult | None = None
@@ -96,6 +115,10 @@ class ExecutionStore(Protocol):
 
     async def exhaust(self, cursor: Cursor, state: RuntimeState) -> None: ...
 
+    async def schedule_retry(
+        self, pending: Pending, state: RuntimeState, *, error_code: str
+    ) -> None: ...
+
 
 async def execute(
     run_id: UUID,
@@ -106,6 +129,7 @@ async def execute(
     store: ExecutionStore,
     tools: ToolRegistry | None = None,
     tool_policy: ToolPolicy | None = None,
+    allow_model_retries: bool = False,
 ) -> RuntimeState:
     """Execute from the store's validated start/resume boundary; never replay intent."""
     registry = tools if tools is not None else ToolRegistry()
@@ -118,6 +142,8 @@ async def execute(
         )
         await store.complete(started.interrupted, state, error_code="execution_interrupted")
         return state
+    if state.retry_source_id is not None and not allow_model_retries:
+        raise ValueError("Resuming model retries requires the operator retry grant")
     while True:
         if state.steps_used >= config.max_steps:
             state = state.model_copy(update={"error_code": "step_limit_exceeded"})
@@ -169,18 +195,35 @@ async def execute(
         )
         state = state.model_copy(update={"steps_used": state.steps_used + 1})
         failure: str | None = None
+        retryable = False
         try:
             async with asyncio.timeout(request.timeout_seconds):
                 response = await provider.generate(request)
             model_action = validate_response(request, response)
         except ProviderError as exc:
             failure = exc.code.value
+            retryable = exc.code == ProviderErrorCode.RATE_LIMITED
         except TimeoutError:
             failure = ProviderErrorCode.TIMEOUT.value
         except Exception:
             # Only the provider/response boundary is normalized; storage errors propagate.
             failure = ProviderErrorCode.UNAVAILABLE.value
         if failure is not None:
+            if (
+                retryable
+                and allow_model_retries
+                and config.schema_version == 3
+                and state.retries_scheduled < config.model_retry.max_retries
+                and state.steps_used < config.max_steps
+            ):
+                state = state.model_copy(
+                    update={
+                        "retries_scheduled": state.retries_scheduled + 1,
+                        "retry_source_id": pending.id,
+                    }
+                )
+                await store.schedule_retry(pending, state, error_code=failure)
+                return state
             state = state.model_copy(update={"error_code": failure})
             await store.complete(pending, state, error_code=failure)
             return state
@@ -192,6 +235,7 @@ async def execute(
                 else None,
                 "next_tool": model_action if isinstance(model_action, ToolAction) else None,
                 "source_model_id": pending.id if isinstance(model_action, ToolAction) else None,
+                "retry_source_id": None,
             }
         )
         cursor = await store.complete(pending, state, result=response.model_dump(mode="json"))
