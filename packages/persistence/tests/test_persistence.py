@@ -37,6 +37,9 @@ async def seed(database: AsyncEngine) -> tuple[AgentVersion, Run]:
 
 async def test_migration_round_trip_and_metadata(empty_database: AsyncEngine) -> None:
     async with empty_database.begin() as connection:
+        await connection.run_sync(lambda conn: command.upgrade(migration_config(conn), "0003"))
+    old_version, old_run = await seed(empty_database)
+    async with empty_database.begin() as connection:
         await connection.run_sync(lambda conn: command.upgrade(migration_config(conn), "head"))
         await connection.run_sync(lambda conn: command.check(migration_config(conn)))
         tables = await connection.run_sync(lambda conn: inspect(conn).get_table_names())
@@ -50,7 +53,9 @@ async def test_migration_round_trip_and_metadata(empty_database: AsyncEngine) ->
             "checkpoints",
             "model_invocations",
             "tool_calls",
+            "worker_jobs",
         }
+        assert await connection.scalar(text("SELECT count(*) FROM worker_jobs")) == 0
         for table in Base.metadata.sorted_tables:
             checks = await connection.run_sync(check_constraint_names, table.name)
             assert checks == {
@@ -59,6 +64,9 @@ async def test_migration_round_trip_and_metadata(empty_database: AsyncEngine) ->
                 if isinstance(constraint, CheckConstraint)
             }
 
+    async with async_sessionmaker(empty_database).begin() as session:
+        assert await RunRepository(session).get(old_run.id) == old_run
+        assert await AgentRepository(session).get_version(old_version.id) == old_version
     await seed(empty_database)
     async with empty_database.begin() as connection:
         await connection.run_sync(lambda conn: command.downgrade(migration_config(conn), "base"))
