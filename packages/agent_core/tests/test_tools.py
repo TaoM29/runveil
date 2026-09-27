@@ -118,7 +118,9 @@ async def test_authorization_is_required_at_dispatch_and_advertisement() -> None
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("failure", ["output", "oversize", "exception", "timeout", "cancel"])
+@pytest.mark.parametrize(
+    "failure", ["output", "oversize", "exception", "resource", "timeout", "cancel"]
+)
 async def test_safe_outcomes_deadline_and_cancellation(failure: str) -> None:
     calls = 0
     entered = asyncio.Event()
@@ -133,6 +135,10 @@ async def test_safe_outcomes_deadline_and_cancellation(failure: str) -> None:
                 return Output.model_construct(text=123)
             if failure == "oversize":
                 return Output(text="x" * MAX_TOOL_BYTES)
+            if failure == "resource":
+                error = ToolError(ToolErrorCode.RESOURCE_LIMIT)
+                error.args = ("secret-sentinel",)
+                raise error
             if failure == "exception":
                 raise RuntimeError("secret-sentinel")
             await asyncio.Event().wait()
@@ -154,6 +160,7 @@ async def test_safe_outcomes_deadline_and_cancellation(failure: str) -> None:
             "output": ToolErrorCode.INVALID_OUTPUT,
             "oversize": ToolErrorCode.INVALID_OUTPUT,
             "exception": ToolErrorCode.FAILED,
+            "resource": ToolErrorCode.RESOURCE_LIMIT,
             "timeout": ToolErrorCode.TIMEOUT,
         }[failure]
         assert caught.value.code == expected and "secret-sentinel" not in str(caught.value)

@@ -52,6 +52,9 @@ class ToolErrorCode(StrEnum):
     INVALID_OUTPUT = "invalid_tool_output"
     TIMEOUT = "tool_timeout"
     FAILED = "tool_failed"
+    RESOURCE_UNAVAILABLE = "tool_resource_unavailable"
+    RESOURCE_LIMIT = "tool_resource_limit"
+    RESOURCE_INVALID = "tool_resource_invalid"
 
 
 class ToolError(Exception):
@@ -102,6 +105,9 @@ class TypedTool[Input: Contract, Output: Contract]:
         try:
             async with asyncio.timeout(self.timeout_seconds):
                 output = await self.handler(validated)
+        except ToolError as exc:
+            # Retain only our safe enum, never handler-supplied exception text.
+            raise ToolError(exc.code) from None
         except TimeoutError:
             raise ToolError(ToolErrorCode.TIMEOUT) from None
         except Exception:
