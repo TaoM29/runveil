@@ -10,7 +10,7 @@ commit or push is authorized.
 | 1     | Domain model, immutable versions, persistence, migrations | Implemented through Phase 1C              |
 | 2     | Provider protocol, scripted and hosted providers          | Implemented; hosted acceptance complete   |
 | 3     | Minimal persisted execution loop                          | Implemented; continued by Phase 4 request |
-| 4     | Typed tools and authorization                             | 4A implemented; awaiting review           |
+| 4     | Typed tools and authorization                             | 4B implemented; awaiting review           |
 | 5     | Durable worker, retries, idempotency and budgets          | Planned                                   |
 | 6     | Human approval and controlled mutations                   | Planned                                   |
 | 7     | Telemetry and trace UI                                    | Planned                                   |
@@ -73,19 +73,22 @@ commit or push is authorized.
 
 ## Phase 4 review gates
 
-- **4A — Implemented, awaiting review:** typed registry, strict bounded input/output
+- **4A — Implemented; Phase 4B continuation authorized:** typed registry, strict bounded input/output
   validation, intersected pinned/operator grants, permission and side-effect
   classification, cooperative deadlines, safe errors and persisted dispatch through
   the registered fixture. See [ADR 0009](docs/adr/0009-typed-tool-dispatch.md) and
   [verification record](docs/operations/PHASE_4A.md).
-- **4B — Planned:** repository read/search tools using this dispatch path, with
-  explicit root/file disclosure policy, path/symlink containment, bounded reads and
-  search results, and filesystem boundary tests. Phase 4 is not complete until
-  this native repository-tool slice passes review.
+- **4B — Implemented, awaiting review:** native read/search tools with exact file
+  allowlists, descriptor-relative containment, symlink/hard-link/special-file
+  refusal, bounded UTF-8 reads and literal search, safe errors, cancellation cleanup
+  and persisted integration. See [ADR 0010](docs/adr/0010-repository-read-tools.md),
+  [operations](docs/operations/REPOSITORY_TOOLS.md) and
+  [verification record](docs/operations/PHASE_4B.md).
 
 ## Recommended next slice
 
-Review Phase 4A, then implement Phase 4B repository read/search tools. Keep worker
-recovery, retries, mutations and approvals in their planned phases. The user's
-Phase 4 request authorized continuation beyond the Phase 3 review stop; the
-separate Phase 2 hosted acceptance gate is complete.
+Review Phase 4B, then plan the first Phase 5 durable execution slice: worker
+ownership/claims, checkpoint resume and duplicate-delivery safety for scripted
+model/fixture runs. Establish workspace and tool implementation identity before
+replaying repository operations. Introduce queue/retry/budget work in coherent
+reviewable increments; keep mutations, approvals and MCP in their planned phases.

@@ -2,7 +2,7 @@
 
 A production-style runtime for reliable, observable and evaluable AI agents.
 
-**Working name · Phase 4A implemented; awaiting review. Phase 2 hosted acceptance complete.** This repository contains
+**Working name · Phase 4B implemented; awaiting review. Phase 2 hosted acceptance complete.** This repository contains
 immutable agent versions, persisted runs with validated lifecycle transitions,
 ordered execution history, checkpoint snapshots, model/tool request and outcome
 records, PostgreSQL migrations and integration tests, plus normalized model
@@ -10,11 +10,12 @@ contracts, structured action validation, scripted and OpenAI-compatible HTTP
 providers, and the Phase 0 API/web foundation. The opt-in hosted acceptance check
 [passed](docs/operations/PHASE_2B.md#subsequent-hosted-live-acceptance--complete),
 based on user-reported evidence.
-A bounded in-process runtime executes a persisted model → typed, authorized fixture
-tool → model → finish loop. Tool grants default to deny; repository tools are Phase 4B. No durable worker, live demo or benchmark results exist.
+A bounded in-process runtime executes persisted model/tool loops with explicit
+grants and bounded native repository read/search tools. File access requires an
+operator-selected root and exact allowlist. No durable worker, live demo or benchmark results exist.
 
 [Architecture](ARCHITECTURE.md) · [Roadmap](ROADMAP.md) ·
-[Project charter](docs/PROJECT_PLAN.md) · [Verification](docs/operations/PHASE_4A.md)
+[Project charter](docs/PROJECT_PLAN.md) · [Verification](docs/operations/PHASE_4B.md)
 
 ## Purpose
 
@@ -109,22 +110,24 @@ For the separate, explicitly opt-in hosted check, see
 - `apps/web`: Next.js App Router application in the npm workspace.
 - `packages/agent_core`: domain snapshots, model contracts, scripted provider and bounded execution loop.
 - `packages/model_providers`: bounded HTTP adapter and opt-in live fixture command.
+- `packages/tool_runtime`: bounded repository read/search adapters with explicit file disclosure.
 - `packages/persistence`: PostgreSQL repositories, mappings, migrations and tests.
 - `scripts`: process-level smoke verification.
 - `docs`: original charter, decisions, naming research and verification record.
 - `.github/workflows/ci.yml`: locked installs, formatting, lint, types, tests,
   production build, HTTP smoke checks, migrations and PostgreSQL integration tests.
 
-Durable workers, production tools, benchmarks and Terraform are introduced when their
+Durable workers, mutation tools, benchmarks and Terraform are introduced when their
 phases supply actual behavior. See the architecture for the intended boundaries.
 
 ## Evidence and limitations
 
-Current verification is recorded in [the Phase 4A handoff](docs/operations/PHASE_4A.md);
+Current verification is recorded in [the Phase 4B handoff](docs/operations/PHASE_4B.md);
 [Phase 0 evidence](docs/operations/PHASE_0.md) is retained.
 Run the offline persisted demonstration with `uv run python scripts/runtime_demo.py`
 after migration and database configuration. It creates and retains one new run; see
 [runtime operations](docs/operations/RUNTIME.md).
+Repository tool setup and limits are documented in [repository tools](docs/operations/REPOSITORY_TOOLS.md).
 Model contract usage is documented in [model operations](docs/operations/MODELS.md).
 Repository usage and state rules are documented in [persistence operations](docs/operations/PERSISTENCE.md).
 Reliability, evaluation, security, inference benchmarks and AWS deployment remain
