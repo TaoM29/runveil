@@ -20,16 +20,20 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 PROFILE = "fixture-v1"
 RETRY_PROFILE = "fixture-retry-v1"
+BUDGET_PROFILE = "fixture-budget-v1"
 POLICY = ToolPolicy(allowed_tools=("fixture.info",), permissions=(Permission.READ,))
 
 
 def configuration(profile: str = PROFILE) -> RuntimeConfig:
-    if profile not in (PROFILE, RETRY_PROFILE):
+    if profile not in (PROFILE, RETRY_PROFILE, BUDGET_PROFILE):
         raise ValueError("Unknown worker profile")
-    if profile == RETRY_PROFILE:
+    if profile in (RETRY_PROFILE, BUDGET_PROFILE):
         return RuntimeConfig(
-            schema_version=3,
-            provider="scripted-fixture-retry-v1",
+            schema_version=4 if profile == BUDGET_PROFILE else 3,
+            max_elapsed_seconds=30 if profile == BUDGET_PROFILE else None,
+            provider="scripted-fixture-budget-v1"
+            if profile == BUDGET_PROFILE
+            else "scripted-fixture-retry-v1",
             model="fixture-v1",
             system_prompt="Identify the fixed public Runveil fixture.",
             tool_policy=POLICY,
@@ -106,7 +110,7 @@ async def work_once(
     if claim is None:
         return None
     provider: FixtureProvider = FixtureProvider()
-    if profile == RETRY_PROFILE:
+    if profile in (RETRY_PROFILE, BUDGET_PROFILE):
         async with sessions.begin() as session:
             restored = await load_runtime_state(session, claim.run_id)
         provider = RetryFixtureProvider(restored.retries_scheduled if restored else 0)
@@ -118,6 +122,6 @@ async def work_once(
         tools=fixture_registry(),
         tool_policy=POLICY,
         store=PostgresExecutionStore(sessions, claim=claim, expected_config=config),
-        allow_model_retries=profile == RETRY_PROFILE,
+        allow_model_retries=profile in (RETRY_PROFILE, BUDGET_PROFILE),
     )
     return claim.run_id, state

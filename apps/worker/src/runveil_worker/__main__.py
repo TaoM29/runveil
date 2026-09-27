@@ -7,7 +7,7 @@ from uuid import UUID
 from runveil_persistence.database import create_engine, database_url
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from runveil_worker.worker import PROFILE, RETRY_PROFILE, submit, work_once
+from runveil_worker.worker import BUDGET_PROFILE, PROFILE, RETRY_PROFILE, submit, work_once
 
 
 async def main() -> int:
@@ -15,7 +15,9 @@ async def main() -> int:
     parser.add_argument("command", choices=("submit", "work"))
     parser.add_argument("--once", action="store_true", help="Check for at most one eligible run")
     parser.add_argument("--run-id", type=UUID, help="Select one enrolled run")
-    parser.add_argument("--profile", choices=(PROFILE, RETRY_PROFILE), default=PROFILE)
+    parser.add_argument(
+        "--profile", choices=(PROFILE, RETRY_PROFILE, BUDGET_PROFILE), default=PROFILE
+    )
     args = parser.parse_args()
     if args.command == "submit" and (args.once or args.run_id):
         parser.error("Worker options apply only to work")
