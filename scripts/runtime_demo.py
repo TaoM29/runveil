@@ -5,10 +5,13 @@ import asyncio
 from runveil_core.models import FinalResult, FinishAction, ModelResponse, ToolAction
 from runveil_core.runtime import RuntimeConfig, execute
 from runveil_core.scripted import ScriptedProvider
+from runveil_core.tools import Permission, ToolPolicy, fixture_registry
 from runveil_persistence.database import create_engine, database_url
 from runveil_persistence.execution import PostgresExecutionStore, load_runtime_state
 from runveil_persistence.repositories import AgentRepository, RunRepository
 from sqlalchemy.ext.asyncio import async_sessionmaker
+
+FIXTURE_POLICY = ToolPolicy(allowed_tools=("fixture.info",), permissions=(Permission.READ,))
 
 
 async def main() -> None:
@@ -16,6 +19,7 @@ async def main() -> None:
     try:
         sessions = async_sessionmaker(engine)
         config = RuntimeConfig(
+            tool_policy=FIXTURE_POLICY,
             provider="scripted",
             model="fixture",
             system_prompt="Inspect the public fixture.",
@@ -23,7 +27,7 @@ async def main() -> None:
         )
         async with sessions.begin() as session:
             agents = AgentRepository(session)
-            agent = await agents.create("Phase 3 offline demonstration")
+            agent = await agents.create("Phase 4A offline demonstration")
             version = await agents.create_version(agent.id, config.model_dump(mode="json"))
             run = await RunRepository(session).create(version.id)
         actions = (
@@ -52,6 +56,8 @@ async def main() -> None:
         state = await execute(
             run.id,
             "Identify this fixture.",
+            tools=fixture_registry(),
+            tool_policy=FIXTURE_POLICY,
             provider_name="scripted",
             provider=provider,
             store=PostgresExecutionStore(sessions),

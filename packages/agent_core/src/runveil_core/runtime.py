@@ -19,13 +19,14 @@ from runveil_core.models import (
     Name,
     ProviderError,
     ProviderErrorCode,
-    ToolOffer,
     validate_response,
 )
+from runveil_core.tools import ToolError, ToolPolicy, ToolRegistry
 
 
 class RuntimeConfig(Contract):
-    schema_version: Literal[1] = 1
+    schema_version: Literal[2] = 2
+    tool_policy: ToolPolicy = Field(default_factory=ToolPolicy)
     provider: Name
     model: Name
     system_prompt: Annotated[str, Field(min_length=1, max_length=16384)]
@@ -75,6 +76,7 @@ class ExecutionStore(Protocol):
         payload: dict[str, JsonValue],
         config: RuntimeConfig,
         model_invocation_id: UUID | None = None,
+        tool_name: str | None = None,
     ) -> Pending: ...
 
     async def complete(
@@ -89,14 +91,6 @@ class ExecutionStore(Protocol):
     async def exhaust(self, cursor: Cursor, state: RuntimeState) -> None: ...
 
 
-def fixture_offer() -> ToolOffer:
-    return ToolOffer(
-        name="fixture.info",
-        description="Read fixed public metadata about the Runveil demonstration fixture.",
-        input_schema={"type": "object", "properties": {}, "additionalProperties": False},
-    )
-
-
 async def execute(
     run_id: UUID,
     task: str,
@@ -104,8 +98,12 @@ async def execute(
     provider_name: str,
     provider: ModelProvider,
     store: ExecutionStore,
+    tools: ToolRegistry | None = None,
+    tool_policy: ToolPolicy | None = None,
 ) -> RuntimeState:
     """Execute a new queued run once. Never retry, resume or swallow cancellation."""
+    registry = tools if tools is not None else ToolRegistry()
+    operator_policy = tool_policy if tool_policy is not None else ToolPolicy()
     started = await store.start(run_id, task, provider_name)
     cursor, config, state = started.cursor, started.config, started.state
     while True:
@@ -116,7 +114,7 @@ async def execute(
         request = ModelRequest(
             model=config.model,
             messages=state.messages,
-            available_tools=(fixture_offer(),),
+            available_tools=registry.offers(config.tool_policy, operator_policy),
             temperature=config.temperature,
             max_output_tokens=config.max_output_tokens,
             timeout_seconds=config.timeout_seconds,
@@ -163,18 +161,24 @@ async def execute(
             payload=action.arguments,
             config=config,
             model_invocation_id=pending.id,
+            tool_name=action.tool_name,
         )
         state = state.model_copy(update={"steps_used": state.steps_used + 1})
-        if action.arguments:
-            state = state.model_copy(update={"error_code": "invalid_tool_arguments"})
-            await store.complete(pending, state, error_code="invalid_tool_arguments")
+        try:
+            observation = await registry.dispatch(
+                action.tool_name, action.arguments, config.tool_policy, operator_policy
+            )
+        except ToolError as exc:
+            state = state.model_copy(update={"error_code": exc.code.value})
+            await store.complete(pending, state, error_code=exc.code.value)
             return state
-        observation: dict[str, JsonValue] = {"project": "Runveil", "fixture_version": 1}
         state = state.model_copy(
             update={
                 "messages": (
                     *state.messages,
-                    Message(role="tool", tool_name="fixture.info", content=json.dumps(observation)),
+                    Message(
+                        role="tool", tool_name=action.tool_name, content=json.dumps(observation)
+                    ),
                 )
             }
         )
