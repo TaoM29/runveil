@@ -1,6 +1,6 @@
 # Architecture
 
-## Implemented through Phase 4B
+## Implemented through Phase 5A
 
 ```mermaid
 flowchart LR
@@ -13,6 +13,8 @@ flowchart LR
     Scripted[Offline scripted provider] --> Contracts[Model contracts and action validation]
     Hosted[HTTPX Chat Completions adapter] --> Contracts
     Hosted --> Endpoint[Configured OpenAI-compatible endpoint]
+    Worker[Offline fixture worker / PostgreSQL polling] --> Runtime
+    Worker --> Store
     Runtime[Bounded core execution loop] --> Contracts
     Runtime --> Store[PostgreSQL execution store]
     Store --> Persistence
@@ -68,7 +70,8 @@ flowchart TD
 The API will accept work rather than run long tasks within an HTTP request.
 Runtime domain code belongs in `packages/agent_core`; providers, tool execution,
 evaluation and observability receive separate packages only when cohesive
-implementations exist. `apps/worker` will own process/queue integration.
+implementations exist. `apps/worker` owns the implemented PostgreSQL polling/profile integration; broker
+integration remains future work.
 Dependency direction should point from apps and adapters toward domain contracts,
 never from the domain toward FastAPI or Next.js.
 
@@ -166,14 +169,24 @@ schema change is needed. See [ADR 0010](docs/adr/0010-repository-read-tools.md) 
 revision-pinned snapshots or process isolation; cancellation stops waiting but
 cannot kill a filesystem syscall.
 
-Queue consistency, approvals and sandbox boundaries still require future ADRs and
-tests; the target diagram does not claim those properties exist.
+Phase 5A adds durable job enrollment and leased ownership in migration 0004.
+`apps/worker` polls PostgreSQL for the fixed `fixture-v1` profile. Run locks, claim
+tokens and database-clock expiry fence every execution-store write; ordinary
+unclaimed stores refuse enrolled runs. Runtime checkpoint version 2 retains the
+next tool action and model provenance. A new owner resumes clean checkpoints;
+unresolved intent is atomically failed as `execution_interrupted`, never replayed.
+The context-driven offline provider survives process recreation. Existing runs
+are not adopted; historical checkpoints remain inspectable. See
+[ADR 0011](docs/adr/0011-durable-fixture-worker.md) and [worker operations](docs/operations/WORKER.md).
+
+Broker consistency, automatic retries, additional budgets, approvals and sandbox
+boundaries remain future slices; the target diagram does not claim they exist.
 
 ## Open decisions
 
 - Public product/repository name and license.
 - Future additional provider profiles/capabilities.
-- Queue/database consistency and worker claim semantics.
+- Future broker/database consistency and retry/idempotency semantics.
 - Sandbox threat model and AWS cost/deployment details.
 
 These are reviewed in their relevant phase, not settled by empty abstractions.

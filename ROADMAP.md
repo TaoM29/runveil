@@ -10,8 +10,8 @@ commit or push is authorized.
 | 1     | Domain model, immutable versions, persistence, migrations | Implemented through Phase 1C              |
 | 2     | Provider protocol, scripted and hosted providers          | Implemented; hosted acceptance complete   |
 | 3     | Minimal persisted execution loop                          | Implemented; continued by Phase 4 request |
-| 4     | Typed tools and authorization                             | 4B implemented; awaiting review           |
-| 5     | Durable worker, retries, idempotency and budgets          | Planned                                   |
+| 4     | Typed tools and authorization                             | Implemented through Phase 4B              |
+| 5     | Durable worker, retries, idempotency and budgets          | 5A implemented; awaiting review           |
 | 6     | Human approval and controlled mutations                   | Planned                                   |
 | 7     | Telemetry and trace UI                                    | Planned                                   |
 | 8     | Deterministic evaluation harness                          | Planned                                   |
@@ -78,17 +78,27 @@ commit or push is authorized.
   classification, cooperative deadlines, safe errors and persisted dispatch through
   the registered fixture. See [ADR 0009](docs/adr/0009-typed-tool-dispatch.md) and
   [verification record](docs/operations/PHASE_4A.md).
-- **4B — Implemented, awaiting review:** native read/search tools with exact file
+- **4B — Implemented; Phase 5 continuation authorized:** native read/search tools with exact file
   allowlists, descriptor-relative containment, symlink/hard-link/special-file
   refusal, bounded UTF-8 reads and literal search, safe errors, cancellation cleanup
   and persisted integration. See [ADR 0010](docs/adr/0010-repository-read-tools.md),
   [operations](docs/operations/REPOSITORY_TOOLS.md) and
   [verification record](docs/operations/PHASE_4B.md).
 
+## Phase 5 review gates
+
+- **5A — Implemented; awaiting review:** PostgreSQL work enrollment and polling,
+  leased claims and transactional stale-worker fences, version-2 checkpoint resume,
+  conservative failure of uncertain in-flight invocations, and duplicate delivery
+  safety for a fixed scripted/fixture profile. See [ADR 0011](docs/adr/0011-durable-fixture-worker.md),
+  [worker operations](docs/operations/WORKER.md) and [handoff](docs/operations/PHASE_5A.md).
+  No general retries, broker, repository replay or expanded budgets are claimed.
+
 ## Recommended next slice
 
-Review Phase 4B, then plan the first Phase 5 durable execution slice: worker
-ownership/claims, checkpoint resume and duplicate-delivery safety for scripted
-model/fixture runs. Establish workspace and tool implementation identity before
-replaying repository operations. Introduce queue/retry/budget work in coherent
-reviewable increments; keep mutations, approvals and MCP in their planned phases.
+Review Phase 5A, then implement bounded, persisted model retry attempts for a
+versioned offline worker profile: classify safe retryable failures, store attempt
+counts and next eligibility time, apply bounded backoff and preserve step accounting
+across restart. Keep uncertain dispatch conservative until provider idempotency is
+explicitly supported. Broader budgets and workspace identity remain subsequent
+Phase 5 work; mutations, approvals and MCP stay in their planned phases.
