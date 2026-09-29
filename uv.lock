@@ -518,12 +518,14 @@ source = { editable = "apps/worker" }
 dependencies = [
     { name = "runveil-agent-core" },
     { name = "runveil-persistence" },
+    { name = "runveil-tool-runtime" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "runveil-agent-core", editable = "packages/agent_core" },
     { name = "runveil-persistence", editable = "packages/persistence" },
+    { name = "runveil-tool-runtime", editable = "packages/tool_runtime" },
 ]
 
 [[package]]
