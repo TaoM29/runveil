@@ -1,6 +1,6 @@
 # Durable fixture worker
 
-The offline profiles are `fixture-v1`, `fixture-retry-v1`, `fixture-budget-v1`, `fixture-token-v1`, `fixture-cost-v1` and (Phase 5F) `fixture-loop-v1`. All use the built-in public fixture, never repository files,
+The offline profiles are `fixture-v1`, `fixture-retry-v1`, `fixture-budget-v1`, `fixture-token-v1`, `fixture-cost-v1`, `fixture-loop-v1` and (Phase 5G) `fixture-calls-v1`. All use the built-in public fixture, never repository files,
 hosted models, arbitrary tools or secrets.
 See [ADR 0011](../adr/0011-durable-fixture-worker.md) for ownership and recovery rules.
 
@@ -235,6 +235,50 @@ The guard may stop legitimate repeated polling. Choose the limit deliberately.
 Other budgets still bound loops that vary arguments. This adds neither tool
 retries nor exactly-once side effects, and existing profiles keep their behavior.
 See [ADR 0016](../adr/0016-durable-repeated-tool-limit.md).
+
+## Separate model and tool call limits
+
+Use `--profile fixture-calls-v1` on both `submit` and `work`. This fixed profile
+uses known synthetic token usage/pricing with no deliberate failures or scheduled
+retries. It pins two model calls, one tool call, eight total steps and two identical
+tool calls. A normal model → tool → finish run succeeds at `steps=3 retries=0`,
+exactly at the two independent call limits. It retains 20 input/10 output tokens
+and a 50,000 nano-USD cost estimate.
+
+Version 8 requires `max_model_calls` and `max_tool_calls`, strict integers from
+0 to 64, alongside the version-7 budgets. Zero disables that invocation kind.
+Neither sum nor individual cap replaces `max_steps`; whichever active boundary
+is reached first applies. Older profiles have no separate call caps.
+
+Admission reads the immutable configuration and counts committed records of the
+requested kind across the run under the existing ownership/history locks. All
+statuses count: completed success, failed attempts and uncertain requested intent.
+Each model retry consumes another model slot; tool capacity spans all tool names
+and arguments. A caller cannot raise the bound through the per-request config.
+
+If no capacity remains, atomically checkpoint `model_call_limit_exceeded` or
+`tool_call_limit_exceeded`, record `budget.exceeded` (`model_calls` or `tool_calls`)
+and fail the run. No new intent, dispatch, usage or invocation step is charged.
+A previously committed proposing model response and pending tool evidence remain
+in history. A successful finish at the limit is accepted; a last model call can
+still be followed by a tool within its own limit.
+
+An otherwise eligible retry with no model capacity remaining fails in its outcome
+transaction, without scheduling a retry or waiting for backoff. The invocation
+retains the provider error and usage; the checkpoint records
+`model_call_limit_exceeded`. Non-retryable/provider errors and already-exhausted
+retry/step policy retain their existing behavior. The store rejects attempts to
+schedule a retry at capacity as well.
+
+Recovery never resets these counts. Unresolved intent still fails once as
+`execution_interrupted`, retaining its original record; it is not replayed or
+reclassified as an admission failure. Ownership/cancellation, observed elapsed
+expiry and the core total-step check keep their existing precedence. Total tool
+capacity is checked before the identical-tool limit.
+
+These limits cover durable intents, not a provider's internal attempts or
+exactly-once execution outside the database. No new migration or counters are
+needed. See [ADR 0017](../adr/0017-durable-invocation-limits.md).
 
 ## Ownership and restart
 

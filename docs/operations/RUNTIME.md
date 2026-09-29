@@ -85,6 +85,11 @@ Version 7 additionally requires `max_identical_tool_calls` (1–64). The Postgre
 store enforces this per tool name/structural JSON arguments using durable intent
 history before tool dispatch. No counter is reset by retries or checkpoints; see
 [worker operations](WORKER.md#repeated-tool-limit).
+
+Version 8 additionally requires `max_model_calls` and `max_tool_calls` (0–64).
+They count committed intents across the run, including failed/uncertain attempts;
+zero disables that invocation kind. The combined `max_steps` still applies. See
+[worker operations](WORKER.md#separate-model-and-tool-call-limits).
 There is no context compaction.
 
 Only explicitly granted registered tools are advertised. The built-in `fixture.info`
