@@ -1,11 +1,20 @@
 """Read/search contracts and native bindings with explicit file disclosure."""
 
 import asyncio
+import hashlib
+import json
+import sys
+from collections.abc import Mapping
 from pathlib import Path
+from types import MappingProxyType
 from typing import Annotated, Self
 
 from pydantic import AfterValidator, Field
+from pydantic import __version__ as pydantic_version
+from runveil_core import models as core_models
+from runveil_core import tools as core_tools
 from runveil_core.models import Contract
+from runveil_core.runtime import WorkspaceIdentity
 from runveil_core.tools import (
     Permission,
     SideEffect,
@@ -15,12 +24,28 @@ from runveil_core.tools import (
     TypedTool,
 )
 
+from runveil_tools import filesystem
 from runveil_tools.filesystem import (
     MAX_FILE_BYTES,
     MAX_SEARCH_BYTES,
     RepositoryReader,
     relative_path,
 )
+
+
+def _implementation_digest() -> str:
+    sources = []
+    for module in (filesystem, core_tools, core_models):
+        source = module.__file__
+        if source is None:
+            raise RuntimeError("Repository snapshot requires source-backed tool modules")
+        sources.append(Path(source).read_bytes())
+    sources.extend((Path(__file__).read_bytes(), sys.version.encode(), pydantic_version.encode()))
+    return hashlib.sha256(b"repository-snapshot-v1\0" + b"\0".join(sources)).hexdigest()
+
+
+# Fingerprint the installed source used by these bindings, once per process.
+_IMPLEMENTATION_DIGEST = _implementation_digest()
 
 RelativePath = Annotated[
     str,
@@ -69,10 +94,49 @@ class SearchOutput(Contract):
 class RepositoryTools:
     """Caller owns the root lifetime; policies still gate every registered call."""
 
-    def __init__(self, root: Path, *, access: RepositoryAccess | None = None) -> None:
+    def __init__(
+        self, root: Path, *, access: RepositoryAccess | None = None, snapshot: bool = False
+    ) -> None:
         policy = access if access is not None else RepositoryAccess()
         self._files = tuple(sorted(set(policy.files)))
         self._reader = RepositoryReader(root)
+        self._snapshot: Mapping[str, tuple[str, int]] | None = None
+        self._closed = False
+        self.identity: WorkspaceIdentity | None = None
+        if snapshot:
+            try:
+                captured: dict[str, tuple[str, int]] = {}
+                remaining = MAX_SEARCH_BYTES
+                manifest: list[tuple[str, str]] = []
+                for path in self._files:
+                    content, size = self._reader.read(path, min(MAX_FILE_BYTES, remaining))
+                    remaining -= size
+                    captured[path] = (content, size)
+                    manifest.append((path, hashlib.sha256(content.encode("utf-8")).hexdigest()))
+                self._snapshot = MappingProxyType(captured)
+                self.identity = WorkspaceIdentity(
+                    root_digest=self._reader.root_digest,
+                    content_digest=hashlib.sha256(
+                        json.dumps(manifest, ensure_ascii=True, separators=(",", ":")).encode()
+                    ).hexdigest(),
+                    implementation_digest=_IMPLEMENTATION_DIGEST,
+                )
+            finally:
+                self._reader.close()
+
+    @property
+    def files(self) -> tuple[str, ...]:
+        return self._files
+
+    def _read_content(self, path: str, limit: int = MAX_FILE_BYTES) -> tuple[str, int]:
+        if self._closed:
+            raise ToolError(ToolErrorCode.RESOURCE_UNAVAILABLE)
+        if self._snapshot is None:
+            return self._reader.read(path, limit)
+        content, size = self._snapshot[path]
+        if size > limit:
+            raise ToolError(ToolErrorCode.RESOURCE_LIMIT)
+        return content, size
 
     def __enter__(self) -> Self:
         return self
@@ -81,6 +145,7 @@ class RepositoryTools:
         self.close()
 
     def close(self) -> None:
+        self._closed = True
         self._reader.close()
 
     def bindings(self) -> tuple[ToolBinding, ...]:
@@ -115,7 +180,7 @@ class RepositoryTools:
     async def _read_file(self, arguments: ReadFileInput) -> ReadFileOutput:
         if arguments.path not in self._files:
             raise ToolError(ToolErrorCode.DENIED)
-        content, _ = await asyncio.to_thread(self._reader.read, arguments.path)
+        content, _ = await asyncio.to_thread(self._read_content, arguments.path)
         if arguments.offset > len(content):
             raise ToolError(ToolErrorCode.INVALID_ARGUMENTS)
         end = min(len(content), arguments.offset + arguments.max_chars)
@@ -133,7 +198,7 @@ class RepositoryTools:
         remaining = MAX_SEARCH_BYTES
         scanned = 0
         for path in self._files:
-            content, size = self._reader.read(path, min(MAX_FILE_BYTES, remaining))
+            content, size = self._read_content(path, min(MAX_FILE_BYTES, remaining))
             remaining -= size
             scanned += 1
             for line_number, line in enumerate(content.splitlines(), start=1):

@@ -249,3 +249,46 @@ async def test_file_changes_during_read_fail_without_partial_content(
             await ToolRegistry(repository.bindings()).dispatch(
                 "repository.read_file", {"path": path.name}, POLICY, POLICY
             )
+
+
+async def test_snapshot_identity_and_reads_ignore_later_edits(tmp_path: Path) -> None:
+    (tmp_path / "a.txt").write_text("original needle", encoding="utf-8")
+    (tmp_path / "b.txt").write_text("second", encoding="utf-8")
+    access = RepositoryAccess(files=("b.txt", "a.txt", "a.txt"))
+    with RepositoryTools(tmp_path, access=access, snapshot=True) as captured:
+        assert captured.identity is not None and captured.files == ("a.txt", "b.txt")
+        (tmp_path / "unselected.txt").write_text("not disclosed", encoding="utf-8")
+        with RepositoryTools(
+            tmp_path, access=RepositoryAccess(files=("a.txt", "b.txt")), snapshot=True
+        ) as same:
+            assert same.identity == captured.identity
+        (tmp_path / "a.txt").write_text("changed", encoding="utf-8")
+        registry = ToolRegistry(captured.bindings())
+        result = await registry.dispatch("repository.read_file", {"path": "a.txt"}, POLICY, POLICY)
+        assert result["content"] == "original needle"
+        result = await registry.dispatch("repository.search", {"query": "needle"}, POLICY, POLICY)
+        assert result["files_scanned"] == 2 and result["matches"]
+        with RepositoryTools(tmp_path, access=access, snapshot=True) as changed:
+            assert changed.identity is not None
+            assert changed.identity.root_digest == captured.identity.root_digest
+            assert changed.identity.content_digest != captured.identity.content_digest
+        assert str(tmp_path) not in captured.identity.model_dump_json()
+    with pytest.raises(ToolError):
+        await registry.dispatch("repository.read_file", {"path": "a.txt"}, POLICY, POLICY)
+
+
+@pytest.mark.parametrize("case", ["link", "total_size"])
+async def test_snapshot_checks_all_selected_files_before_exposure(
+    tmp_path: Path, case: str
+) -> None:
+    (tmp_path / "a.txt").write_text("safe prefix", encoding="utf-8")
+    files: tuple[str, ...]
+    if case == "link":
+        (tmp_path / "z.txt").symlink_to(tmp_path / "a.txt")
+        files = ("a.txt", "z.txt")
+    else:
+        files = tuple(f"{i}.txt" for i in range(17))
+        for name in files:
+            (tmp_path / name).write_bytes(b"a" * MAX_FILE_BYTES)
+    with pytest.raises(ToolError):
+        RepositoryTools(tmp_path, access=RepositoryAccess(files=files), snapshot=True)

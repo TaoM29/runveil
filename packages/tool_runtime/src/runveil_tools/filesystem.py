@@ -1,5 +1,7 @@
 """Descriptor-owned, bounded reads from an operator-controlled local checkout."""
 
+import hashlib
+import json
 import os
 import stat
 from pathlib import Path
@@ -36,11 +38,16 @@ class RepositoryReader:
         ):
             raise ValueError("Repository tools require POSIX descriptor-relative opens")
         self._lock = Lock()
+        self._root: int | None = None
         try:
-            self._root: int | None = os.open(
-                root.resolve(strict=True), os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
-            )
+            resolved = root.resolve(strict=True)
+            self._root = os.open(resolved, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+            info = os.fstat(self._root)
+            self.root_digest = hashlib.sha256(
+                json.dumps([str(resolved), info.st_dev, info.st_ino]).encode("utf-8")
+            ).hexdigest()
         except (OSError, RuntimeError):
+            self.close()
             raise ValueError("Repository root is unavailable") from None
 
     def close(self) -> None:
