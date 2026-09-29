@@ -1,6 +1,6 @@
 # Durable fixture worker
 
-The offline profiles are `fixture-v1`, `fixture-retry-v1`, `fixture-budget-v1` and (Phase 5D) `fixture-token-v1`. All use the built-in public fixture, never repository files,
+The offline profiles are `fixture-v1`, `fixture-retry-v1`, `fixture-budget-v1`, `fixture-token-v1` and (Phase 5E) `fixture-cost-v1`. All use the built-in public fixture, never repository files,
 hosted models, arbitrary tools or secrets.
 See [ADR 0011](../adr/0011-durable-fixture-worker.md) for ownership and recovery rules.
 
@@ -53,7 +53,7 @@ at 240 seconds. Successful operations do not reset the retry count. Both pinned
 configuration and `execute(allow_model_retries=True)` are required; the latter is
 a trusted operator assertion that this provider's explicit rate-limit failure is
 safe to repeat. The grant is checked again before resuming a scheduled retry;
-withdrawing it prevents dispatch. The CLI grants it only to the retry, budget and token fixture profiles. A hosted HTTP
+withdrawing it prevents dispatch. The CLI grants it only to the retry, budget, token and cost fixture profiles. A hosted HTTP
 error code alone does not establish safe replay.
 
 Scheduling atomically retains the failed model invocation, checkpoints the count,
@@ -154,6 +154,50 @@ estimation or provider-specific output guarantee is implied. Existing profiles
 retain their behavior and do not backfill token accounting. See
 [ADR 0014](../adr/0014-durable-token-budget.md).
 
+## Pinned pricing and cost limits
+
+Use `--profile fixture-cost-v1` on both `submit` and `work`. It retains the token
+fixture's two known zero-usage failures, elapsed/token limits and retry delays.
+Its immutable `fixture-linear-usd-v1` tariff charges synthetic 1,250 nano-USD per
+input token and 2,500 per output token. The run limit is 100,000 nano-USD. A normal
+run succeeds after five steps/two retries, with 20 input/10 output tokens and an
+estimated 50,000 nano-USD (USD 0.00005). These are fixture numbers, not live prices.
+
+Configuration version 6 requires:
+
+- `pricing`: `price_id`, matching `provider` and `model`, `currency: "USD"`,
+  `input_nanousd_per_token` and `output_nanousd_per_token` (strict integers 0–10^9).
+- `max_cost_nanousd`: a strict positive integer up to 10^15, plus the existing
+  elapsed and input/output token limits.
+
+One nano-USD is USD 0.000000001. Integer multiplication/summation avoids floating
+point and per-attempt rounding. Rates bind to the configured request model,
+including an alias, rather than a mutable price registry or a response model name.
+The full pinned rate snapshot is authoritative; price IDs are audit labels.
+Changing rates requires a new agent version/profile. Missing/unknown rates,
+unsupported currency, fractional rates or mismatched identities reject the
+configuration before execution (`worker_failed` through the CLI); no price is
+inferred and no attempt is dispatched. Zero rates must be explicit.
+
+Checkpoints store `cost.known_nanousd` and `cost.unknown_attempts`. Known token
+components contribute to cost even for rejected actions, failed calls or partial
+usage. Unknown consumption is never presented as an exact zero, including with
+zero rates. Token unknown/limit errors take precedence over cost-limit errors;
+interruption/elapsed expiry retain their existing precedence and cost evidence.
+
+At or above the threshold, reject the response action (including finish), persist
+`cost_limit_exceeded`, a `budget.exceeded` event with `budget: "cost"` and FAILED
+atomically. No retry follows. Recovery recomputes cost against pinned pricing and
+usage; normal and retry outcome boundaries validate the same relationship. Tools
+do not incur modeled cost. No new migration is required.
+
+This supports linear input/output estimates only. It cannot express cache tiers,
+request fees, reasoning-token surcharges, taxes or other billing dimensions.
+Operators must select a tariff that fits the normalized usage contract. It is not
+invoice reconciliation, and one admitted call may exceed the stop threshold.
+Existing profiles retain their semantics and have `cost: null`, not a claim of
+free execution. See [ADR 0015](../adr/0015-pinned-cost-budget.md).
+
 ## Ownership and restart
 
 Each claim lasts 660 seconds according to the database clock and is renewed at
@@ -191,7 +235,7 @@ Database writes are fenced; external execution cannot be made atomic with a clai
 A paused old process may still execute its pure fixture after losing ownership,
 but cannot commit its result. This is not exactly-once execution.
 
-General/hosted retries and cost budgets are deferred. Existing
+General/hosted retries and richer billing models are deferred. Existing
 step limits and cooperative per-call deadlines remain active across recovery.
 Repository and hosted-provider recovery need explicit workspace/implementation
 identity and attempt/idempotency policies before being exposed by a worker.

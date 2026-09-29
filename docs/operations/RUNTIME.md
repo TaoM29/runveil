@@ -74,6 +74,12 @@ Version 5 additionally requires run-wide `max_input_tokens` and
 post-attempt reported-usage thresholds; incomplete usage stops continuation.
 See [worker operations](WORKER.md#durable-reported-token-budgets) for failure,
 recovery and overshoot semantics. Versions 2–4 retain their prior behavior.
+
+Version 6 requires `pricing` and `max_cost_nanousd`, alongside version-5 budgets.
+Pricing must be a complete matching linear USD snapshot; unknown pricing is an
+invalid configuration, never implicit zero. Cost estimates use exact integer
+nano-USD and retain unknown-usage counts. See
+[worker operations](WORKER.md#pinned-pricing-and-cost-limits).
 There is no context compaction.
 
 Only explicitly granted registered tools are advertised. The built-in `fixture.info`
