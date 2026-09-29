@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from runveil_worker.worker import (
     BUDGET_PROFILE,
+    COST_PROFILE,
     PROFILE,
     RETRY_PROFILE,
     TOKEN_PROFILE,
@@ -24,7 +25,7 @@ async def main() -> int:
     parser.add_argument("--run-id", type=UUID, help="Select one enrolled run")
     parser.add_argument(
         "--profile",
-        choices=(PROFILE, RETRY_PROFILE, BUDGET_PROFILE, TOKEN_PROFILE),
+        choices=(PROFILE, RETRY_PROFILE, BUDGET_PROFILE, TOKEN_PROFILE, COST_PROFILE),
         default=PROFILE,
     )
     args = parser.parse_args()

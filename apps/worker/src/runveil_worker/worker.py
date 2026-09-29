@@ -12,7 +12,13 @@ from runveil_core.models import (
     TokenUsage,
     ToolAction,
 )
-from runveil_core.runtime import ModelRetryPolicy, RuntimeConfig, RuntimeState, execute
+from runveil_core.runtime import (
+    ModelPricing,
+    ModelRetryPolicy,
+    RuntimeConfig,
+    RuntimeState,
+    execute,
+)
 from runveil_core.tools import Permission, ToolPolicy, fixture_registry
 from runveil_persistence.execution import PostgresExecutionStore, load_runtime_state
 from runveil_persistence.jobs import claim_next, enroll
@@ -23,19 +29,32 @@ PROFILE = "fixture-v1"
 RETRY_PROFILE = "fixture-retry-v1"
 BUDGET_PROFILE = "fixture-budget-v1"
 TOKEN_PROFILE = "fixture-token-v1"
+COST_PROFILE = "fixture-cost-v1"
 POLICY = ToolPolicy(allowed_tools=("fixture.info",), permissions=(Permission.READ,))
 
 
 def configuration(profile: str = PROFILE) -> RuntimeConfig:
-    if profile not in (PROFILE, RETRY_PROFILE, BUDGET_PROFILE, TOKEN_PROFILE):
+    if profile not in (PROFILE, RETRY_PROFILE, BUDGET_PROFILE, TOKEN_PROFILE, COST_PROFILE):
         raise ValueError("Unknown worker profile")
-    if profile == TOKEN_PROFILE:
+    if profile in (TOKEN_PROFILE, COST_PROFILE):
         return RuntimeConfig(
-            schema_version=5,
+            schema_version=6 if profile == COST_PROFILE else 5,
+            pricing=ModelPricing(
+                price_id="fixture-linear-usd-v1",
+                provider="scripted-fixture-cost-v1",
+                model="fixture-v1",
+                input_nanousd_per_token=1250,
+                output_nanousd_per_token=2500,
+            )
+            if profile == COST_PROFILE
+            else None,
+            max_cost_nanousd=100_000 if profile == COST_PROFILE else None,
             max_elapsed_seconds=30,
             max_input_tokens=100,
             max_total_output_tokens=100,
-            provider="scripted-fixture-token-v1",
+            provider="scripted-fixture-cost-v1"
+            if profile == COST_PROFILE
+            else "scripted-fixture-token-v1",
             model="fixture-v1",
             system_prompt="Identify the fixed public Runveil fixture.",
             tool_policy=POLICY,
@@ -137,10 +156,14 @@ async def work_once(
     if claim is None:
         return None
     provider: FixtureProvider = FixtureProvider()
-    if profile in (RETRY_PROFILE, BUDGET_PROFILE, TOKEN_PROFILE):
+    if profile in (RETRY_PROFILE, BUDGET_PROFILE, TOKEN_PROFILE, COST_PROFILE):
         async with sessions.begin() as session:
             restored = await load_runtime_state(session, claim.run_id)
-        provider_type = TokenFixtureProvider if profile == TOKEN_PROFILE else RetryFixtureProvider
+        provider_type = (
+            TokenFixtureProvider
+            if profile in (TOKEN_PROFILE, COST_PROFILE)
+            else RetryFixtureProvider
+        )
         provider = provider_type(restored.retries_scheduled if restored else 0)
     state = await execute(
         claim.run_id,
@@ -150,6 +173,6 @@ async def work_once(
         tools=fixture_registry(),
         tool_policy=POLICY,
         store=PostgresExecutionStore(sessions, claim=claim, expected_config=config),
-        allow_model_retries=profile in (RETRY_PROFILE, BUDGET_PROFILE, TOKEN_PROFILE),
+        allow_model_retries=profile in (RETRY_PROFILE, BUDGET_PROFILE, TOKEN_PROFILE, COST_PROFILE),
     )
     return claim.run_id, state
