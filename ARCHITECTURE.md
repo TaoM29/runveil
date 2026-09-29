@@ -1,6 +1,6 @@
 # Architecture
 
-## Implemented through Phase 5F
+## Implemented through Phase 5G
 
 ```mermaid
 flowchart LR
@@ -217,6 +217,14 @@ creating a tool intent. Exhaustion atomically records a failed checkpoint, budge
 event and terminal transition, without another tool invocation. No counter table,
 checkpoint counter or migration is needed. `fixture-loop-v1` deliberately repeats
 a read-only call to demonstrate rejection. See [ADR 0016](docs/adr/0016-durable-repeated-tool-limit.md).
+
+Phase 5G adds version-8 separate model/tool intent limits, counted from durable
+invocation records before dispatch. Zero disables a kind; all attempt statuses
+consume capacity. Successful completion at a limit remains valid. Otherwise
+eligible retries without remaining model capacity fail atomically at the outcome
+instead of scheduling backoff. The existing total-step and repeated-tool limits
+remain active. `fixture-calls-v1` demonstrates exact-limit success. See
+[ADR 0017](docs/adr/0017-durable-invocation-limits.md).
 
 Broker consistency, general/hosted retries, richer billing models, approvals and sandbox
 boundaries remain future slices; the target diagram does not claim they exist.
