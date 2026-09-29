@@ -1,6 +1,6 @@
 # Architecture
 
-## Implemented through Phase 5E
+## Implemented through Phase 5F
 
 ```mermaid
 flowchart LR
@@ -210,6 +210,13 @@ token components and carries unknown-attempt counts. Cost limits terminate befor
 accepting an action at the same post-attempt boundary as tokens; recovery verifies
 stored cost against pinned rates. `fixture-cost-v1` uses synthetic usage/pricing.
 No migration or live price lookup is needed. See [ADR 0015](docs/adr/0015-pinned-cost-budget.md).
+
+Phase 5F adds a version-7 run-wide identical-tool limit. The store counts matching
+name/JSONB arguments in immutable invocation history under existing locks, before
+creating a tool intent. Exhaustion atomically records a failed checkpoint, budget
+event and terminal transition, without another tool invocation. No counter table,
+checkpoint counter or migration is needed. `fixture-loop-v1` deliberately repeats
+a read-only call to demonstrate rejection. See [ADR 0016](docs/adr/0016-durable-repeated-tool-limit.md).
 
 Broker consistency, general/hosted retries, richer billing models, approvals and sandbox
 boundaries remain future slices; the target diagram does not claim they exist.

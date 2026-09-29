@@ -11,7 +11,7 @@ commit or push is authorized.
 | 2     | Provider protocol, scripted and hosted providers          | Implemented; hosted acceptance complete   |
 | 3     | Minimal persisted execution loop                          | Implemented; continued by Phase 4 request |
 | 4     | Typed tools and authorization                             | Implemented through Phase 4B              |
-| 5     | Durable worker, retries, idempotency and budgets          | 5E implemented; awaiting review           |
+| 5     | Durable worker, retries, idempotency and budgets          | 5F implemented; awaiting review           |
 | 6     | Human approval and controlled mutations                   | Planned                                   |
 | 7     | Telemetry and trace UI                                    | Planned                                   |
 | 8     | Deterministic evaluation harness                          | Planned                                   |
@@ -115,17 +115,24 @@ commit or push is authorized.
   and [handoff](docs/operations/PHASE_5D.md). These are post-attempt stop thresholds;
   one call may cross a limit. No hard billing cap is claimed.
 
-- **5E — Implemented; awaiting review:** immutable linear USD pricing, exact
+- **5E — Implemented; Phase 5F continuation authorized:** immutable linear USD pricing, exact
   integer cost estimates and post-attempt cost limits, including partial/uncertain
   usage, failed attempts, retries and recovery. New offline `fixture-cost-v1`
   profile. See [ADR 0015](docs/adr/0015-pinned-cost-budget.md) and
   [handoff](docs/operations/PHASE_5E.md). No invoice or hard spending-cap claim.
 
+- **5F — Implemented; awaiting review:** run-wide repeated-tool limit, pinned in
+  version 7 and enforced against durable invocation history before creating the
+  next tool intent. Atomic failure and restart-safe counting; offline
+  `fixture-loop-v1` demonstrates a blocked third identical call. See
+  [ADR 0016](docs/adr/0016-durable-repeated-tool-limit.md) and
+  [handoff](docs/operations/PHASE_5F.md). No semantic loop inference or new side effects.
+
 ## Recommended next slice
 
-Review Phase 5E, then add bounded repeated-action detection using durable state
-or history, with a small deterministic policy and restart-safe counts. Keep it
-separate from semantic loop inference. Repository recovery still requires
-workspace/implementation identity; hosted retry requires provider idempotency/safety
-policy. Broker integration and separate model/tool invocation limits remain open
-Phase 5 work. Mutations, approvals and MCP remain in their planned phases.
+Review Phase 5F, then implement separate run-wide model/tool invocation limits,
+using durable attempt history and preserving the existing total step bound.
+Verify retry/uncertain-attempt accounting and admission before dispatch. Repository
+recovery still requires workspace/implementation identity; hosted retry requires
+provider idempotency/safety policy. Broker integration remains open Phase 5 work.
+Mutations, approvals and MCP remain in their planned phases.
