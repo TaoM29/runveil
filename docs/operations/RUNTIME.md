@@ -68,6 +68,12 @@ and a worker claim. Its immutable deadline starts at first execution and include
 retry waits/restarts. Expiry yields a persisted `elapsed_time_exceeded` failure;
 see [worker operations](WORKER.md#durable-elapsed-time-budget) for admission,
 timeout and lease limits. Versions 2/3 have no elapsed budget.
+
+Version 5 additionally requires run-wide `max_input_tokens` and
+`max_total_output_tokens`, and records token accounting in checkpoints. These are
+post-attempt reported-usage thresholds; incomplete usage stops continuation.
+See [worker operations](WORKER.md#durable-reported-token-budgets) for failure,
+recovery and overshoot semantics. Versions 2–4 retain their prior behavior.
 There is no context compaction.
 
 Only explicitly granted registered tools are advertised. The built-in `fixture.info`

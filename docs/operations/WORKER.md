@@ -1,7 +1,6 @@
 # Durable fixture worker
 
-The offline profiles are `fixture-v1`, `fixture-retry-v1` and (Phase 5C)
-`fixture-budget-v1`. All use the built-in public fixture, never repository files,
+The offline profiles are `fixture-v1`, `fixture-retry-v1`, `fixture-budget-v1` and (Phase 5D) `fixture-token-v1`. All use the built-in public fixture, never repository files,
 hosted models, arbitrary tools or secrets.
 See [ADR 0011](../adr/0011-durable-fixture-worker.md) for ownership and recovery rules.
 
@@ -54,7 +53,7 @@ at 240 seconds. Successful operations do not reset the retry count. Both pinned
 configuration and `execute(allow_model_retries=True)` are required; the latter is
 a trusted operator assertion that this provider's explicit rate-limit failure is
 safe to repeat. The grant is checked again before resuming a scheduled retry;
-withdrawing it prevents dispatch. The CLI grants it only to the retry and budget fixture profiles. A hosted HTTP
+withdrawing it prevents dispatch. The CLI grants it only to the retry, budget and token fixture profiles. A hosted HTTP
 error code alone does not establish safe replay.
 
 Scheduling atomically retains the failed model invocation, checkpoints the count,
@@ -118,6 +117,43 @@ native code or an already-sent remote request cannot be forcibly stopped. Result
 presented to the store after expiry cannot succeed. See
 [ADR 0013](../adr/0013-durable-elapsed-budget.md).
 
+## Durable reported-token budgets
+
+Select `--profile fixture-token-v1` on both `submit` and `work`. Like the elapsed
+profile, it has two delayed retries and a 30-second deadline. It reports synthetic
+zero usage for the deliberate failures, then 10 input/5 output tokens per model
+response: successful completion totals 20 input/10 output, four model attempts
+and one tool call. These numbers demonstrate accounting, not real tokenization.
+
+Version 5 requires `max_input_tokens` and `max_total_output_tokens` (strict integers
+1–1,000,000,000), in addition to the elapsed limit. The fixture pins both to 100.
+`max_output_tokens` remains the separate per-request generation parameter.
+After every model attempt, reaching or exceeding either cumulative threshold
+fails with `token_limit_exceeded` and `budget.exceeded`. Missing either usage
+component fails with `token_usage_unknown` and `budget.unknown`. Unknown takes
+precedence if both conditions apply. The model action is discarded and no tool or
+retry follows, including when the response was a finish action.
+
+Checkpoints retain `tokens`: completed model attempts, known input/output sums,
+unknown attempt count and nullable `last_usage`. Known components of partial usage
+remain visible; totals with unknown attempts are lower bounds. Provider errors
+can supply normalized usage, but missing usage is never inferred to mean zero.
+Invalid actions still consume their reported usage. Known rate-limit failures
+below both thresholds may retry under the existing grant and count policy.
+
+Outcome, accounting, budget event and terminal transition are one transaction.
+Recovery verifies model-attempt counts against history. Unresolved model intent
+records one unknown attempt with `execution_interrupted`; unresolved tools do not
+change model accounting. Elapsed expiry retains usage supplied with an outcome
+but discards its content. Before-dispatch expiry conservatively counts committed
+model intent as unknown. Cancellation or stale ownership prevents the whole write.
+
+These limits stop subsequent work based on reported usage. One model call can
+cross a threshold; this is not a pre-dispatch token or monetary cap. No input-token
+estimation or provider-specific output guarantee is implied. Existing profiles
+retain their behavior and do not backfill token accounting. See
+[ADR 0014](../adr/0014-durable-token-budget.md).
+
 ## Ownership and restart
 
 Each claim lasts 660 seconds according to the database clock and is renewed at
@@ -155,7 +191,7 @@ Database writes are fenced; external execution cannot be made atomic with a clai
 A paused old process may still execute its pure fixture after losing ownership,
 but cannot commit its result. This is not exactly-once execution.
 
-General/hosted retries and token/cost budgets are deferred. Existing
+General/hosted retries and cost budgets are deferred. Existing
 step limits and cooperative per-call deadlines remain active across recovery.
 Repository and hosted-provider recovery need explicit workspace/implementation
 identity and attempt/idempotency policies before being exposed by a worker.

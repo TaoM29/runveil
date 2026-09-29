@@ -53,7 +53,9 @@ Model response `content` contains the action JSON. Native vendor tool calls are
 not a second action path: the HTTP adapter rejects nonempty native tool calls and
 legacy function calls. Response `model` may be the resolved model identifier
 rather than the request alias. Usage counters are individually nullable and cannot
-be negative; unknown usage must never be reported as zero. Latency is milliseconds
+be negative; unknown usage must never be reported as zero. `ProviderError` may
+also carry normalized `TokenUsage` through its optional `usage` argument. Omitted
+error usage remains unknown; HTTP status alone never establishes zero consumption. Latency is milliseconds
 supplied by the provider, independent of persistence timestamps.
 
 Contracts reject unknown fields and scalar coercions. Messages/content are bounded
