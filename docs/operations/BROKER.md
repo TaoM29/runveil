@@ -103,6 +103,10 @@ RUNVEIL_TEST_DATABASE_URL=postgresql+psycopg://runveil:runveil-local-only@127.0.
   uv run pytest packages/persistence/tests/test_broker.py
 ```
 
+The [process-death acceptance command](PHASE_5.md) additionally runs the actual
+consumer in fresh processes after SIGKILL and checks terminal redelivery without
+new history. It also uses SDK stubs; this is not live AWS acceptance.
+
 These cover the SDK wire calls together with PostgreSQL rollback, migration,
 publication ownership, duplicates and terminal acknowledgement. They do not verify
 live IAM, credentials, queue configuration or AWS delivery timing. See

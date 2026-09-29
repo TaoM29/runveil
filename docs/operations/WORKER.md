@@ -321,6 +321,15 @@ against malicious native code. Clean checkpoints recover before/after a read;
 uncertain intents still fail without replay. See
 [ADR 0018](../adr/0018-pinned-repository-recovery.md).
 
+## Process-death acceptance
+
+Run `uv run python scripts/phase5_acceptance.py` with `RUNVEIL_TEST_DATABASE_URL`
+set to the test admin database. It uses a separate disposable database, actual
+SIGKILL/fresh worker processes, and offline SQS wire stubs. It verifies checkpoint
+continuation and terminal duplicate acknowledgement, plus uncertain-intent failure
+without replay. The harness advances lease expiry only after its child has died;
+production lease/deadline policy is unchanged. See [Phase 5 acceptance](PHASE_5.md).
+
 ## Ownership and restart
 
 Each claim lasts 660 seconds according to the database clock and is renewed at
