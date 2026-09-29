@@ -1,6 +1,6 @@
 # Durable fixture worker
 
-The offline profiles are `fixture-v1`, `fixture-retry-v1`, `fixture-budget-v1`, `fixture-token-v1` and (Phase 5E) `fixture-cost-v1`. All use the built-in public fixture, never repository files,
+The offline profiles are `fixture-v1`, `fixture-retry-v1`, `fixture-budget-v1`, `fixture-token-v1`, `fixture-cost-v1` and (Phase 5F) `fixture-loop-v1`. All use the built-in public fixture, never repository files,
 hosted models, arbitrary tools or secrets.
 See [ADR 0011](../adr/0011-durable-fixture-worker.md) for ownership and recovery rules.
 
@@ -197,6 +197,44 @@ Operators must select a tariff that fits the normalized usage contract. It is no
 invoice reconciliation, and one admitted call may exceed the stop threshold.
 Existing profiles retain their semantics and have `cost: null`, not a claim of
 free execution. See [ADR 0015](../adr/0015-pinned-cost-budget.md).
+
+## Repeated-tool limit
+
+Submit and process `--profile fixture-loop-v1`. This intentionally failing offline
+demo proposes `fixture.info` repeatedly, with the same synthetic usage/prices as
+the cost fixture and no scheduled retries. It permits two identical tool calls;
+the third proposal produces `status=FAILED steps=5 retries=0` and `work --once`
+exits 1. The checkpoint records `repeated_tool_limit_exceeded`, three model
+attempts, two tool intents, 30 input/15 output tokens and 75,000 nano-USD. Repeat
+delivery returns `no_eligible_work`. The total step limit is eight, leaving room
+for this guard to act first.
+
+Version 7 requires `max_identical_tool_calls` (strict integer 1–64), plus version-6
+budgets. The limit counts committed tool intents across the entire run, including
+all statuses, for the same tool name and structurally equal JSON arguments. The
+store reads the immutable configuration; a caller cannot relax the bound by
+passing a different configuration to `request`.
+
+Object key order does not matter, array order does, JSON numbers 1 and 1.0 match,
+and true differs from 1. This is PostgreSQL JSONB equality, not equality after
+applying tool defaults, path normalization or semantic interpretation. Decision
+summaries and model IDs do not participate. Alternating other actions does not
+reset a pair's count; different tool names or arguments have separate counts.
+
+Before admitting another matching intent at the limit, the store atomically
+writes `runtime.repeated_tool_limit_exceeded`, a checkpoint, `budget.exceeded`
+(`budget: identical_tool_calls`) and FAILED. No new tool intent is created or
+dispatched, and `steps_used` does not increase. The proposing model response and
+its usage remain committed; `next_tool` and source identify the blocked proposal.
+Recovery at that model checkpoint reaches the same decision. Rollback preserves
+the previous checkpoint; stale owners/cancelled runs cannot write budget failure.
+Elapsed expiry takes precedence when observed at the store boundary; an already
+exhausted core step budget can terminate first.
+
+The guard may stop legitimate repeated polling. Choose the limit deliberately.
+Other budgets still bound loops that vary arguments. This adds neither tool
+retries nor exactly-once side effects, and existing profiles keep their behavior.
+See [ADR 0016](../adr/0016-durable-repeated-tool-limit.md).
 
 ## Ownership and restart
 

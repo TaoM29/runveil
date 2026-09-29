@@ -80,6 +80,11 @@ Pricing must be a complete matching linear USD snapshot; unknown pricing is an
 invalid configuration, never implicit zero. Cost estimates use exact integer
 nano-USD and retain unknown-usage counts. See
 [worker operations](WORKER.md#pinned-pricing-and-cost-limits).
+
+Version 7 additionally requires `max_identical_tool_calls` (1–64). The PostgreSQL
+store enforces this per tool name/structural JSON arguments using durable intent
+history before tool dispatch. No counter is reset by retries or checkpoints; see
+[worker operations](WORKER.md#repeated-tool-limit).
 There is no context compaction.
 
 Only explicitly granted registered tools are advertised. The built-in `fixture.info`
