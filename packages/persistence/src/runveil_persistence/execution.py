@@ -165,6 +165,8 @@ class PostgresExecutionStore:
                 raise ValueError("Invalid runtime configuration or task") from None
             if config.provider != provider:
                 raise ValueError("Provider binding does not match the pinned configuration")
+            if config.workspace is not None and self.expected_config is None:
+                raise ValueError("Workspace execution requires a verified binding")
             if self.expected_config is not None and config != self.expected_config:
                 raise ValueError("Runtime configuration does not match worker profile")
             if (
