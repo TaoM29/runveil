@@ -171,3 +171,47 @@ def test_repeated_tool_limit_requires_version_seven_and_strict_bounds() -> None:
             ).max_identical_tool_calls
             == limit
         )
+
+
+def test_invocation_limits_require_version_eight_and_both_strict_caps() -> None:
+    base = RuntimeConfig(
+        schema_version=7,
+        provider="scripted",
+        model="fixture",
+        system_prompt="Public",
+        max_elapsed_seconds=30,
+        max_input_tokens=100,
+        max_total_output_tokens=100,
+        max_identical_tool_calls=2,
+        pricing=ModelPricing(
+            price_id="fixture",
+            provider="scripted",
+            model="fixture",
+            input_nanousd_per_token=0,
+            output_nanousd_per_token=0,
+        ),
+        max_cost_nanousd=100,
+    ).model_dump(mode="json")
+    for version, model, tool in (
+        (7, 1, 1),
+        (8, None, 1),
+        (8, 1, None),
+        (8, -1, 1),
+        (8, 1, 65),
+        (8, True, 1),
+        (8, 1, 1.5),
+    ):
+        with pytest.raises(ValidationError):
+            RuntimeConfig.model_validate_json(
+                json.dumps(
+                    base
+                    | {"schema_version": version, "max_model_calls": model, "max_tool_calls": tool}
+                )
+            )
+    for model, tool in ((0, 64), (64, 0)):
+        config = RuntimeConfig.model_validate_json(
+            json.dumps(
+                base | {"schema_version": 8, "max_model_calls": model, "max_tool_calls": tool}
+            )
+        )
+        assert (config.max_model_calls, config.max_tool_calls) == (model, tool)

@@ -50,7 +50,9 @@ class ModelPricing(Contract):
 
 
 class RuntimeConfig(Contract):
-    schema_version: Literal[2, 3, 4, 5, 6, 7] = 2
+    schema_version: Literal[2, 3, 4, 5, 6, 7, 8] = 2
+    max_model_calls: Annotated[int, Field(ge=0, le=64)] | None = None
+    max_tool_calls: Annotated[int, Field(ge=0, le=64)] | None = None
     max_identical_tool_calls: Annotated[int, Field(ge=1, le=64)] | None = None
     pricing: ModelPricing | None = None
     max_cost_nanousd: Annotated[int, Field(ge=1, le=1_000_000_000_000_000)] | None = None
@@ -89,8 +91,15 @@ class RuntimeConfig(Contract):
                 raise ValueError("Pricing must match the configured provider/model")
         elif self.pricing is not None or self.max_cost_nanousd is not None:
             raise ValueError("Cost budget requires configuration version 6 or later")
-        if (self.schema_version == 7) != (self.max_identical_tool_calls is not None):
-            raise ValueError("Repeated-tool limit requires configuration version 7 and a limit")
+        if (self.schema_version >= 7) != (self.max_identical_tool_calls is not None):
+            raise ValueError(
+                "Repeated-tool limit requires configuration version 7 or later and a limit"
+            )
+        if self.schema_version == 8:
+            if self.max_model_calls is None or self.max_tool_calls is None:
+                raise ValueError("Invocation limits require both model and tool limits")
+        elif self.max_model_calls is not None or self.max_tool_calls is not None:
+            raise ValueError("Invocation limits require configuration version 8")
         return self
 
 
@@ -139,7 +148,7 @@ class CostAccounting(Contract):
 
 
 class RuntimeState(Contract):
-    schema_version: Literal[1, 2, 3, 4, 5, 6, 7] = 2
+    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8] = 2
     cost: CostAccounting | None = None
     tokens: TokenAccounting = Field(default_factory=TokenAccounting)
     retries_scheduled: Annotated[int, Field(ge=0, le=3)] = 0
@@ -404,6 +413,13 @@ async def _execute(
                 and state.retries_scheduled < config.model_retry.max_retries
                 and state.steps_used < config.max_steps
             ):
+                if (
+                    config.max_model_calls is not None
+                    and state.tokens.attempts >= config.max_model_calls
+                ):
+                    state = state.model_copy(update={"error_code": "model_call_limit_exceeded"})
+                    await store.complete(pending, state, error_code=failure)
+                    return state
                 state = state.model_copy(
                     update={
                         "retries_scheduled": state.retries_scheduled + 1,
