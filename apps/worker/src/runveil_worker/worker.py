@@ -9,6 +9,7 @@ from runveil_core.models import (
     ModelResponse,
     ProviderError,
     ProviderErrorCode,
+    TokenUsage,
     ToolAction,
 )
 from runveil_core.runtime import ModelRetryPolicy, RuntimeConfig, RuntimeState, execute
@@ -21,12 +22,26 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 PROFILE = "fixture-v1"
 RETRY_PROFILE = "fixture-retry-v1"
 BUDGET_PROFILE = "fixture-budget-v1"
+TOKEN_PROFILE = "fixture-token-v1"
 POLICY = ToolPolicy(allowed_tools=("fixture.info",), permissions=(Permission.READ,))
 
 
 def configuration(profile: str = PROFILE) -> RuntimeConfig:
-    if profile not in (PROFILE, RETRY_PROFILE, BUDGET_PROFILE):
+    if profile not in (PROFILE, RETRY_PROFILE, BUDGET_PROFILE, TOKEN_PROFILE):
         raise ValueError("Unknown worker profile")
+    if profile == TOKEN_PROFILE:
+        return RuntimeConfig(
+            schema_version=5,
+            max_elapsed_seconds=30,
+            max_input_tokens=100,
+            max_total_output_tokens=100,
+            provider="scripted-fixture-token-v1",
+            model="fixture-v1",
+            system_prompt="Identify the fixed public Runveil fixture.",
+            tool_policy=POLICY,
+            max_steps=5,
+            model_retry=ModelRetryPolicy(max_retries=2),
+        )
     if profile in (RETRY_PROFILE, BUDGET_PROFILE):
         return RuntimeConfig(
             schema_version=4 if profile == BUDGET_PROFILE else 3,
@@ -86,6 +101,18 @@ class RetryFixtureProvider(FixtureProvider):
         return await super().generate(request)
 
 
+class TokenFixtureProvider(RetryFixtureProvider):
+    """Synthetic usage only; no tokenizer or billing claim."""
+
+    async def generate(self, request: ModelRequest) -> ModelResponse:
+        if self.retries_scheduled < 2:
+            raise ProviderError(
+                ProviderErrorCode.RATE_LIMITED, usage=TokenUsage(input_tokens=0, output_tokens=0)
+            )
+        response = await FixtureProvider.generate(self, request)
+        return response.model_copy(update={"usage": TokenUsage(input_tokens=10, output_tokens=5)})
+
+
 async def submit(sessions: async_sessionmaker[AsyncSession], *, profile: str = PROFILE) -> UUID:
     """Atomically create and enroll one new fixture run; no broker publication."""
     async with sessions.begin() as session:
@@ -110,10 +137,11 @@ async def work_once(
     if claim is None:
         return None
     provider: FixtureProvider = FixtureProvider()
-    if profile in (RETRY_PROFILE, BUDGET_PROFILE):
+    if profile in (RETRY_PROFILE, BUDGET_PROFILE, TOKEN_PROFILE):
         async with sessions.begin() as session:
             restored = await load_runtime_state(session, claim.run_id)
-        provider = RetryFixtureProvider(restored.retries_scheduled if restored else 0)
+        provider_type = TokenFixtureProvider if profile == TOKEN_PROFILE else RetryFixtureProvider
+        provider = provider_type(restored.retries_scheduled if restored else 0)
     state = await execute(
         claim.run_id,
         claim.task,
@@ -122,6 +150,6 @@ async def work_once(
         tools=fixture_registry(),
         tool_policy=POLICY,
         store=PostgresExecutionStore(sessions, claim=claim, expected_config=config),
-        allow_model_retries=profile in (RETRY_PROFILE, BUDGET_PROFILE),
+        allow_model_retries=profile in (RETRY_PROFILE, BUDGET_PROFILE, TOKEN_PROFILE),
     )
     return claim.run_id, state
