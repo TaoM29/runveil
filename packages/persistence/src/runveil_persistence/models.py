@@ -263,6 +263,12 @@ class ToolCallRow(InvocationColumns, Base):
 class JobRow(Base):
     __tablename__ = "worker_jobs"
     __table_args__ = (
+        CheckConstraint("admission_failures BETWEEN 0 AND 3", name="admission_failures_bound"),
+        CheckConstraint("admission_revision >= 0", name="admission_revision_nonnegative"),
+        CheckConstraint(
+            "(admission_failures = 3) = (quarantined_at IS NOT NULL)",
+            name="admission_quarantine_pair",
+        ),
         CheckConstraint("length(task) BETWEEN 1 AND 16384", name="task_length"),
         CheckConstraint("length(profile) BETWEEN 1 AND 100", name="profile_length"),
         CheckConstraint("(token IS NULL) = (expires_at IS NULL)", name="lease_pair"),
@@ -278,6 +284,12 @@ class JobRow(Base):
         DateTime(timezone=True), server_default=func.now()
     )
     deadline_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    admission_failures: Mapped[int] = mapped_column(Integer, server_default="0")
+    admission_revision: Mapped[int] = mapped_column(Integer, server_default="0")
+    admission_not_before: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    quarantined_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class OutboxRow(Base):
@@ -296,3 +308,24 @@ class OutboxRow(Base):
     )
     token: Mapped[UUID | None] = mapped_column()
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class AdmissionEventRow(Base):
+    __tablename__ = "worker_admission_events"
+    __table_args__ = (
+        CheckConstraint("revision > 0", name="admission_event_revision"),
+        CheckConstraint(
+            "(action = 'rejected' AND failures BETWEEN 1 AND 3) "
+            "OR (action = 'released' AND failures = 0)",
+            name="admission_event_action",
+        ),
+    )
+    run_id: Mapped[UUID] = mapped_column(
+        ForeignKey("worker_jobs.run_id", ondelete="RESTRICT"), primary_key=True
+    )
+    revision: Mapped[int] = mapped_column(Integer, primary_key=True)
+    action: Mapped[str] = mapped_column(String(20))
+    failures: Mapped[int] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.clock_timestamp()
+    )
