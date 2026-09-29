@@ -382,27 +382,27 @@ class PostgresExecutionStore:
             raise ValueError("Only tool requests require a tool name")
         blocked: RuntimeState | None = None
         async with self._boundary(cursor) as (session, _):
-            invocations = InvocationRepository(session)
-            record_id = uuid4()
-            if kind == "model":
-                state = await load_runtime_state(session, cursor.run_id)
-                if state is not None and state.budget_failure(config) is not None:
-                    raise ValueError("Run budget does not permit dispatch")
-                model = await invocations.request_model(
-                    cursor.run_id,
-                    invocation_id=record_id,
-                    provider=config.provider,
-                    model=config.model,
-                    request=payload,
-                    retry_of=state.retry_source_id if state is not None else None,
-                    expected_revision=cursor.revision,
-                    expected_sequence=cursor.sequence,
-                )
-                sequence = model.requested_event_sequence
-            else:
-                assert tool_name is not None
-                blocked = await self._check_repeated_tool(session, cursor, tool_name, payload)
-                if blocked is None:
+            blocked = await self._check_request_budget(session, cursor, kind, tool_name, payload)
+            if blocked is None:
+                invocations = InvocationRepository(session)
+                record_id = uuid4()
+                if kind == "model":
+                    state = await load_runtime_state(session, cursor.run_id)
+                    if state is not None and state.budget_failure(config) is not None:
+                        raise ValueError("Run budget does not permit dispatch")
+                    model = await invocations.request_model(
+                        cursor.run_id,
+                        invocation_id=record_id,
+                        provider=config.provider,
+                        model=config.model,
+                        request=payload,
+                        retry_of=state.retry_source_id if state is not None else None,
+                        expected_revision=cursor.revision,
+                        expected_sequence=cursor.sequence,
+                    )
+                    sequence = model.requested_event_sequence
+                else:
+                    assert tool_name is not None
                     tool = await invocations.request_tool(
                         cursor.run_id,
                         tool_call_id=record_id,
@@ -413,38 +413,81 @@ class PostgresExecutionStore:
                         expected_sequence=cursor.sequence,
                     )
                     sequence = tool.requested_event_sequence
-            if blocked is None:
                 return Pending(Cursor(cursor.run_id, cursor.revision, sequence), record_id, kind)
         assert blocked is not None
         raise BudgetExceeded(blocked)
 
-    async def _check_repeated_tool(
-        self, session: AsyncSession, cursor: Cursor, tool_name: str, arguments: dict[str, JsonValue]
+    async def _check_request_budget(
+        self,
+        session: AsyncSession,
+        cursor: Cursor,
+        kind: Literal["model", "tool"],
+        tool_name: str | None,
+        arguments: dict[str, JsonValue],
     ) -> RuntimeState | None:
         run = await RunRepository(session).get(cursor.run_id)
         version = await AgentRepository(session).get_version(run.agent_version_id)
         config = RuntimeConfig.model_validate_json(version.configuration_json)
-        limit = config.max_identical_tool_calls
-        if limit is None:
-            return None
-        count = await session.scalar(
-            select(func.count())
-            .select_from(ToolCallRow)
-            .where(
-                ToolCallRow.run_id == cursor.run_id,
-                ToolCallRow.tool_name == tool_name,
-                ToolCallRow.request == arguments,
+        limit = config.max_model_calls if kind == "model" else config.max_tool_calls
+        if limit is not None:
+            table = ModelInvocationRow if kind == "model" else ToolCallRow
+            count = (
+                await session.scalar(
+                    select(func.count()).select_from(table).where(table.run_id == cursor.run_id)
+                )
+                or 0
             )
-        )
-        if (count or 0) < limit:
+            if count >= limit:
+                return await self._fail_request_budget(
+                    session,
+                    cursor,
+                    budget=f"{kind}_calls",
+                    error_code=f"{kind}_call_limit_exceeded",
+                    limit=limit,
+                    count=count,
+                )
+        limit = config.max_identical_tool_calls
+        if kind != "tool" or limit is None:
             return None
+        count = (
+            await session.scalar(
+                select(func.count())
+                .select_from(ToolCallRow)
+                .where(
+                    ToolCallRow.run_id == cursor.run_id,
+                    ToolCallRow.tool_name == tool_name,
+                    ToolCallRow.request == arguments,
+                )
+            )
+        ) or 0
+        if count < limit:
+            return None
+        return await self._fail_request_budget(
+            session,
+            cursor,
+            budget="identical_tool_calls",
+            error_code="repeated_tool_limit_exceeded",
+            limit=limit,
+            count=count or 0,
+        )
+
+    async def _fail_request_budget(
+        self,
+        session: AsyncSession,
+        cursor: Cursor,
+        *,
+        budget: str,
+        error_code: str,
+        limit: int,
+        count: int,
+    ) -> RuntimeState:
         previous = await load_runtime_state(session, cursor.run_id)
         if previous is None:
-            raise ValueError("Repeated-tool limit requires a runtime checkpoint")
-        state = previous.model_copy(update={"error_code": "repeated_tool_limit_exceeded"})
+            raise ValueError("Invocation limit requires a runtime checkpoint")
+        state = previous.model_copy(update={"error_code": error_code})
         await HistoryRepository(session).record_step(
             cursor.run_id,
-            kind="runtime.repeated_tool_limit_exceeded",
+            kind=f"runtime.{error_code}",
             details={"limit": limit, "prior_calls": count},
             state=state.model_dump(mode="json"),
             expected_revision=cursor.revision,
@@ -454,7 +497,7 @@ class PostgresExecutionStore:
             run_id=cursor.run_id,
             kind="budget.exceeded",
             run_revision=cursor.revision,
-            payload={"budget": "identical_tool_calls", "error_code": state.error_code},
+            payload={"budget": budget, "error_code": error_code},
         )
         session.add(event)
         await session.flush()
@@ -497,6 +540,13 @@ class PostgresExecutionStore:
                     state.tokens, config.pricing
                 ):
                     raise ValueError("Outcome cost differs from pinned pricing and usage")
+                if state.error_code == "model_call_limit_exceeded" and (
+                    pending.kind != "model"
+                    or result is not None
+                    or config.max_model_calls is None
+                    or state.tokens.attempts < config.max_model_calls
+                ):
+                    raise ValueError("Invalid model-call budget failure")
                 failure = state.budget_failure(config)
                 if failure is not None and (
                     result is not None
@@ -529,6 +579,7 @@ class PostgresExecutionStore:
                 "token_usage_unknown",
                 "token_limit_exceeded",
                 "cost_limit_exceeded",
+                "model_call_limit_exceeded",
             ):
                 event = EventRow(
                     run_id=cursor.run_id,
@@ -537,7 +588,12 @@ class PostgresExecutionStore:
                     else "budget.unknown",
                     run_revision=cursor.revision,
                     payload={
-                        "budget": "cost" if state.error_code == "cost_limit_exceeded" else "tokens",
+                        "budget": {
+                            "cost_limit_exceeded": "cost",
+                            "model_call_limit_exceeded": "model_calls",
+                            "token_limit_exceeded": "tokens",
+                            "token_usage_unknown": "tokens",
+                        }[state.error_code],
                         "error_code": state.error_code,
                     },
                 )
@@ -579,6 +635,10 @@ class PostgresExecutionStore:
                 or previous.next_tool is not None
                 or state.budget_failure(config) is not None
                 or state.steps_used >= config.max_steps
+                or (
+                    config.max_model_calls is not None
+                    and state.tokens.attempts >= config.max_model_calls
+                )
                 or state
                 != previous.model_copy(
                     update={
