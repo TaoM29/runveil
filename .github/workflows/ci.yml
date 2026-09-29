@@ -42,6 +42,8 @@ jobs:
           uv run alembic upgrade head
           uv run alembic check
       - run: uv run pytest
+      - name: Phase 5 process-death acceptance (offline)
+        run: uv run python scripts/phase5_acceptance.py
       - run: npm run format:check
       - run: npm run lint
       - run: npm run typecheck
