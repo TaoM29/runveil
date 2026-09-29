@@ -9,6 +9,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     ForeignKeyConstraint,
+    Index,
     Integer,
     MetaData,
     String,
@@ -277,3 +278,21 @@ class JobRow(Base):
         DateTime(timezone=True), server_default=func.now()
     )
     deadline_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class OutboxRow(Base):
+    __tablename__ = "worker_outbox"
+    __table_args__ = (
+        CheckConstraint("length(queue_url) BETWEEN 1 AND 2048", name="queue_url_length"),
+        CheckConstraint("(token IS NULL) = (expires_at IS NULL)", name="publication_lease_pair"),
+        Index("ix_worker_outbox_due", "queue_url", "next_publish_at"),
+    )
+    run_id: Mapped[UUID] = mapped_column(
+        ForeignKey("worker_jobs.run_id", ondelete="RESTRICT"), primary_key=True
+    )
+    queue_url: Mapped[str] = mapped_column(String(2048))
+    next_publish_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    token: Mapped[UUID | None] = mapped_column()
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
