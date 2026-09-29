@@ -10,7 +10,7 @@ from uuid import UUID, uuid4
 from pydantic import ValidationError
 from runveil_core.agents import JsonValue
 from runveil_core.errors import InvalidTransition
-from runveil_core.models import Message, ModelRequest, ModelResponse, validate_response
+from runveil_core.models import Message, ModelRequest, ModelResponse, TokenUsage, validate_response
 from runveil_core.runs import RunStatus
 from runveil_core.runtime import (
     Cursor,
@@ -44,7 +44,7 @@ class PostgresExecutionStore:
 
     @asynccontextmanager
     async def _boundary(
-        self, cursor: Cursor, *, pending: Pending | None = None
+        self, cursor: Cursor, *, pending: Pending | None = None, usage: TokenUsage | None = None
     ) -> AsyncIterator[tuple[AsyncSession, float | None]]:
         expired_state: RuntimeState | None = None
         async with self.sessions.begin() as session:
@@ -64,7 +64,7 @@ class PostgresExecutionStore:
                 else None
             )
             if seconds is not None and seconds <= 0:
-                expired_state = await self._expire(session, cursor, pending)
+                expired_state = await self._expire(session, cursor, pending, usage)
             else:
                 yield session, seconds
         # Raising within the transaction would roll back the terminal evidence.
@@ -78,7 +78,11 @@ class PostgresExecutionStore:
             return seconds
 
     async def _expire(
-        self, session: AsyncSession, cursor: Cursor, pending: Pending | None
+        self,
+        session: AsyncSession,
+        cursor: Cursor,
+        pending: Pending | None,
+        usage: TokenUsage | None,
     ) -> RuntimeState:
         previous = await load_runtime_state(session, cursor.run_id)
         if previous is None:
@@ -90,6 +94,8 @@ class PostgresExecutionStore:
                 "steps_used": previous.steps_used + int(pending is not None),
             }
         )
+        if previous.schema_version == 5 and pending is not None and pending.kind == "model":
+            state = state.model_copy(update={"tokens": previous.tokens.add(usage or TokenUsage())})
         if pending is not None:
             invocations = InvocationRepository(session)
             complete = (
@@ -219,6 +225,7 @@ class PostgresExecutionStore:
             or (state.retry_source_id is not None and state.next_tool is not None)
             or state.final_result is not None
             or state.error_code is not None
+            or state.tokens.failure(config) is not None
             or state.steps_used > config.max_steps
             or (state.next_tool is None) != (state.source_model_id is None)
         ):
@@ -281,6 +288,12 @@ class PostgresExecutionStore:
                 )
                 or 0
             )
+            if (
+                kind == "model"
+                and config.schema_version == 5
+                and state.tokens.attempts != completed_count
+            ):
+                raise ValueError("Checkpoint token attempt count differs from history")
             records = await session.scalars(
                 select(table).where(table.run_id == run_id, table.status == "REQUESTED").limit(2)
             )
@@ -362,6 +375,8 @@ class PostgresExecutionStore:
             record_id = uuid4()
             if kind == "model":
                 state = await load_runtime_state(session, cursor.run_id)
+                if state is not None and state.tokens.failure(config) is not None:
+                    raise ValueError("Token budget does not permit dispatch")
                 model = await invocations.request_model(
                     cursor.run_id,
                     invocation_id=record_id,
@@ -396,7 +411,36 @@ class PostgresExecutionStore:
         error_code: str | None = None,
     ) -> Cursor:
         cursor = pending.cursor
-        async with self._boundary(cursor, pending=pending) as (session, _):
+        async with self._boundary(
+            cursor,
+            pending=pending,
+            usage=state.tokens.last_usage
+            if state.schema_version == 5 and pending.kind == "model"
+            else None,
+        ) as (session, _):
+            previous = await load_runtime_state(session, cursor.run_id)
+            if state.schema_version == 5:
+                if previous is None or state.tokens != (
+                    previous.tokens.add(state.tokens.last_usage)
+                    if pending.kind == "model"
+                    else previous.tokens
+                ):
+                    raise ValueError("Invalid token accounting boundary")
+                run = await RunRepository(session).get(cursor.run_id)
+                version = await AgentRepository(session).get_version(run.agent_version_id)
+                config = RuntimeConfig.model_validate_json(version.configuration_json)
+                failure = state.tokens.failure(config)
+                if failure is not None and (
+                    result is not None
+                    or state.final_result is not None
+                    or state.error_code not in (failure, "execution_interrupted")
+                    or error_code != state.error_code
+                ):
+                    raise ValueError("Token budget requires a failed outcome")
+                if pending.kind == "model" and result is not None:
+                    response = ModelResponse.model_validate_json(json.dumps(result))
+                    if response.usage != state.tokens.last_usage:
+                        raise ValueError("Outcome usage differs from accounting")
             invocations = InvocationRepository(session)
             complete = (
                 invocations.complete_model if pending.kind == "model" else invocations.complete_tool
@@ -413,6 +457,18 @@ class PostgresExecutionStore:
             checkpoint = await HistoryRepository(session).latest_checkpoint(cursor.run_id)
             assert checkpoint is not None
             cursor = Cursor(cursor.run_id, cursor.revision, checkpoint.event_sequence)
+            if state.error_code in ("token_usage_unknown", "token_limit_exceeded"):
+                event = EventRow(
+                    run_id=cursor.run_id,
+                    kind="budget.exceeded"
+                    if state.error_code == "token_limit_exceeded"
+                    else "budget.unknown",
+                    run_revision=cursor.revision,
+                    payload={"budget": "tokens", "error_code": state.error_code},
+                )
+                session.add(event)
+                await session.flush()
+                cursor = Cursor(cursor.run_id, cursor.revision, event.sequence)
             if state.final_result is not None or state.error_code is not None:
                 await RunRepository(session).transition(
                     cursor.run_id,
@@ -426,7 +482,13 @@ class PostgresExecutionStore:
         self, pending: Pending, state: RuntimeState, *, error_code: str
     ) -> None:
         cursor = pending.cursor
-        async with self._boundary(cursor, pending=pending) as (session, _):
+        async with self._boundary(
+            cursor,
+            pending=pending,
+            usage=state.tokens.last_usage
+            if state.schema_version == 5 and pending.kind == "model"
+            else None,
+        ) as (session, _):
             run = await RunRepository(session).get(cursor.run_id)
             version = await AgentRepository(session).get_version(run.agent_version_id)
             config = RuntimeConfig.model_validate_json(version.configuration_json)
@@ -440,10 +502,14 @@ class PostgresExecutionStore:
                 or previous.final_result is not None
                 or previous.error_code is not None
                 or previous.next_tool is not None
+                or state.tokens.failure(config) is not None
                 or state.steps_used >= config.max_steps
                 or state
                 != previous.model_copy(
                     update={
+                        "tokens": previous.tokens.add(state.tokens.last_usage)
+                        if config.schema_version == 5
+                        else previous.tokens,
                         "steps_used": previous.steps_used + 1,
                         "retries_scheduled": previous.retries_scheduled + 1,
                         "retry_source_id": pending.id,
