@@ -1,6 +1,6 @@
 # Architecture
 
-## Implemented through Phase 5H
+## Implemented through Phase 5I
 
 ```mermaid
 flowchart LR
@@ -15,6 +15,10 @@ flowchart LR
     Hosted --> Endpoint[Configured OpenAI-compatible endpoint]
     Worker[Offline worker / PostgreSQL polling] --> Runtime
     Worker --> Store
+    Relay[Opt-in SQS notification relay] --> Persistence
+    Relay --> SQS[SQS Standard / offline verified]
+    SQS --> Consumer[Fixed fixture consumer]
+    Consumer --> Worker
     Runtime[Bounded core execution loop] --> Contracts
     Runtime --> Store[PostgreSQL execution store]
     Store --> Persistence
@@ -236,14 +240,25 @@ Recovery requires the same local root and selected content; no durable content
 archive or migration is added. Existing live bindings remain available. See
 [ADR 0018](docs/adr/0018-pinned-repository-recovery.md).
 
-Broker consistency, general/hosted retries, richer billing models, approvals and sandbox
-boundaries remain future slices; the target diagram does not claim they exist.
+Phase 5I adds migration 0007's opt-in notification outbox and a boto3 SQS Standard
+adapter for `fixture-calls-v1`. Queue destination and enrollment commit with the
+run; message bodies contain only schema version/run ID. A separately leased relay
+sends outside transactions and fences completion. Eligible jobs are re-notified
+periodically until terminal, covering lost messages and expired execution leases.
+Consumers validate queue/profile membership and use existing PostgreSQL claims;
+only committed terminal state permits acknowledgement. Existing polling remains
+available. Offline SDK stubs and database tests verify the consistency boundary;
+no live AWS acceptance or infrastructure is claimed. See
+[ADR 0019](docs/adr/0019-sqs-notification-outbox.md) and [broker operations](docs/operations/BROKER.md).
+
+Broker operational hardening, general/hosted retries, richer billing models,
+approvals and sandbox boundaries remain future slices.
 
 ## Open decisions
 
 - Public product/repository name and license.
 - Future additional provider profiles/capabilities.
-- Future broker/database consistency and retry/idempotency semantics.
+- Broker quarantine/repair operations and hosted retry/idempotency semantics.
 - Sandbox threat model and AWS cost/deployment details.
 
 These are reviewed in their relevant phase, not settled by empty abstractions.
