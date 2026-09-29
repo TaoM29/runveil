@@ -32,6 +32,10 @@ from runveil_persistence.models import EventRow, JobRow, ModelInvocationRow, Too
 from runveil_persistence.repositories import AgentRepository, RunRepository
 
 
+class ConfigurationRejected(ValueError):
+    """Pinned configuration rejected by start before dispatch or history changes."""
+
+
 class PostgresExecutionStore:
     def __init__(
         self,
@@ -162,13 +166,15 @@ class PostgresExecutionStore:
                     ),
                 )
             except ValidationError:
-                raise ValueError("Invalid runtime configuration or task") from None
+                raise ConfigurationRejected("Invalid runtime configuration or task") from None
             if config.provider != provider:
-                raise ValueError("Provider binding does not match the pinned configuration")
+                raise ConfigurationRejected(
+                    "Provider binding does not match the pinned configuration"
+                )
             if config.workspace is not None and self.expected_config is None:
-                raise ValueError("Workspace execution requires a verified binding")
+                raise ConfigurationRejected("Workspace execution requires a verified binding")
             if self.expected_config is not None and config != self.expected_config:
-                raise ValueError("Runtime configuration does not match worker profile")
+                raise ConfigurationRejected("Runtime configuration does not match worker profile")
             if (
                 config.model_retry.max_retries or config.max_elapsed_seconds
             ) and self.claim is None:

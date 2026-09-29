@@ -50,6 +50,8 @@ async def claim_publication(
             .where(
                 OutboxRow.queue_url == queue_url,
                 JobRow.profile == profile,
+                JobRow.quarantined_at.is_(None),
+                JobRow.admission_not_before <= now,
                 RunRow.status.in_(("QUEUED", "RUNNING", "RETRYING")),
                 or_(JobRow.available_at <= now, JobRow.deadline_at <= now),
                 or_(JobRow.token.is_(None), JobRow.expires_at <= now),

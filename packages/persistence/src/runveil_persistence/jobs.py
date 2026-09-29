@@ -62,6 +62,8 @@ async def claim_next(
                 RunRow.status.in_(("QUEUED", "RUNNING", "RETRYING")),
                 or_(JobRow.available_at <= now, JobRow.deadline_at <= now),
                 JobRow.profile == profile,
+                JobRow.quarantined_at.is_(None),
+                JobRow.admission_not_before <= now,
                 or_(JobRow.token.is_(None), JobRow.expires_at <= now),
             )
             .order_by(RunRow.created_at, RunRow.id)
@@ -78,6 +80,8 @@ async def claim_next(
         now = await database_now(session)
         # Recheck after acquiring locks: another claimant may just have renewed.
         expired = job.deadline_at is not None and job.deadline_at <= now
+        if job.quarantined_at is not None or job.admission_not_before > now:
+            return None
         if (job.available_at > now and not expired) or (
             job.expires_at is not None and job.expires_at > now
         ):
@@ -104,6 +108,7 @@ async def fence(session: AsyncSession, run_id: UUID, claim: Claim | None) -> Non
         or job.token != claim.token
         or job.profile != claim.profile
         or job.task != claim.task
+        or job.quarantined_at is not None
         or job.expires_at is None
         or job.expires_at <= now
     ):
