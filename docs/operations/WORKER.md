@@ -1,6 +1,6 @@
-# Durable fixture worker
+# Durable offline worker
 
-The offline profiles are `fixture-v1`, `fixture-retry-v1`, `fixture-budget-v1`, `fixture-token-v1`, `fixture-cost-v1`, `fixture-loop-v1` and (Phase 5G) `fixture-calls-v1`. All use the built-in public fixture, never repository files,
+The fixture profiles are `fixture-v1`, `fixture-retry-v1`, `fixture-budget-v1`, `fixture-token-v1`, `fixture-cost-v1`, `fixture-loop-v1` and (Phase 5G) `fixture-calls-v1`. All use the built-in public fixture, never repository files,
 hosted models, arbitrary tools or secrets.
 See [ADR 0011](../adr/0011-durable-fixture-worker.md) for ownership and recovery rules.
 
@@ -280,6 +280,47 @@ These limits cover durable intents, not a provider's internal attempts or
 exactly-once execution outside the database. No new migration or counters are
 needed. See [ADR 0017](../adr/0017-durable-invocation-limits.md).
 
+## Pinned repository recovery
+
+Phase 5H adds `repository-read-v1`, a fixed offline demonstration using explicitly
+selected repository text. Vet the files before submission: captured text is not
+secret-scanned, and read results enter durable model/tool history. Use a stable
+local directory and supply the same root and exact allowlist on both commands:
+
+```sh
+uv run python -m runveil_worker submit --profile repository-read-v1 \
+  --repository-root /absolute/approved/checkout --file src/example.py
+uv run python -m runveil_worker work --profile repository-read-v1 --once --run-id UUID \
+  --repository-root /absolute/approved/checkout --file src/example.py
+```
+
+Repeat `--file` for each selected file. Root/files are mandatory; repository work
+also requires `--once --run-id`. These flags are rejected for fixture profiles.
+The provider requests only the first 4096-character excerpt of the first sorted
+file, then emits a static finish summary. It does not analyze code or call a hosted
+model. A successful run consumes two model calls/one tool call, three steps,
+20 input/10 output synthetic tokens and 50,000 nano-USD. It inherits the calls
+profile's 30-second budget, 100-token input/output limits, 100,000 nano-USD cap,
+eight-step/two-identical-call limits and no retries.
+
+Submission and each work invocation capture the complete allowlist into immutable
+memory: up to 128 paths, 64 KiB per file and 1 MiB total, UTF-8 without NUL, using
+all existing [repository boundaries](REPOSITORY_TOOLS.md). Version 9 pins three
+SHA-256 fingerprints: root path/device/inode, selected paths/content and covered
+tool source/Python/Pydantic versions. Recovery reconstructs the snapshot and
+compares the entire configuration before dispatch or history writes. A moved or
+replaced root, changed allowlist/selected bytes, or covered implementation change
+prints `worker_failed`; the claim can remain until lease expiry. Do not rebind the
+run to new content. Failed capture occurs before claiming; even a duplicate work
+invocation must first capture a valid binding.
+
+An active snapshot ignores later file edits. Recovery needs identical local
+contents and root identity; there is no durable content archive. Capture is not
+an atomic Git revision. This is trusted application configuration, not protection
+against malicious native code. Clean checkpoints recover before/after a read;
+uncertain intents still fail without replay. See
+[ADR 0018](../adr/0018-pinned-repository-recovery.md).
+
 ## Ownership and restart
 
 Each claim lasts 660 seconds according to the database clock and is renewed at
@@ -314,10 +355,11 @@ are not resumable. Migration 0004 does not enroll or reinterpret existing runs.
 
 This is a local PostgreSQL worker, not an SQS adapter or a production scheduler.
 Database writes are fenced; external execution cannot be made atomic with a claim.
-A paused old process may still execute its pure fixture after losing ownership,
+A paused old process may still execute its read-only operation after losing ownership,
 but cannot commit its result. This is not exactly-once execution.
 
 General/hosted retries and richer billing models are deferred. Existing
 step limits and cooperative per-call deadlines remain active across recovery.
-Repository and hosted-provider recovery need explicit workspace/implementation
-identity and attempt/idempotency policies before being exposed by a worker.
+General repository agents and hosted-provider recovery remain deferred; hosted
+retries need an explicit attempt/idempotency policy. The repository profile above
+is a bounded offline demonstration, not general autonomous repository work.

@@ -94,13 +94,35 @@ and closes its descriptors; queued work after close cannot reopen the root.
 A hung filesystem syscall cannot be forcibly cancelled, so use local trusted
 filesystems. This is not a process sandbox or protection against hostile native
 code, privileged writers, mount changes, concurrent directory relocation or
-hard-link manipulation. File metadata checks catch ordinary edits but do not
-establish a cryptographically immutable snapshot. Different calls may see edits.
+hard-link manipulation. File metadata checks catch ordinary edits. In default live mode, different calls
+may see edits.
 
-The root/allowlist and repository revision are not durably pinned. Interrupted runs
-still cannot resume; a later recovery design must establish workspace and tool
-implementation identity before replay. No worker, retry, approval or MCP work is
-included here.
+## Explicit snapshots and recovery
+
+`RepositoryTools(root, access=access, snapshot=True)` captures every sorted,
+deduplicated selected file before exposing a binding. The same path/text/file
+checks apply, with a total capture limit of 1 MiB (even files a search would skip).
+Capture failure exposes no partial snapshot and closes the root descriptor.
+Successful capture closes it too; read/search use immutable in-memory strings.
+Closing the binding prevents later calls. Capture is not an atomic Git revision;
+keep selected files stable during capture and use trusted local filesystems.
+
+`identity` exposes three SHA-256 digests: canonical root path/device/inode,
+selected paths/content, and covered tool source modules plus Python/Pydantic
+versions. `files` exposes the sorted allowlist. Live bindings have no identity.
+Source-backed installations are required; the fingerprint is computed once per
+process. Changes to covered source, even formatting, conservatively change it.
+This is code identity, not full dependency attestation or a native-code sandbox.
+
+The [repository worker](WORKER.md#pinned-repository-recovery) pins this identity
+in version-9 configuration and requires a matching fresh binding on recovery.
+There is no durable file archive: a new process needs identical selected bytes at
+the same root path/device/inode. A changed unselected file is irrelevant. An active
+snapshot ignores subsequent edits, while a fresh binding detects selected changes.
+Fingerprints contain no plaintext root or file bodies, but are not encryption.
+Selected text can appear in persisted tool/model context; approve disclosure first.
+Uncertain tool intent still fails without replay. Default live bindings alone do
+not authorize durable recovery. See [ADR 0018](../adr/0018-pinned-repository-recovery.md).
 
 Run `uv run python scripts/runtime_demo.py` against a migrated local database for
 an offline model → search → model → read → model finish demonstration. It uses a

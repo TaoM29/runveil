@@ -123,9 +123,13 @@ blocking Python or isolate a handler that ignores cancellation. These classifica
 and grants are an application boundary, not an OS sandbox or authentication system.
 Repository filesystem access uses the separate [native adapter](REPOSITORY_TOOLS.md)
 with an explicit root/file allowlist and bounded reads. Mutation approval remains Phase 6.
-Operator code and implementation bindings are not stored in checkpoints. The worker
-therefore admits only a fixed versioned fixture profile; repository recovery still
-needs workspace and implementation identity.
+Operator code and implementation bindings are not stored in checkpoints. Version 9
+requires a `workspace` with root, content and implementation SHA-256 fingerprints,
+alongside all version-8 budgets. Earlier versions cannot carry that identity.
+Workspace-bound execution requires `PostgresExecutionStore(expected_config=...)`
+constructed from the actual binding; omission or mismatch refuses start/resume.
+The fixed `repository-read-v1` worker reconstructs and verifies a snapshot before
+execution; see [worker operations](WORKER.md#pinned-repository-recovery).
 
 ## Evidence and failure handling
 
@@ -159,7 +163,7 @@ retry `execute`. Task cancellation propagates and can leave RUNNING/REQUESTED
 records. Another actor may cancel a run during generation; its late result cannot
 be committed, although the remote call may have happened or been billed. The
 unclaimed embedding starts queued runs only. `load_runtime_state` is inspection,
-not recovery. The [worker](WORKER.md) resumes enrolled fixture runs under a live
+not recovery. The [worker](WORKER.md) resumes enrolled supported runs under a live
 claim; uncertain invocations fail without replay. Neither path claims exactly-once
 external execution.
 
