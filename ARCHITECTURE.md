@@ -1,6 +1,6 @@
 # Architecture
 
-## Implemented through Phase 5J
+## Implemented through Phase 5; acceptance complete
 
 ```mermaid
 flowchart LR
@@ -260,6 +260,15 @@ release checks the observed admission revision and supported pinned configuratio
 before auditing/resetting admission state. Unknown exceptions and uncertain
 execution are not reclassified or replayed. See
 [ADR 0020](docs/adr/0020-worker-admission-quarantine.md) and [admission operations](docs/operations/ADMISSION.md).
+
+Phase 5K consolidates acceptance without changing runtime behavior. A disposable
+PostgreSQL harness kills an actual worker process after a committed tool checkpoint
+or intent, then drives the existing SQS consumer in fresh processes with offline
+SDK stubs. It verifies successful continuation, conservative uncertain-intent failure,
+active-lease deferral and terminal duplicate acknowledgement. Lease expiry is advanced
+only inside the harness-owned database after verified process death. CI runs the
+demonstration alongside the existing boundary tests. Phase 5 is ready for closure
+review within the accepted scope; see the [acceptance audit](docs/operations/PHASE_5.md).
 
 Broader broker operational hardening, general/hosted retries, richer billing models,
 approvals and sandbox boundaries remain future slices.

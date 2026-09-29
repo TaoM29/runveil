@@ -16,6 +16,10 @@ in the README. The test role needs CREATEDB; fixtures create and drop only rando
 named test databases. Run `uv run alembic upgrade head` and `uv run alembic check`
 against your local database. Never use ORM `create_all` as a substitute for migrations.
 See `docs/operations/PERSISTENCE.md` for transaction boundaries.
+Run `uv run python scripts/phase5_acceptance.py` with the same test admin URL on
+POSIX for actual worker-process death/recovery acceptance. It owns and removes a
+random `runveil_acceptance_*` database and uses offline SQS stubs. See
+`docs/operations/PHASE_5.md` for its deliberate lease-expiry shortcut and scope.
 
 Tests must be deterministic and offline once dependencies are installed. Future
 live provider tests must be separate and opt-in. Do not add speculative runtime

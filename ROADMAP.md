@@ -11,7 +11,7 @@ commit or push is authorized.
 | 2     | Provider protocol, scripted and hosted providers          | Implemented; hosted acceptance complete   |
 | 3     | Minimal persisted execution loop                          | Implemented; continued by Phase 4 request |
 | 4     | Typed tools and authorization                             | Implemented through Phase 4B              |
-| 5     | Durable worker, retries, idempotency and budgets          | 5J implemented; awaiting review           |
+| 5     | Durable worker, retries, idempotency and budgets          | Acceptance complete; closure review       |
 | 6     | Human approval and controlled mutations                   | Planned                                   |
 | 7     | Telemetry and trace UI                                    | Planned                                   |
 | 8     | Deterministic evaluation harness                          | Planned                                   |
@@ -148,19 +148,34 @@ commit or push is authorized.
   See [ADR 0019](docs/adr/0019-sqs-notification-outbox.md) and
   [handoff](docs/operations/PHASE_5I.md). No live AWS acceptance or provisioning.
 
-- **5J — Implemented; awaiting review:** three-rejection admission quarantine for
+- **5J — Implemented; Phase 5 acceptance continuation authorized:** three-rejection admission quarantine for
   `fixture-calls-v1`, cooldown and claim-fenced append-only audit, selection suppression
   across polling/outbox, and operator inspection/release with revision and binding checks.
   Runtime history, deadlines and uncertain-intent semantics remain unchanged.
   See [ADR 0020](docs/adr/0020-worker-admission-quarantine.md) and
   [handoff](docs/operations/PHASE_5J.md). Other failure classes/profiles are not auto-quarantined.
 
+- **5K — Acceptance complete; ready for closure review:** one offline process-death
+  command verifies SIGKILL, active-lease deferral, fresh-process checkpoint recovery,
+  successful continuation, uncertain-intent failure without replay and terminal
+  duplicate acknowledgement. CI runs it alongside the unchanged pytest suite.
+  The [closure audit](docs/operations/PHASE_5.md) maps every Phase 5 criterion to
+  implementation/evidence and explicit limits; see [handoff](docs/operations/PHASE_5K.md).
+
+## Phase 5 closure
+
+Phase 5 implementation and acceptance are complete within the accepted boundaries
+of ADRs 0011–0020. No required criterion remains open for the supported profiles.
+The charter's worker-crash/restart/recovery/success and duplicate-message gates are
+now demonstrated across actual process death. Live AWS/IAM acceptance, deployment
+operations, hosted retry safety and exactly-once external effects are not claimed.
+The SQS target is offline verified; live infrastructure remains Phase 12, with live
+acceptance a separate opt-in activity. Stop for closure review before Phase 6.
+
 ## Recommended next slice
 
-Review Phase 5J, then consolidate Phase 5 acceptance: provide a focused reproducible
-process-crash/restart and duplicate-delivery demonstration using the existing public
-profiles, and audit the charter's reliability criteria against evidence and explicit
-gaps. Prefer that acceptance slice over another independent reliability feature.
-Live AWS acceptance remains a separate explicit opt-in check; provisioning stays
-in Phase 12. Decide Phase 5 closure and Phase 6 entry at review. Hosted retry safety,
-mutations, approvals and MCP are not implied by the current offline evidence.
+After review and separate authorization, begin Phase 6A: durable approval requests
+and pause/resume for one controlled patch proposal. Establish that no patch is
+applied before required approval and rejection prevents action; keep mutation
+gated until that boundary exists and is reviewed. No Phase 6 implementation is
+included in the Phase 5 completion work.

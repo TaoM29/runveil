@@ -2,7 +2,7 @@
 
 A production-style runtime for reliable, observable and evaluable AI agents.
 
-**Working name · Phase 5J implemented; awaiting review. Phase 2 hosted acceptance complete.** This repository contains
+**Working name · Phase 5 acceptance complete; ready for closure review. Phase 2 hosted acceptance complete.** This repository contains
 immutable agent versions, persisted runs with validated lifecycle transitions,
 ordered execution history, checkpoint snapshots, model/tool request and outcome
 records, PostgreSQL migrations and integration tests, plus normalized model
@@ -21,7 +21,7 @@ Repeated configuration rejections in that profile enter durable quarantine with 
 No public live demo or benchmark results exist.
 
 [Architecture](ARCHITECTURE.md) · [Roadmap](ROADMAP.md) ·
-[Project charter](docs/PROJECT_PLAN.md) · [Verification](docs/operations/PHASE_5J.md)
+[Project charter](docs/PROJECT_PLAN.md) · [Verification](docs/operations/PHASE_5K.md)
 
 ## Purpose
 
@@ -91,6 +91,7 @@ uv run pytest -m 'not integration'
 # PostgreSQL must be running; this role needs CREATEDB for isolated test databases.
 export RUNVEIL_TEST_DATABASE_URL='postgresql+psycopg://runveil:runveil-local-only@127.0.0.1:5432/postgres'
 uv run pytest -m integration
+uv run python scripts/phase5_acceptance.py
 npm run format:check
 npm run lint
 npm run typecheck
@@ -100,8 +101,11 @@ uv run python scripts/smoke.py
 ```
 
 Integration tests create/migrate/drop only randomly named `runveil_test_*`
-databases. They never reset the database named in the admin URL. Without the test
-URL they are explicitly skipped; CI sets it and runs the full suite.
+databases. The POSIX process-death acceptance command similarly owns one temporary
+`runveil_acceptance_*` database and uses offline SDK stubs. Neither resets the
+database named in the admin URL. Integration tests skip when the test URL is unset;
+the acceptance command requires it and fails explicitly if missing. CI sets it
+and runs both.
 
 The smoke check starts the API and the production web build on temporary local
 ports, checks their real HTTP responses, and stops both processes. Run the build
@@ -129,7 +133,10 @@ phases supply actual behavior. See the architecture for the intended boundaries.
 
 ## Evidence and limitations
 
-Current verification is recorded in [the Phase 5J handoff](docs/operations/PHASE_5J.md);
+The [Phase 5 acceptance audit](docs/operations/PHASE_5.md) maps the charter criteria
+to evidence, including actual worker-process death, recovery and duplicate delivery.
+Production/live AWS acceptance and hosted retry safety are not claimed.
+Current verification is recorded in [the Phase 5K handoff](docs/operations/PHASE_5K.md);
 [Phase 0 evidence](docs/operations/PHASE_0.md) is retained.
 Run the offline persisted demonstration with `uv run python scripts/runtime_demo.py`
 after migration and database configuration. It creates and retains one new run; see
