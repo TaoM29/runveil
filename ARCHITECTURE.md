@@ -1,6 +1,6 @@
 # Architecture
 
-## Implemented through Phase 5G
+## Implemented through Phase 5H
 
 ```mermaid
 flowchart LR
@@ -13,7 +13,7 @@ flowchart LR
     Scripted[Offline scripted provider] --> Contracts[Model contracts and action validation]
     Hosted[HTTPX Chat Completions adapter] --> Contracts
     Hosted --> Endpoint[Configured OpenAI-compatible endpoint]
-    Worker[Offline fixture worker / PostgreSQL polling] --> Runtime
+    Worker[Offline worker / PostgreSQL polling] --> Runtime
     Worker --> Store
     Runtime[Bounded core execution loop] --> Contracts
     Runtime --> Store[PostgreSQL execution store]
@@ -225,6 +225,16 @@ eligible retries without remaining model capacity fail atomically at the outcome
 instead of scheduling backoff. The existing total-step and repeated-tool limits
 remain active. `fixture-calls-v1` demonstrates exact-limit success. See
 [ADR 0017](docs/adr/0017-durable-invocation-limits.md).
+
+Phase 5H adds explicit immutable in-memory repository snapshots. Version 9 pins
+root identity, selected paths/content and tool source/version fingerprints in the
+agent configuration. Every worker start/recovery constructs a fresh snapshot and
+compares the complete expected configuration before model/tool dispatch or history
+writes. `repository-read-v1` uses a fixed offline provider with explicit root/files
+and per-run selection. Reads/search use captured bytes even if disk contents change.
+Recovery requires the same local root and selected content; no durable content
+archive or migration is added. Existing live bindings remain available. See
+[ADR 0018](docs/adr/0018-pinned-repository-recovery.md).
 
 Broker consistency, general/hosted retries, richer billing models, approvals and sandbox
 boundaries remain future slices; the target diagram does not claim they exist.

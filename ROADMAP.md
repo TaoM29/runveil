@@ -11,7 +11,7 @@ commit or push is authorized.
 | 2     | Provider protocol, scripted and hosted providers          | Implemented; hosted acceptance complete   |
 | 3     | Minimal persisted execution loop                          | Implemented; continued by Phase 4 request |
 | 4     | Typed tools and authorization                             | Implemented through Phase 4B              |
-| 5     | Durable worker, retries, idempotency and budgets          | 5G implemented; awaiting review           |
+| 5     | Durable worker, retries, idempotency and budgets          | 5H implemented; awaiting review           |
 | 6     | Human approval and controlled mutations                   | Planned                                   |
 | 7     | Telemetry and trace UI                                    | Planned                                   |
 | 8     | Deterministic evaluation harness                          | Planned                                   |
@@ -128,16 +128,23 @@ commit or push is authorized.
   [ADR 0016](docs/adr/0016-durable-repeated-tool-limit.md) and
   [handoff](docs/operations/PHASE_5F.md). No semantic loop inference or new side effects.
 
-- **5G — Implemented; awaiting review:** separate pinned model/tool intent limits,
+- **5G — Implemented; Phase 5H continuation authorized:** separate pinned model/tool intent limits,
   admission before dispatch, retry-capacity checks and conservative uncertain-intent
   accounting. New offline `fixture-calls-v1` succeeds exactly at both limits.
   See [ADR 0017](docs/adr/0017-durable-invocation-limits.md) and
   [handoff](docs/operations/PHASE_5G.md). The existing total-step bound remains active.
 
+- **5H — Implemented; awaiting review:** bounded immutable repository snapshots,
+  version-9 workspace/tool implementation identity and explicit offline
+  `repository-read-v1` worker recovery. Changed roots, allowlists, content or covered
+  implementation refuse execution; clean checkpoints resume with identical bindings.
+  See [ADR 0018](docs/adr/0018-pinned-repository-recovery.md) and
+  [handoff](docs/operations/PHASE_5H.md). No durable content archive or tool replay.
+
 ## Recommended next slice
 
-Review Phase 5G, then establish pinned repository workspace/implementation identity
-for a bounded durable read-only repository profile. Verify that recovery cannot
-silently switch its root, allowlist, content snapshot or tool implementation.
-Hosted retry still requires provider idempotency/safety policy; broker consistency
-remains open Phase 5 work. Mutations, approvals and MCP remain in their planned phases.
+Review Phase 5H, then define and implement a focused broker/database delivery
+consistency slice for an offline-tested SQS adapter. Keep PostgreSQL ownership
+authoritative; establish enqueue/outbox, duplicate delivery and acknowledgement
+boundaries before live infrastructure. Hosted retry still requires provider
+idempotency/safety policy. Mutations, approvals and MCP remain in their planned phases.
