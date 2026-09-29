@@ -30,12 +30,34 @@ RETRY_PROFILE = "fixture-retry-v1"
 BUDGET_PROFILE = "fixture-budget-v1"
 TOKEN_PROFILE = "fixture-token-v1"
 COST_PROFILE = "fixture-cost-v1"
+LOOP_PROFILE = "fixture-loop-v1"
 POLICY = ToolPolicy(allowed_tools=("fixture.info",), permissions=(Permission.READ,))
 
 
 def configuration(profile: str = PROFILE) -> RuntimeConfig:
-    if profile not in (PROFILE, RETRY_PROFILE, BUDGET_PROFILE, TOKEN_PROFILE, COST_PROFILE):
+    if profile not in (
+        PROFILE,
+        RETRY_PROFILE,
+        BUDGET_PROFILE,
+        TOKEN_PROFILE,
+        COST_PROFILE,
+        LOOP_PROFILE,
+    ):
         raise ValueError("Unknown worker profile")
+    if profile == LOOP_PROFILE:
+        cost = configuration(COST_PROFILE)
+        assert cost.pricing is not None
+        return RuntimeConfig.model_validate(
+            cost.model_dump()
+            | {
+                "schema_version": 7,
+                "max_identical_tool_calls": 2,
+                "max_steps": 8,
+                "model_retry": ModelRetryPolicy(),
+                "provider": "scripted-fixture-loop-v1",
+                "pricing": cost.pricing.model_copy(update={"provider": "scripted-fixture-loop-v1"}),
+            }
+        )
     if profile in (TOKEN_PROFILE, COST_PROFILE):
         return RuntimeConfig(
             schema_version=6 if profile == COST_PROFILE else 5,
@@ -132,6 +154,24 @@ class TokenFixtureProvider(RetryFixtureProvider):
         return response.model_copy(update={"usage": TokenUsage(input_tokens=10, output_tokens=5)})
 
 
+class LoopFixtureProvider(FixtureProvider):
+    """Deliberately repeat one read-only action to demonstrate the loop guard."""
+
+    async def generate(self, request: ModelRequest) -> ModelResponse:
+        return ModelResponse(
+            model="fixture-v1",
+            finish_reason="stop",
+            latency_ms=0.0,
+            usage=TokenUsage(input_tokens=10, output_tokens=5),
+            content=ToolAction(
+                action="tool_call",
+                tool_name="fixture.info",
+                arguments={},
+                decision_summary="Read the fixed public fixture again.",
+            ).model_dump_json(),
+        )
+
+
 async def submit(sessions: async_sessionmaker[AsyncSession], *, profile: str = PROFILE) -> UUID:
     """Atomically create and enroll one new fixture run; no broker publication."""
     async with sessions.begin() as session:
@@ -155,7 +195,9 @@ async def work_once(
     claim = await claim_next(sessions, profile=profile, run_id=run_id)
     if claim is None:
         return None
-    provider: FixtureProvider = FixtureProvider()
+    provider: FixtureProvider = (
+        LoopFixtureProvider() if profile == LOOP_PROFILE else FixtureProvider()
+    )
     if profile in (RETRY_PROFILE, BUDGET_PROFILE, TOKEN_PROFILE, COST_PROFILE):
         async with sessions.begin() as session:
             restored = await load_runtime_state(session, claim.run_id)
