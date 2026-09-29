@@ -38,6 +38,12 @@ class ModelRetryPolicy(Contract):
         return self.base_delay_seconds * (1 << (retry_count - 1))
 
 
+class WorkspaceIdentity(Contract):
+    root_digest: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
+    content_digest: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
+    implementation_digest: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
+
+
 class ModelPricing(Contract):
     """Immutable linear tariff for a configured request binding, in nano-USD."""
 
@@ -50,7 +56,8 @@ class ModelPricing(Contract):
 
 
 class RuntimeConfig(Contract):
-    schema_version: Literal[2, 3, 4, 5, 6, 7, 8] = 2
+    schema_version: Literal[2, 3, 4, 5, 6, 7, 8, 9] = 2
+    workspace: WorkspaceIdentity | None = None
     max_model_calls: Annotated[int, Field(ge=0, le=64)] | None = None
     max_tool_calls: Annotated[int, Field(ge=0, le=64)] | None = None
     max_identical_tool_calls: Annotated[int, Field(ge=1, le=64)] | None = None
@@ -95,11 +102,13 @@ class RuntimeConfig(Contract):
             raise ValueError(
                 "Repeated-tool limit requires configuration version 7 or later and a limit"
             )
-        if self.schema_version == 8:
+        if self.schema_version >= 8:
             if self.max_model_calls is None or self.max_tool_calls is None:
                 raise ValueError("Invocation limits require both model and tool limits")
         elif self.max_model_calls is not None or self.max_tool_calls is not None:
-            raise ValueError("Invocation limits require configuration version 8")
+            raise ValueError("Invocation limits require configuration version 8 or later")
+        if (self.schema_version == 9) != (self.workspace is not None):
+            raise ValueError("Workspace identity requires configuration version 9 and a binding")
         return self
 
 
@@ -148,7 +157,7 @@ class CostAccounting(Contract):
 
 
 class RuntimeState(Contract):
-    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8] = 2
+    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9] = 2
     cost: CostAccounting | None = None
     tokens: TokenAccounting = Field(default_factory=TokenAccounting)
     retries_scheduled: Annotated[int, Field(ge=0, le=3)] = 0

@@ -2,11 +2,20 @@
 
 import argparse
 import asyncio
+from pathlib import Path
 from uuid import UUID
 
 from runveil_persistence.database import create_engine, database_url
+from runveil_tools.repository import RepositoryAccess
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
+from runveil_worker.repository_worker import (
+    PROFILE as REPOSITORY_PROFILE,
+)
+from runveil_worker.repository_worker import (
+    submit_repository,
+    work_repository_once,
+)
 from runveil_worker.worker import (
     BUDGET_PROFILE,
     CALLS_PROFILE,
@@ -35,20 +44,46 @@ async def main() -> int:
             COST_PROFILE,
             LOOP_PROFILE,
             CALLS_PROFILE,
+            REPOSITORY_PROFILE,
         ),
         default=PROFILE,
     )
+    parser.add_argument("--repository-root", type=Path)
+    parser.add_argument("--file", action="append", dest="files", default=[])
     args = parser.parse_args()
+    if args.profile == REPOSITORY_PROFILE:
+        if args.repository_root is None or not args.files:
+            parser.error("Repository profile requires a root and explicit files")
+        if args.command == "work" and (not args.once or args.run_id is None):
+            parser.error("Repository work requires --once and --run-id")
+    elif args.repository_root is not None or args.files:
+        parser.error("Repository binding options require the repository profile")
     if args.command == "submit" and (args.once or args.run_id):
         parser.error("Worker options apply only to work")
     engine = create_engine(database_url())
     try:
         sessions = async_sessionmaker(engine)
         if args.command == "submit":
-            print(f"run_id={await submit(sessions, profile=args.profile)}")
+            if args.profile == REPOSITORY_PROFILE:
+                assert args.repository_root is not None
+                run_id = await submit_repository(
+                    sessions, args.repository_root, RepositoryAccess(files=tuple(args.files))
+                )
+            else:
+                run_id = await submit(sessions, profile=args.profile)
+            print(f"run_id={run_id}")
             return 0
         while True:
-            outcome = await work_once(sessions, run_id=args.run_id, profile=args.profile)
+            if args.profile == REPOSITORY_PROFILE:
+                assert args.repository_root is not None and args.run_id is not None
+                outcome = await work_repository_once(
+                    sessions,
+                    args.repository_root,
+                    RepositoryAccess(files=tuple(args.files)),
+                    run_id=args.run_id,
+                )
+            else:
+                outcome = await work_once(sessions, run_id=args.run_id, profile=args.profile)
             if outcome is not None:
                 run_id, state = outcome
                 status = (
