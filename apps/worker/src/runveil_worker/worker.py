@@ -20,7 +20,12 @@ from runveil_core.runtime import (
     execute,
 )
 from runveil_core.tools import Permission, ToolPolicy, fixture_registry
-from runveil_persistence.execution import PostgresExecutionStore, load_runtime_state
+from runveil_persistence.admission import record_configuration_rejection
+from runveil_persistence.execution import (
+    ConfigurationRejected,
+    PostgresExecutionStore,
+    load_runtime_state,
+)
 from runveil_persistence.jobs import claim_next, enroll
 from runveil_persistence.outbox import enroll_notification
 from runveil_persistence.repositories import AgentRepository, RunRepository
@@ -236,14 +241,20 @@ async def work_once(
             else RetryFixtureProvider
         )
         provider = provider_type(restored.retries_scheduled if restored else 0)
-    state = await execute(
-        claim.run_id,
-        claim.task,
-        provider_name=config.provider,
-        provider=provider,
-        tools=fixture_registry(),
-        tool_policy=POLICY,
-        store=PostgresExecutionStore(sessions, claim=claim, expected_config=config),
-        allow_model_retries=profile in (RETRY_PROFILE, BUDGET_PROFILE, TOKEN_PROFILE, COST_PROFILE),
-    )
+    try:
+        state = await execute(
+            claim.run_id,
+            claim.task,
+            provider_name=config.provider,
+            provider=provider,
+            tools=fixture_registry(),
+            tool_policy=POLICY,
+            store=PostgresExecutionStore(sessions, claim=claim, expected_config=config),
+            allow_model_retries=profile
+            in (RETRY_PROFILE, BUDGET_PROFILE, TOKEN_PROFILE, COST_PROFILE),
+        )
+    except ConfigurationRejected:
+        if profile == CALLS_PROFILE:
+            await record_configuration_rejection(sessions, claim)
+        raise
     return claim.run_id, state
