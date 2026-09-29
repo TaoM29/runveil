@@ -344,7 +344,10 @@ lifecycle operations, including cancellation. Tokens are never printed.
 - Unknown checkpoint versions, inconsistent history, or configuration/profile
   mismatch stop the worker with `worker_failed` and a nonzero exit. No provider
   dispatch follows. Investigate the stored history/configuration; the lease remains
-  until expiry. There is no poison-job quarantine or automatic repair yet.
+  until expiry, except for the calls profile's explicit configuration rejections.
+  Phase 5J records those under the live claim, clears ownership and applies a
+  30-second cooldown; the third rejection quarantines the job. See
+  [admission inspection/release](ADMISSION.md). No general automatic repair is added.
 
 The CLI emits IDs/status/counts and fixed error codes only; it suppresses raw
 exceptions. Stored tasks/context are not redacted. Enroll only approved content.

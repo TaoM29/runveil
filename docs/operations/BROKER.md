@@ -62,6 +62,9 @@ publication repeats while the run is eligible and unowned until it is terminal.
 No permanent sent flag can strand work after message loss/retention expiry.
 Eligibility uses the job's due time/deadline override and execution lease. A
 selection race can send a stale notification, which remains only a hint.
+Phase 5J also excludes admission cooldown/quarantine from publication and execution
+claims. Quarantined redeliveries return `deferred` and remain unacknowledged;
+verified operator release restores eligibility. See [admission operations](ADMISSION.md).
 
 Messages contain only `schema_version: 1` and `run_id`; bodies are limited to
 1024 UTF-8 bytes. Unknown/malformed envelopes and jobs outside the pinned queue
@@ -85,9 +88,11 @@ transactional fences govern writes. There is no exactly-once external execution.
 ## Limits and verification
 
 Recurring publication deliberately trades additional messages/cost for a simple
-recovery mechanism. Poison messages stay unacknowledged; configure redrive and
-investigate them operationally. Corrupt enrolled jobs can generate repeated hints;
-quarantine/repair policy is the next planned slice. No outbox cleanup, metrics,
+recovery mechanism. Malformed messages stay unacknowledged; configure redrive and
+investigate them operationally. Repeated explicit configuration rejections for
+the calls profile now enter durable quarantine after three recorded failures.
+Unclassified failures, other profiles and malformed messages are not automatically
+quarantined. No outbox cleanup, metrics,
 readiness probe or deployment throughput claim is provided. Other worker profiles,
 including repository and hosted execution, are not accepted by this consumer.
 

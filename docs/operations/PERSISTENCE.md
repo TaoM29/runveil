@@ -35,6 +35,12 @@ commits with the run/job; no existing jobs are backfilled. Downgrading to `0006`
 Re-upgrade does not reconstruct those notifications; PostgreSQL polling remains
 available. See [broker operations](BROKER.md).
 
+Revision `0008` adds admission counts/revisions, cooldown/quarantine to worker jobs
+and a separate append-only `worker_admission_events` table. Existing jobs start
+with zero failures/revision and no quarantine; runtime history is not rewritten.
+Downgrading to `0007` **deletes admission controls and audit**, potentially making
+quarantined work selectable again. It is not an operator repair procedure.
+
 Alembic's metadata drift check covers tables/indexes and supported constraints; it
 does not validate trigger bodies. Direct-SQL integration tests verify those guards.
 
