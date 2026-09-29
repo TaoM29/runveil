@@ -1,6 +1,6 @@
 # Architecture
 
-## Implemented through Phase 5C
+## Implemented through Phase 5E
 
 ```mermaid
 flowchart LR
@@ -203,7 +203,15 @@ limits stop execution after an attempt, before accepting its action. Failed and
 uncertain attempts remain accounted across retries/restarts. No migration or
 provider-specific tokenizer is added. See [ADR 0014](docs/adr/0014-durable-token-budget.md).
 
-Broker consistency, general/hosted retries, cost budgets, approvals and sandbox
+Phase 5E adds version-6 pinned linear USD pricing and exact cost estimates in
+nano-USD. The immutable configuration binds rates to the provider/request model;
+unknown or mismatched pricing is rejected. Checkpoint cost is derived from known
+token components and carries unknown-attempt counts. Cost limits terminate before
+accepting an action at the same post-attempt boundary as tokens; recovery verifies
+stored cost against pinned rates. `fixture-cost-v1` uses synthetic usage/pricing.
+No migration or live price lookup is needed. See [ADR 0015](docs/adr/0015-pinned-cost-budget.md).
+
+Broker consistency, general/hosted retries, richer billing models, approvals and sandbox
 boundaries remain future slices; the target diagram does not claim they exist.
 
 ## Open decisions
