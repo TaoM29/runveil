@@ -353,7 +353,9 @@ are not resumable. Migration 0004 does not enroll or reinterpret existing runs.
 
 ## Limits
 
-This is a local PostgreSQL worker, not an SQS adapter or a production scheduler.
+The default transport remains PostgreSQL polling. Phase 5I adds a separate opt-in
+[SQS notification adapter](BROKER.md) for `fixture-calls-v1`; neither path is a
+production scheduler.
 Database writes are fenced; external execution cannot be made atomic with a claim.
 A paused old process may still execute its read-only operation after losing ownership,
 but cannot commit its result. This is not exactly-once execution.

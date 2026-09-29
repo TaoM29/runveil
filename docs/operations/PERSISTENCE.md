@@ -1,4 +1,4 @@
-# Persistence operations — Phase 1C
+# Persistence operations
 
 ## Configuration and migration
 
@@ -26,6 +26,14 @@ and checkpoint data** while preserving agents/runs. A downgrade to `base`
 **deletes all domain tables and their data**. Round-trip migration tests use disposable databases;
 never use downgrade as an ordinary developer reset. Production migration execution
 and separate runtime/migration roles are future deployment work.
+
+Revisions `0004`–`0006` add worker enrollment, eligibility and deadlines.
+Revision `0007` adds `worker_outbox` for opt-in recurring broker notifications,
+including an immutable queue destination and separate publication lease. Creation
+commits with the run/job; no existing jobs are backfilled. Downgrading to `0006`
+**deletes broker enrollment and publication state** while retaining runs/jobs/history.
+Re-upgrade does not reconstruct those notifications; PostgreSQL polling remains
+available. See [broker operations](BROKER.md).
 
 Alembic's metadata drift check covers tables/indexes and supported constraints; it
 does not validate trigger bodies. Direct-SQL integration tests verify those guards.
