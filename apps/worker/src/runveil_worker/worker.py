@@ -31,6 +31,7 @@ BUDGET_PROFILE = "fixture-budget-v1"
 TOKEN_PROFILE = "fixture-token-v1"
 COST_PROFILE = "fixture-cost-v1"
 LOOP_PROFILE = "fixture-loop-v1"
+CALLS_PROFILE = "fixture-calls-v1"
 POLICY = ToolPolicy(allowed_tools=("fixture.info",), permissions=(Permission.READ,))
 
 
@@ -42,8 +43,24 @@ def configuration(profile: str = PROFILE) -> RuntimeConfig:
         TOKEN_PROFILE,
         COST_PROFILE,
         LOOP_PROFILE,
+        CALLS_PROFILE,
     ):
         raise ValueError("Unknown worker profile")
+    if profile == CALLS_PROFILE:
+        loop = configuration(LOOP_PROFILE)
+        assert loop.pricing is not None
+        return RuntimeConfig.model_validate(
+            loop.model_dump()
+            | {
+                "schema_version": 8,
+                "max_model_calls": 2,
+                "max_tool_calls": 1,
+                "provider": "scripted-fixture-calls-v1",
+                "pricing": loop.pricing.model_copy(
+                    update={"provider": "scripted-fixture-calls-v1"}
+                ),
+            }
+        )
     if profile == LOOP_PROFILE:
         cost = configuration(COST_PROFILE)
         assert cost.pricing is not None
@@ -198,6 +215,8 @@ async def work_once(
     provider: FixtureProvider = (
         LoopFixtureProvider() if profile == LOOP_PROFILE else FixtureProvider()
     )
+    if profile == CALLS_PROFILE:
+        provider = TokenFixtureProvider(2)
     if profile in (RETRY_PROFILE, BUDGET_PROFILE, TOKEN_PROFILE, COST_PROFILE):
         async with sessions.begin() as session:
             restored = await load_runtime_state(session, claim.run_id)
