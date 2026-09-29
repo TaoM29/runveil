@@ -24,6 +24,7 @@ from runveil_persistence.jobs import OwnershipLost, claim_next, enroll
 from runveil_persistence.models import JobRow, ModelInvocationRow
 from runveil_persistence.repositories import AgentRepository, RunRepository
 from runveil_worker.worker import (
+    COST_PROFILE,
     POLICY,
     TOKEN_PROFILE,
     FixtureProvider,
@@ -37,8 +38,12 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 
 
-async def seeded(sessions: async_sessionmaker[AsyncSession]) -> tuple[UUID, RuntimeConfig]:
-    config = configuration(TOKEN_PROFILE).model_copy(update={"max_elapsed_seconds": 86400})
+async def seeded(
+    sessions: async_sessionmaker[AsyncSession], config: RuntimeConfig | None = None
+) -> tuple[UUID, RuntimeConfig]:
+    config = (config or configuration(TOKEN_PROFILE)).model_copy(
+        update={"max_elapsed_seconds": 86400}
+    )
     async with sessions.begin() as session:
         agents = AgentRepository(session)
         agent = await agents.create("Token fixture")
@@ -48,8 +53,9 @@ async def seeded(sessions: async_sessionmaker[AsyncSession]) -> tuple[UUID, Runt
     return run_id, config
 
 
+@pytest.mark.parametrize("profile", [TOKEN_PROFILE, COST_PROFILE])
 async def test_token_profile_retries_across_engines(
-    database: AsyncEngine, monkeypatch: pytest.MonkeyPatch
+    database: AsyncEngine, monkeypatch: pytest.MonkeyPatch, profile: str
 ) -> None:
     at: datetime | None = None
     real_now = jobs.database_now
@@ -60,13 +66,11 @@ async def test_token_profile_retries_across_engines(
     monkeypatch.setattr(jobs, "database_now", now)
     monkeypatch.setattr(execution, "database_now", now)
     sessions = async_sessionmaker(database)
-    run_id = await submit(sessions, profile=TOKEN_PROFILE)
+    run_id = await submit(sessions, profile=profile)
     for attempt in range(3):
         restarted = create_engine(database.url)
         try:
-            outcome = await work_once(
-                async_sessionmaker(restarted), run_id=run_id, profile=TOKEN_PROFILE
-            )
+            outcome = await work_once(async_sessionmaker(restarted), run_id=run_id, profile=profile)
         finally:
             await restarted.dispose()
         assert outcome is not None
@@ -81,7 +85,10 @@ async def test_token_profile_retries_across_engines(
         else:
             assert state.final_result is not None and state.tokens.attempts == 4
             assert (state.tokens.input_tokens, state.tokens.output_tokens) == (20, 10)
-    assert await work_once(sessions, run_id=run_id, profile=TOKEN_PROFILE) is None
+            if profile == COST_PROFILE:
+                assert state.cost is not None and state.cost.known_nanousd == 50_000
+                assert state.cost.unknown_attempts == 0
+    assert await work_once(sessions, run_id=run_id, profile=profile) is None
 
 
 @pytest.mark.parametrize(
@@ -149,9 +156,10 @@ async def test_token_failure_rejects_action_and_retry(
             )
 
 
-async def test_uncertain_intent_and_stale_owner(database: AsyncEngine) -> None:
+@pytest.mark.parametrize("profile", [TOKEN_PROFILE, COST_PROFILE])
+async def test_uncertain_intent_and_stale_owner(database: AsyncEngine, profile: str) -> None:
     sessions = async_sessionmaker(database)
-    run_id, config = await seeded(sessions)
+    run_id, config = await seeded(sessions, configuration(profile))
     claim = await claim_next(sessions, profile="token-test", run_id=run_id)
     assert claim is not None
     old = PostgresExecutionStore(sessions, claim=claim, expected_config=config)
@@ -180,24 +188,38 @@ async def test_uncertain_intent_and_stale_owner(database: AsyncEngine) -> None:
     assert not provider.requests and state.error_code == "execution_interrupted"
     assert state.tokens.attempts == state.tokens.unknown_attempts == 1
 
+    if profile == COST_PROFILE:
+        assert state.cost is not None and state.cost.unknown_attempts == 1
+        assert state.cost.known_nanousd == 0
 
+
+@pytest.mark.parametrize("profile", [TOKEN_PROFILE, COST_PROFILE])
 async def test_accounting_rollback_and_late_usage(
-    database: AsyncEngine, monkeypatch: pytest.MonkeyPatch
+    database: AsyncEngine, monkeypatch: pytest.MonkeyPatch, profile: str
 ) -> None:
     sessions = async_sessionmaker(database)
-    run_id, config = await seeded(sessions)
+    run_id, config = await seeded(sessions, configuration(profile))
     claim = await claim_next(sessions, profile="token-test", run_id=run_id)
     assert claim is not None
     store = PostgresExecutionStore(sessions, claim=claim, expected_config=config)
     started = await store.start(run_id, claim.task, config.provider)
     pending = await store.request(started.cursor, kind="model", payload={}, config=config)
-    state = started.state.model_copy(
+    state = started.state.account_model_usage(
+        TokenUsage(input_tokens=100, output_tokens=4), config
+    ).model_copy(
         update={
-            "tokens": started.state.tokens.add(TokenUsage(input_tokens=100, output_tokens=4)),
             "steps_used": 1,
             "error_code": "token_limit_exceeded",
         }
     )
+
+    if profile == COST_PROFILE:
+        assert state.cost is not None
+        wrong = state.model_copy(
+            update={"cost": state.cost.model_copy(update={"known_nanousd": 0})}
+        )
+        with pytest.raises(ValueError, match="Outcome cost differs"):
+            await store.complete(pending, wrong, error_code=wrong.error_code)
 
     async def interrupt(*args: object, **kwargs: object) -> None:
         raise asyncio.CancelledError
@@ -224,15 +246,20 @@ async def test_accounting_rollback_and_late_usage(
         await store.complete(pending, state, error_code=state.error_code)
     assert expired.value.state.error_code == "elapsed_time_exceeded"
     assert expired.value.state.tokens == state.tokens
+    assert expired.value.state.cost == state.cost
     async with sessions.begin() as session:
         assert await load_runtime_state(session, run_id) == expired.value.state
 
 
+@pytest.mark.parametrize("profile", [TOKEN_PROFILE, COST_PROFILE])
 async def test_known_failed_usage_is_not_reset_by_retry(
-    database: AsyncEngine, monkeypatch: pytest.MonkeyPatch
+    database: AsyncEngine, monkeypatch: pytest.MonkeyPatch, profile: str
 ) -> None:
     sessions = async_sessionmaker(database)
-    run_id, config = await seeded(sessions)
+    config = configuration(profile)
+    if profile == COST_PROFILE:
+        config = config.model_copy(update={"max_input_tokens": 1000})
+    run_id, config = await seeded(sessions, config)
     claim = await claim_next(sessions, profile="token-test", run_id=run_id)
     assert claim is not None
 
@@ -282,6 +309,10 @@ async def test_known_failed_usage_is_not_reset_by_retry(
         tools=fixture_registry(),
         tool_policy=POLICY,
     )
-    assert state.error_code == "token_limit_exceeded" and state.next_tool is None
+    expected = "cost_limit_exceeded" if profile == COST_PROFILE else "token_limit_exceeded"
+    assert state.error_code == expected and state.next_tool is None
+    if profile == COST_PROFILE:
+        assert first.cost is not None and first.cost.known_nanousd == 80_000
+        assert state.cost is not None and state.cost.known_nanousd == 137_500
     assert state.tokens.attempts == 2 and state.tokens.unknown_attempts == 0
     assert (state.tokens.input_tokens, state.tokens.output_tokens) == (100, 5)

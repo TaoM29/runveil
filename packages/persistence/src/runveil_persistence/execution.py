@@ -13,6 +13,7 @@ from runveil_core.errors import InvalidTransition
 from runveil_core.models import Message, ModelRequest, ModelResponse, TokenUsage, validate_response
 from runveil_core.runs import RunStatus
 from runveil_core.runtime import (
+    CostAccounting,
     Cursor,
     ElapsedBudgetExceeded,
     Pending,
@@ -94,8 +95,11 @@ class PostgresExecutionStore:
                 "steps_used": previous.steps_used + int(pending is not None),
             }
         )
-        if previous.schema_version == 5 and pending is not None and pending.kind == "model":
-            state = state.model_copy(update={"tokens": previous.tokens.add(usage or TokenUsage())})
+        if previous.schema_version >= 5 and pending is not None and pending.kind == "model":
+            run = await RunRepository(session).get(cursor.run_id)
+            version = await AgentRepository(session).get_version(run.agent_version_id)
+            config = RuntimeConfig.model_validate_json(version.configuration_json)
+            state = state.account_model_usage(usage or TokenUsage(), config)
         if pending is not None:
             invocations = InvocationRepository(session)
             complete = (
@@ -150,6 +154,7 @@ class PostgresExecutionStore:
                 config = RuntimeConfig.model_validate_json(version.configuration_json)
                 state = RuntimeState(
                     schema_version=config.schema_version,
+                    cost=CostAccounting() if config.schema_version == 6 else None,
                     messages=(
                         Message(role="system", content=config.system_prompt),
                         Message(role="user", content=task),
@@ -219,13 +224,17 @@ class PostgresExecutionStore:
         if checkpoint is None or checkpoint.run_revision != revision - int(retrying):
             raise ValueError("Recovery requires a checkpoint at the current revision")
         state = RuntimeState.model_validate_json(json.dumps(checkpoint.state))
+        if config.pricing is not None and state.cost != CostAccounting.from_tokens(
+            state.tokens, config.pricing
+        ):
+            raise ValueError("Checkpoint cost differs from pinned pricing and usage")
         if (
             state.schema_version != config.schema_version
             or state.retries_scheduled > config.model_retry.max_retries
             or (state.retry_source_id is not None and state.next_tool is not None)
             or state.final_result is not None
             or state.error_code is not None
-            or state.tokens.failure(config) is not None
+            or state.budget_failure(config) is not None
             or state.steps_used > config.max_steps
             or (state.next_tool is None) != (state.source_model_id is None)
         ):
@@ -290,7 +299,7 @@ class PostgresExecutionStore:
             )
             if (
                 kind == "model"
-                and config.schema_version == 5
+                and config.schema_version >= 5
                 and state.tokens.attempts != completed_count
             ):
                 raise ValueError("Checkpoint token attempt count differs from history")
@@ -375,8 +384,8 @@ class PostgresExecutionStore:
             record_id = uuid4()
             if kind == "model":
                 state = await load_runtime_state(session, cursor.run_id)
-                if state is not None and state.tokens.failure(config) is not None:
-                    raise ValueError("Token budget does not permit dispatch")
+                if state is not None and state.budget_failure(config) is not None:
+                    raise ValueError("Run budget does not permit dispatch")
                 model = await invocations.request_model(
                     cursor.run_id,
                     invocation_id=record_id,
@@ -415,11 +424,11 @@ class PostgresExecutionStore:
             cursor,
             pending=pending,
             usage=state.tokens.last_usage
-            if state.schema_version == 5 and pending.kind == "model"
+            if state.schema_version >= 5 and pending.kind == "model"
             else None,
         ) as (session, _):
             previous = await load_runtime_state(session, cursor.run_id)
-            if state.schema_version == 5:
+            if state.schema_version >= 5:
                 if previous is None or state.tokens != (
                     previous.tokens.add(state.tokens.last_usage)
                     if pending.kind == "model"
@@ -429,14 +438,18 @@ class PostgresExecutionStore:
                 run = await RunRepository(session).get(cursor.run_id)
                 version = await AgentRepository(session).get_version(run.agent_version_id)
                 config = RuntimeConfig.model_validate_json(version.configuration_json)
-                failure = state.tokens.failure(config)
+                if config.pricing is not None and state.cost != CostAccounting.from_tokens(
+                    state.tokens, config.pricing
+                ):
+                    raise ValueError("Outcome cost differs from pinned pricing and usage")
+                failure = state.budget_failure(config)
                 if failure is not None and (
                     result is not None
                     or state.final_result is not None
                     or state.error_code not in (failure, "execution_interrupted")
                     or error_code != state.error_code
                 ):
-                    raise ValueError("Token budget requires a failed outcome")
+                    raise ValueError("Run budget requires a failed outcome")
                 if pending.kind == "model" and result is not None:
                     response = ModelResponse.model_validate_json(json.dumps(result))
                     if response.usage != state.tokens.last_usage:
@@ -457,14 +470,21 @@ class PostgresExecutionStore:
             checkpoint = await HistoryRepository(session).latest_checkpoint(cursor.run_id)
             assert checkpoint is not None
             cursor = Cursor(cursor.run_id, cursor.revision, checkpoint.event_sequence)
-            if state.error_code in ("token_usage_unknown", "token_limit_exceeded"):
+            if state.error_code in (
+                "token_usage_unknown",
+                "token_limit_exceeded",
+                "cost_limit_exceeded",
+            ):
                 event = EventRow(
                     run_id=cursor.run_id,
                     kind="budget.exceeded"
-                    if state.error_code == "token_limit_exceeded"
+                    if state.error_code != "token_usage_unknown"
                     else "budget.unknown",
                     run_revision=cursor.revision,
-                    payload={"budget": "tokens", "error_code": state.error_code},
+                    payload={
+                        "budget": "cost" if state.error_code == "cost_limit_exceeded" else "tokens",
+                        "error_code": state.error_code,
+                    },
                 )
                 session.add(event)
                 await session.flush()
@@ -486,7 +506,7 @@ class PostgresExecutionStore:
             cursor,
             pending=pending,
             usage=state.tokens.last_usage
-            if state.schema_version == 5 and pending.kind == "model"
+            if state.schema_version >= 5 and pending.kind == "model"
             else None,
         ) as (session, _):
             run = await RunRepository(session).get(cursor.run_id)
@@ -502,14 +522,17 @@ class PostgresExecutionStore:
                 or previous.final_result is not None
                 or previous.error_code is not None
                 or previous.next_tool is not None
-                or state.tokens.failure(config) is not None
+                or state.budget_failure(config) is not None
                 or state.steps_used >= config.max_steps
                 or state
                 != previous.model_copy(
                     update={
                         "tokens": previous.tokens.add(state.tokens.last_usage)
-                        if config.schema_version == 5
+                        if config.schema_version >= 5
                         else previous.tokens,
+                        "cost": CostAccounting.from_tokens(state.tokens, config.pricing)
+                        if config.pricing
+                        else None,
                         "steps_used": previous.steps_used + 1,
                         "retries_scheduled": previous.retries_scheduled + 1,
                         "retry_source_id": pending.id,
