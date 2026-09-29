@@ -21,6 +21,7 @@ from runveil_core.models import (
     Name,
     ProviderError,
     ProviderErrorCode,
+    TokenUsage,
     ToolAction,
     validate_response,
 )
@@ -38,7 +39,9 @@ class ModelRetryPolicy(Contract):
 
 
 class RuntimeConfig(Contract):
-    schema_version: Literal[2, 3, 4] = 2
+    schema_version: Literal[2, 3, 4, 5] = 2
+    max_input_tokens: Annotated[int, Field(ge=1, le=1_000_000_000)] | None = None
+    max_total_output_tokens: Annotated[int, Field(ge=1, le=1_000_000_000)] | None = None
     max_elapsed_seconds: Annotated[int, Field(ge=1, le=86400)] | None = None
     model_retry: ModelRetryPolicy = Field(default_factory=ModelRetryPolicy)
     tool_policy: ToolPolicy = Field(default_factory=ToolPolicy)
@@ -54,13 +57,52 @@ class RuntimeConfig(Contract):
     def versioned_retry_policy(self) -> RuntimeConfig:
         if self.schema_version == 2 and self.model_retry != ModelRetryPolicy():
             raise ValueError("Model retry policy requires configuration version 3")
-        if (self.schema_version == 4) != (self.max_elapsed_seconds is not None):
+        if (self.schema_version >= 4) != (self.max_elapsed_seconds is not None):
             raise ValueError("Elapsed budget requires configuration version 4 and a limit")
+        if (self.schema_version == 5) != (
+            self.max_input_tokens is not None and self.max_total_output_tokens is not None
+        ) or (
+            self.schema_version < 5
+            and (self.max_input_tokens is not None or self.max_total_output_tokens is not None)
+        ):
+            raise ValueError("Token budgets require configuration version 5 and both limits")
         return self
 
 
+class TokenAccounting(Contract):
+    attempts: Annotated[int, Field(ge=0, le=64)] = 0
+    input_tokens: Annotated[int, Field(ge=0)] = 0
+    output_tokens: Annotated[int, Field(ge=0)] = 0
+    unknown_attempts: Annotated[int, Field(ge=0, le=64)] = 0
+    last_usage: TokenUsage = Field(default_factory=TokenUsage)
+
+    def add(self, usage: TokenUsage) -> TokenAccounting:
+        return TokenAccounting(
+            attempts=self.attempts + 1,
+            input_tokens=self.input_tokens + (usage.input_tokens or 0),
+            output_tokens=self.output_tokens + (usage.output_tokens or 0),
+            unknown_attempts=self.unknown_attempts
+            + int(usage.input_tokens is None or usage.output_tokens is None),
+            last_usage=usage,
+        )
+
+    def failure(self, config: RuntimeConfig) -> str | None:
+        if config.schema_version < 5:
+            return None
+        if self.unknown_attempts:
+            return "token_usage_unknown"
+        assert config.max_input_tokens is not None and config.max_total_output_tokens is not None
+        if (
+            self.input_tokens >= config.max_input_tokens
+            or self.output_tokens >= config.max_total_output_tokens
+        ):
+            return "token_limit_exceeded"
+        return None
+
+
 class RuntimeState(Contract):
-    schema_version: Literal[1, 2, 3, 4] = 2
+    schema_version: Literal[1, 2, 3, 4, 5] = 2
+    tokens: TokenAccounting = Field(default_factory=TokenAccounting)
     retries_scheduled: Annotated[int, Field(ge=0, le=3)] = 0
     retry_source_id: UUID | None = None
     messages: tuple[Message, ...]
@@ -191,6 +233,8 @@ async def _execute(
         state = state.model_copy(
             update={"steps_used": state.steps_used + 1, "error_code": "execution_interrupted"}
         )
+        if config.schema_version == 5 and started.interrupted.kind == "model":
+            state = state.model_copy(update={"tokens": state.tokens.add(TokenUsage())})
         await store.complete(started.interrupted, state, error_code="execution_interrupted")
         return state
     if state.retry_source_id is not None and not allow_model_retries:
@@ -263,11 +307,15 @@ async def _execute(
         )
         failure: str | None = None
         retryable = False
+        usage = TokenUsage()
         try:
             async with asyncio.timeout(timeout):
                 response = await provider.generate(request)
+            usage = response.usage
             model_action = validate_response(request, response)
         except ProviderError as exc:
+            if usage == TokenUsage():
+                usage = exc.usage
             failure = exc.code.value
             retryable = exc.code == ProviderErrorCode.RATE_LIMITED
         except TimeoutError:
@@ -275,7 +323,15 @@ async def _execute(
         except Exception:
             # Only the provider/response boundary is normalized; storage errors propagate.
             failure = ProviderErrorCode.UNAVAILABLE.value
-        await remaining(pending)
+        if config.schema_version == 5:
+            state = state.model_copy(update={"tokens": state.tokens.add(usage)})
+            token_failure = state.tokens.failure(config)
+            if token_failure is not None:
+                failure, retryable = token_failure, False
+            # The outcome boundary checks elapsed time and retains this usage even
+            # when it discards a late response. No content is accepted before it.
+        else:
+            await remaining(pending)
         if failure is not None:
             if (
                 retryable

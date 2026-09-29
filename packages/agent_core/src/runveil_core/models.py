@@ -113,9 +113,10 @@ class ProviderErrorCode(StrEnum):
 
 
 class ProviderError(Exception):
-    """Safe code only: never wrap a provider body or raw exception message."""
+    """Safe code and optional normalized usage; never retain raw provider errors."""
 
-    def __init__(self, code: ProviderErrorCode) -> None:
+    def __init__(self, code: ProviderErrorCode, *, usage: TokenUsage | None = None) -> None:
+        self.usage = usage if usage is not None else TokenUsage()
         self.code = ProviderErrorCode(code)
         super().__init__(self.code.value)
 

@@ -36,3 +36,38 @@ def test_elapsed_budget_requires_version_and_bounded_limit() -> None:
             json.dumps(base | {"schema_version": 4, "max_elapsed_seconds": limit})
         )
         assert config.max_elapsed_seconds == limit
+
+
+def test_token_limits_require_version_five_and_both_strict_limits() -> None:
+    base = {
+        "provider": "scripted",
+        "model": "fixture",
+        "system_prompt": "Public",
+        "max_elapsed_seconds": 30,
+    }
+    for version, input_limit, output_limit in (
+        (4, 10, 10),
+        (5, None, 10),
+        (5, 10, None),
+        (5, 0, 10),
+        (5, 10, True),
+        (5, 10, 1_000_000_001),
+    ):
+        with pytest.raises(ValidationError):
+            RuntimeConfig.model_validate_json(
+                json.dumps(
+                    base
+                    | {
+                        "schema_version": version,
+                        "max_input_tokens": input_limit,
+                        "max_total_output_tokens": output_limit,
+                    }
+                )
+            )
+    config = RuntimeConfig.model_validate_json(
+        json.dumps(
+            base
+            | {"schema_version": 5, "max_input_tokens": 1, "max_total_output_tokens": 1_000_000_000}
+        )
+    )
+    assert config.max_input_tokens == 1
