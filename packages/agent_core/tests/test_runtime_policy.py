@@ -2,7 +2,7 @@ import json
 
 import pytest
 from pydantic import ValidationError
-from runveil_core.runtime import ModelRetryPolicy, RuntimeConfig
+from runveil_core.runtime import ModelPricing, ModelRetryPolicy, RuntimeConfig
 
 
 def test_retry_policy_bounds_and_explicit_configuration_version() -> None:
@@ -74,8 +74,6 @@ def test_token_limits_require_version_five_and_both_strict_limits() -> None:
 
 
 def test_cost_pricing_requires_complete_matching_snapshot() -> None:
-    from runveil_core.runtime import ModelPricing
-
     pricing = ModelPricing(
         price_id="fixture-v1",
         provider="scripted",
@@ -141,3 +139,35 @@ def test_cost_is_exact_and_partial_usage_remains_unknown_even_at_zero_rates() ->
     free = price.model_copy(update={"input_nanousd_per_token": 0, "output_nanousd_per_token": 0})
     assert CostAccounting.from_tokens(tokens, free).unknown_attempts == 1
     assert CostAccounting.from_tokens(tokens, free).known_nanousd == 0
+
+
+def test_repeated_tool_limit_requires_version_seven_and_strict_bounds() -> None:
+    base = RuntimeConfig(
+        schema_version=6,
+        provider="scripted",
+        model="fixture",
+        system_prompt="Public",
+        max_elapsed_seconds=30,
+        max_input_tokens=100,
+        max_total_output_tokens=100,
+        pricing=ModelPricing(
+            price_id="fixture",
+            provider="scripted",
+            model="fixture",
+            input_nanousd_per_token=0,
+            output_nanousd_per_token=0,
+        ),
+        max_cost_nanousd=100,
+    ).model_dump(mode="json")
+    for version, limit in ((7, None), (6, 2), (7, 0), (7, 65), (7, True), (7, 1.5)):
+        with pytest.raises(ValidationError):
+            RuntimeConfig.model_validate_json(
+                json.dumps(base | {"schema_version": version, "max_identical_tool_calls": limit})
+            )
+    for limit in (1, 64):
+        assert (
+            RuntimeConfig.model_validate_json(
+                json.dumps(base | {"schema_version": 7, "max_identical_tool_calls": limit})
+            ).max_identical_tool_calls
+            == limit
+        )

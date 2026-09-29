@@ -50,7 +50,8 @@ class ModelPricing(Contract):
 
 
 class RuntimeConfig(Contract):
-    schema_version: Literal[2, 3, 4, 5, 6] = 2
+    schema_version: Literal[2, 3, 4, 5, 6, 7] = 2
+    max_identical_tool_calls: Annotated[int, Field(ge=1, le=64)] | None = None
     pricing: ModelPricing | None = None
     max_cost_nanousd: Annotated[int, Field(ge=1, le=1_000_000_000_000_000)] | None = None
     max_input_tokens: Annotated[int, Field(ge=1, le=1_000_000_000)] | None = None
@@ -81,13 +82,15 @@ class RuntimeConfig(Contract):
             raise ValueError(
                 "Token budgets require configuration version 5 or later and both limits"
             )
-        if self.schema_version == 6:
+        if self.schema_version >= 6:
             if self.pricing is None or self.max_cost_nanousd is None:
                 raise ValueError("Cost budget requires a pinned price and a limit")
             if (self.pricing.provider, self.pricing.model) != (self.provider, self.model):
                 raise ValueError("Pricing must match the configured provider/model")
         elif self.pricing is not None or self.max_cost_nanousd is not None:
-            raise ValueError("Cost budget requires configuration version 6")
+            raise ValueError("Cost budget requires configuration version 6 or later")
+        if (self.schema_version == 7) != (self.max_identical_tool_calls is not None):
+            raise ValueError("Repeated-tool limit requires configuration version 7 and a limit")
         return self
 
 
@@ -136,7 +139,7 @@ class CostAccounting(Contract):
 
 
 class RuntimeState(Contract):
-    schema_version: Literal[1, 2, 3, 4, 5, 6] = 2
+    schema_version: Literal[1, 2, 3, 4, 5, 6, 7] = 2
     cost: CostAccounting | None = None
     tokens: TokenAccounting = Field(default_factory=TokenAccounting)
     retries_scheduled: Annotated[int, Field(ge=0, le=3)] = 0
@@ -170,12 +173,16 @@ class RuntimeState(Contract):
         return None
 
 
-class ElapsedBudgetExceeded(Exception):
-    """Storage committed an elapsed-budget terminal state before raising this."""
+class BudgetExceeded(Exception):
+    """Storage committed a budget terminal state before raising this."""
 
     def __init__(self, state: RuntimeState) -> None:
         self.state = state
-        super().__init__("elapsed_time_exceeded")
+        super().__init__(state.error_code)
+
+
+class ElapsedBudgetExceeded(BudgetExceeded):
+    """Elapsed expiry, retained as a distinct exception for store callers."""
 
 
 @dataclass(frozen=True)
@@ -257,7 +264,7 @@ async def execute(
             tool_policy=tool_policy,
             allow_model_retries=allow_model_retries,
         )
-    except ElapsedBudgetExceeded as exc:
+    except BudgetExceeded as exc:
         return exc.state
 
 
