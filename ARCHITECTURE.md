@@ -196,7 +196,14 @@ shrink to remaining time. Expiry commits a failed outcome/checkpoint, budget eve
 and terminal transition. Expired backoff is selectable without stealing live
 leases. See [ADR 0013](docs/adr/0013-durable-elapsed-budget.md).
 
-Broker consistency, general/hosted retries, token/cost budgets, approvals and sandbox
+Phase 5D adds version-5 reported-token accounting in immutable checkpoints and
+`fixture-token-v1`. Model outcomes atomically retain input/output sums, attempt
+counts and nullable latest usage. Missing usage blocks continuation; reported
+limits stop execution after an attempt, before accepting its action. Failed and
+uncertain attempts remain accounted across retries/restarts. No migration or
+provider-specific tokenizer is added. See [ADR 0014](docs/adr/0014-durable-token-budget.md).
+
+Broker consistency, general/hosted retries, cost budgets, approvals and sandbox
 boundaries remain future slices; the target diagram does not claim they exist.
 
 ## Open decisions

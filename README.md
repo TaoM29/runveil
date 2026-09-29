@@ -126,7 +126,7 @@ phases supply actual behavior. See the architecture for the intended boundaries.
 
 ## Evidence and limitations
 
-Current verification is recorded in [the Phase 5C handoff](docs/operations/PHASE_5C.md);
+Current verification is recorded in [the Phase 5D handoff](docs/operations/PHASE_5D.md);
 [Phase 0 evidence](docs/operations/PHASE_0.md) is retained.
 Run the offline persisted demonstration with `uv run python scripts/runtime_demo.py`
 after migration and database configuration. It creates and retains one new run; see
@@ -134,7 +134,8 @@ after migration and database configuration. It creates and retains one new run; 
 Run the durable offline worker with `uv run python -m runveil_worker submit`, then
 `uv run python -m runveil_worker work --once`. Add `--profile fixture-retry-v1`
 to both commands for the durable retry demonstration, or `--profile fixture-budget-v1`
-for the same workflow with a 30-second elapsed budget; see [worker operations](docs/operations/WORKER.md).
+for the same workflow with a 30-second elapsed budget. Use `fixture-token-v1`
+for elapsed plus reported-token limits and synthetic usage; see [worker operations](docs/operations/WORKER.md).
 Repository tool setup and limits are documented in [repository tools](docs/operations/REPOSITORY_TOOLS.md).
 Model contract usage is documented in [model operations](docs/operations/MODELS.md).
 Repository usage and state rules are documented in [persistence operations](docs/operations/PERSISTENCE.md).
