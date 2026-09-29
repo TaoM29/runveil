@@ -22,6 +22,7 @@ from runveil_core.runtime import (
 from runveil_core.tools import Permission, ToolPolicy, fixture_registry
 from runveil_persistence.execution import PostgresExecutionStore, load_runtime_state
 from runveil_persistence.jobs import claim_next, enroll
+from runveil_persistence.outbox import enroll_notification
 from runveil_persistence.repositories import AgentRepository, RunRepository
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -189,8 +190,15 @@ class LoopFixtureProvider(FixtureProvider):
         )
 
 
-async def submit(sessions: async_sessionmaker[AsyncSession], *, profile: str = PROFILE) -> UUID:
-    """Atomically create and enroll one new fixture run; no broker publication."""
+async def submit(
+    sessions: async_sessionmaker[AsyncSession],
+    *,
+    profile: str = PROFILE,
+    queue_url: str | None = None,
+) -> UUID:
+    """Atomically create a fixture run and optional outbox; no broker I/O."""
+    if queue_url is not None and profile != CALLS_PROFILE:
+        raise ValueError("Broker enrollment requires the calls fixture profile")
     async with sessions.begin() as session:
         agents = AgentRepository(session)
         agent = await agents.create("Durable fixture demonstration")
@@ -199,6 +207,8 @@ async def submit(sessions: async_sessionmaker[AsyncSession], *, profile: str = P
         )
         run = await RunRepository(session).create(version.id)
         await enroll(session, run.id, task="Identify the public fixture.", profile=profile)
+        if queue_url is not None:
+            await enroll_notification(session, run.id, queue_url)
         return run.id
 
 
