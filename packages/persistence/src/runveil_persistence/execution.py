@@ -13,6 +13,7 @@ from runveil_core.errors import InvalidTransition
 from runveil_core.models import Message, ModelRequest, ModelResponse, TokenUsage, validate_response
 from runveil_core.runs import RunStatus
 from runveil_core.runtime import (
+    BudgetExceeded,
     CostAccounting,
     Cursor,
     ElapsedBudgetExceeded,
@@ -154,7 +155,7 @@ class PostgresExecutionStore:
                 config = RuntimeConfig.model_validate_json(version.configuration_json)
                 state = RuntimeState(
                     schema_version=config.schema_version,
-                    cost=CostAccounting() if config.schema_version == 6 else None,
+                    cost=CostAccounting() if config.schema_version >= 6 else None,
                     messages=(
                         Message(role="system", content=config.system_prompt),
                         Message(role="user", content=task),
@@ -379,6 +380,7 @@ class PostgresExecutionStore:
     ) -> Pending:
         if (kind == "tool") != (tool_name is not None):
             raise ValueError("Only tool requests require a tool name")
+        blocked: RuntimeState | None = None
         async with self._boundary(cursor) as (session, _):
             invocations = InvocationRepository(session)
             record_id = uuid4()
@@ -399,17 +401,70 @@ class PostgresExecutionStore:
                 sequence = model.requested_event_sequence
             else:
                 assert tool_name is not None
-                tool = await invocations.request_tool(
-                    cursor.run_id,
-                    tool_call_id=record_id,
-                    tool_name=tool_name,
-                    arguments=payload,
-                    model_invocation_id=model_invocation_id,
-                    expected_revision=cursor.revision,
-                    expected_sequence=cursor.sequence,
-                )
-                sequence = tool.requested_event_sequence
-            return Pending(Cursor(cursor.run_id, cursor.revision, sequence), record_id, kind)
+                blocked = await self._check_repeated_tool(session, cursor, tool_name, payload)
+                if blocked is None:
+                    tool = await invocations.request_tool(
+                        cursor.run_id,
+                        tool_call_id=record_id,
+                        tool_name=tool_name,
+                        arguments=payload,
+                        model_invocation_id=model_invocation_id,
+                        expected_revision=cursor.revision,
+                        expected_sequence=cursor.sequence,
+                    )
+                    sequence = tool.requested_event_sequence
+            if blocked is None:
+                return Pending(Cursor(cursor.run_id, cursor.revision, sequence), record_id, kind)
+        assert blocked is not None
+        raise BudgetExceeded(blocked)
+
+    async def _check_repeated_tool(
+        self, session: AsyncSession, cursor: Cursor, tool_name: str, arguments: dict[str, JsonValue]
+    ) -> RuntimeState | None:
+        run = await RunRepository(session).get(cursor.run_id)
+        version = await AgentRepository(session).get_version(run.agent_version_id)
+        config = RuntimeConfig.model_validate_json(version.configuration_json)
+        limit = config.max_identical_tool_calls
+        if limit is None:
+            return None
+        count = await session.scalar(
+            select(func.count())
+            .select_from(ToolCallRow)
+            .where(
+                ToolCallRow.run_id == cursor.run_id,
+                ToolCallRow.tool_name == tool_name,
+                ToolCallRow.request == arguments,
+            )
+        )
+        if (count or 0) < limit:
+            return None
+        previous = await load_runtime_state(session, cursor.run_id)
+        if previous is None:
+            raise ValueError("Repeated-tool limit requires a runtime checkpoint")
+        state = previous.model_copy(update={"error_code": "repeated_tool_limit_exceeded"})
+        await HistoryRepository(session).record_step(
+            cursor.run_id,
+            kind="runtime.repeated_tool_limit_exceeded",
+            details={"limit": limit, "prior_calls": count},
+            state=state.model_dump(mode="json"),
+            expected_revision=cursor.revision,
+            expected_sequence=cursor.sequence,
+        )
+        event = EventRow(
+            run_id=cursor.run_id,
+            kind="budget.exceeded",
+            run_revision=cursor.revision,
+            payload={"budget": "identical_tool_calls", "error_code": state.error_code},
+        )
+        session.add(event)
+        await session.flush()
+        await RunRepository(session).transition(
+            cursor.run_id,
+            RunStatus.FAILED,
+            expected_revision=cursor.revision,
+            expected_sequence=event.sequence,
+        )
+        return state
 
     async def complete(
         self,
