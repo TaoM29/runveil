@@ -19,6 +19,7 @@ from runveil_persistence.outbox import (
     enroll_notification,
     published,
 )
+from runveil_persistence.repositories import AgentRepository, RunRepository
 from runveil_worker import worker
 from runveil_worker.sqs import Notification, SqsQueue, consume_once, publish_once, queue_region
 from runveil_worker.worker import CALLS_PROFILE, submit, work_once
@@ -48,7 +49,21 @@ async def test_outbox_migration_atomic_enrollment_and_destination(
     async with empty_database.begin() as connection:
         await connection.run_sync(lambda c: command.upgrade(migration_config(c), "0006"))
     sessions = async_sessionmaker(empty_database)
-    legacy = await submit(sessions)
+    async with sessions.begin() as session:
+        agents = AgentRepository(session)
+        agent = await agents.create("Public pre-admission fixture")
+        version = await agents.create_version(
+            agent.id, worker.configuration().model_dump(mode="json")
+        )
+        run = await RunRepository(session).create(version.id)
+        legacy = run.id
+        await session.execute(
+            text(
+                "INSERT INTO worker_jobs (run_id,task,profile) "
+                "VALUES (:id,'Public task','fixture-v1')"
+            ),
+            {"id": legacy},
+        )
     async with empty_database.begin() as connection:
         await connection.run_sync(lambda c: command.upgrade(migration_config(c), "head"))
     async with sessions() as session:

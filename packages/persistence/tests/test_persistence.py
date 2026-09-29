@@ -68,6 +68,7 @@ async def test_migration_round_trip_and_metadata(empty_database: AsyncEngine) ->
             "tool_calls",
             "worker_jobs",
             "worker_outbox",
+            "worker_admission_events",
         }
         assert await connection.scalar(text("SELECT count(*) FROM worker_jobs")) == 1
         assert (
@@ -79,6 +80,8 @@ async def test_migration_round_trip_and_metadata(empty_database: AsyncEngine) ->
                 text(
                     "SELECT available_at <= clock_timestamp() AND task='Public task' "
                     "AND profile='fixture-v1' AND token IS NULL AND deadline_at IS NULL "
+                    "AND admission_failures=0 AND admission_revision=0 AND quarantined_at IS NULL "
+                    "AND admission_not_before <= clock_timestamp() "
                     "FROM worker_jobs WHERE run_id=:id"
                 ),
                 {"id": enrolled_run.id},
