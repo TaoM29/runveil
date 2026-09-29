@@ -1,6 +1,6 @@
 # Architecture
 
-## Implemented through Phase 5I
+## Implemented through Phase 5J
 
 ```mermaid
 flowchart LR
@@ -74,8 +74,8 @@ flowchart TD
 The API will accept work rather than run long tasks within an HTTP request.
 Runtime domain code belongs in `packages/agent_core`; providers, tool execution,
 evaluation and observability receive separate packages only when cohesive
-implementations exist. `apps/worker` owns the implemented PostgreSQL polling/profile integration; broker
-integration remains future work.
+implementations exist. `apps/worker` owns PostgreSQL polling/profile integration
+and the opt-in SQS notification adapter.
 Dependency direction should point from apps and adapters toward domain contracts,
 never from the domain toward FastAPI or Next.js.
 
@@ -251,14 +251,24 @@ available. Offline SDK stubs and database tests verify the consistency boundary;
 no live AWS acceptance or infrastructure is claimed. See
 [ADR 0019](docs/adr/0019-sqs-notification-outbox.md) and [broker operations](docs/operations/BROKER.md).
 
-Broker operational hardening, general/hosted retries, richer billing models,
+Phase 5J adds migration 0008's job admission state and separate append-only audit.
+For `fixture-calls-v1`, explicit execution-start configuration rejections accumulate
+under the live claim. Recording clears ownership and imposes a 30-second cooldown;
+the third recorded rejection quarantines the job from polling and publication.
+Runtime history/checkpoints and original deadlines remain unchanged. Operator
+release checks the observed admission revision and supported pinned configuration
+before auditing/resetting admission state. Unknown exceptions and uncertain
+execution are not reclassified or replayed. See
+[ADR 0020](docs/adr/0020-worker-admission-quarantine.md) and [admission operations](docs/operations/ADMISSION.md).
+
+Broader broker operational hardening, general/hosted retries, richer billing models,
 approvals and sandbox boundaries remain future slices.
 
 ## Open decisions
 
 - Public product/repository name and license.
 - Future additional provider profiles/capabilities.
-- Broker quarantine/repair operations and hosted retry/idempotency semantics.
+- Broader admission failure classification and hosted retry/idempotency semantics.
 - Sandbox threat model and AWS cost/deployment details.
 
 These are reviewed in their relevant phase, not settled by empty abstractions.

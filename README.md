@@ -2,7 +2,7 @@
 
 A production-style runtime for reliable, observable and evaluable AI agents.
 
-**Working name · Phase 5I implemented; awaiting review. Phase 2 hosted acceptance complete.** This repository contains
+**Working name · Phase 5J implemented; awaiting review. Phase 2 hosted acceptance complete.** This repository contains
 immutable agent versions, persisted runs with validated lifecycle transitions,
 ordered execution history, checkpoint snapshots, model/tool request and outcome
 records, PostgreSQL migrations and integration tests, plus normalized model
@@ -17,10 +17,11 @@ plus opt-in bounded model retries, elapsed/token/cost budgets and repeated-tool
 limits plus separate model/tool call limits and a pinned read-only repository profile.
 An opt-in SQS notification adapter uses a transactional outbox and PostgreSQL claims
 for the public fixture profile; verification is offline, with no live AWS acceptance.
+Repeated configuration rejections in that profile enter durable quarantine with verified operator release.
 No public live demo or benchmark results exist.
 
 [Architecture](ARCHITECTURE.md) · [Roadmap](ROADMAP.md) ·
-[Project charter](docs/PROJECT_PLAN.md) · [Verification](docs/operations/PHASE_5I.md)
+[Project charter](docs/PROJECT_PLAN.md) · [Verification](docs/operations/PHASE_5J.md)
 
 ## Purpose
 
@@ -128,7 +129,7 @@ phases supply actual behavior. See the architecture for the intended boundaries.
 
 ## Evidence and limitations
 
-Current verification is recorded in [the Phase 5I handoff](docs/operations/PHASE_5I.md);
+Current verification is recorded in [the Phase 5J handoff](docs/operations/PHASE_5J.md);
 [Phase 0 evidence](docs/operations/PHASE_0.md) is retained.
 Run the offline persisted demonstration with `uv run python scripts/runtime_demo.py`
 after migration and database configuration. It creates and retains one new run; see
@@ -143,6 +144,7 @@ rejection of a third identical tool call. `fixture-calls-v1` succeeds exactly at
 its two-model/one-tool limits; see [worker operations](docs/operations/WORKER.md).
 `repository-read-v1` captures an explicit file allowlist and refuses recovery if its
 workspace or tool implementation changes; see [worker setup](docs/operations/WORKER.md#pinned-repository-recovery).
+For quarantine inspection/release, see [admission operations](docs/operations/ADMISSION.md).
 For the optional SQS submission/relay/consumer path, see [broker operations](docs/operations/BROKER.md).
 Repository tool setup and limits are documented in [repository tools](docs/operations/REPOSITORY_TOOLS.md).
 Model contract usage is documented in [model operations](docs/operations/MODELS.md).
