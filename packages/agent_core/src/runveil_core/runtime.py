@@ -38,8 +38,21 @@ class ModelRetryPolicy(Contract):
         return self.base_delay_seconds * (1 << (retry_count - 1))
 
 
+class ModelPricing(Contract):
+    """Immutable linear tariff for a configured request binding, in nano-USD."""
+
+    price_id: Name
+    provider: Name
+    model: Name
+    currency: Literal["USD"] = "USD"
+    input_nanousd_per_token: Annotated[int, Field(ge=0, le=1_000_000_000)]
+    output_nanousd_per_token: Annotated[int, Field(ge=0, le=1_000_000_000)]
+
+
 class RuntimeConfig(Contract):
-    schema_version: Literal[2, 3, 4, 5] = 2
+    schema_version: Literal[2, 3, 4, 5, 6] = 2
+    pricing: ModelPricing | None = None
+    max_cost_nanousd: Annotated[int, Field(ge=1, le=1_000_000_000_000_000)] | None = None
     max_input_tokens: Annotated[int, Field(ge=1, le=1_000_000_000)] | None = None
     max_total_output_tokens: Annotated[int, Field(ge=1, le=1_000_000_000)] | None = None
     max_elapsed_seconds: Annotated[int, Field(ge=1, le=86400)] | None = None
@@ -54,18 +67,27 @@ class RuntimeConfig(Contract):
     timeout_seconds: Annotated[float, Field(gt=0, le=600)] = 60.0
 
     @model_validator(mode="after")
-    def versioned_retry_policy(self) -> RuntimeConfig:
+    def versioned_budgets(self) -> RuntimeConfig:
         if self.schema_version == 2 and self.model_retry != ModelRetryPolicy():
             raise ValueError("Model retry policy requires configuration version 3")
         if (self.schema_version >= 4) != (self.max_elapsed_seconds is not None):
-            raise ValueError("Elapsed budget requires configuration version 4 and a limit")
-        if (self.schema_version == 5) != (
+            raise ValueError("Elapsed budget requires configuration version 4 or later and a limit")
+        if (self.schema_version >= 5) != (
             self.max_input_tokens is not None and self.max_total_output_tokens is not None
         ) or (
             self.schema_version < 5
             and (self.max_input_tokens is not None or self.max_total_output_tokens is not None)
         ):
-            raise ValueError("Token budgets require configuration version 5 and both limits")
+            raise ValueError(
+                "Token budgets require configuration version 5 or later and both limits"
+            )
+        if self.schema_version == 6:
+            if self.pricing is None or self.max_cost_nanousd is None:
+                raise ValueError("Cost budget requires a pinned price and a limit")
+            if (self.pricing.provider, self.pricing.model) != (self.provider, self.model):
+                raise ValueError("Pricing must match the configured provider/model")
+        elif self.pricing is not None or self.max_cost_nanousd is not None:
+            raise ValueError("Cost budget requires configuration version 6")
         return self
 
 
@@ -100,8 +122,22 @@ class TokenAccounting(Contract):
         return None
 
 
+class CostAccounting(Contract):
+    known_nanousd: Annotated[int, Field(ge=0)] = 0
+    unknown_attempts: Annotated[int, Field(ge=0, le=64)] = 0
+
+    @classmethod
+    def from_tokens(cls, tokens: TokenAccounting, pricing: ModelPricing) -> CostAccounting:
+        return cls(
+            known_nanousd=tokens.input_tokens * pricing.input_nanousd_per_token
+            + tokens.output_tokens * pricing.output_nanousd_per_token,
+            unknown_attempts=tokens.unknown_attempts,
+        )
+
+
 class RuntimeState(Contract):
-    schema_version: Literal[1, 2, 3, 4, 5] = 2
+    schema_version: Literal[1, 2, 3, 4, 5, 6] = 2
+    cost: CostAccounting | None = None
     tokens: TokenAccounting = Field(default_factory=TokenAccounting)
     retries_scheduled: Annotated[int, Field(ge=0, le=3)] = 0
     retry_source_id: UUID | None = None
@@ -111,6 +147,27 @@ class RuntimeState(Contract):
     error_code: str | None = None
     next_tool: ToolAction | None = None
     source_model_id: UUID | None = None
+
+    def account_model_usage(self, usage: TokenUsage, config: RuntimeConfig) -> RuntimeState:
+        tokens = self.tokens.add(usage)
+        return self.model_copy(
+            update={
+                "tokens": tokens,
+                "cost": CostAccounting.from_tokens(tokens, config.pricing)
+                if config.pricing
+                else None,
+            }
+        )
+
+    def budget_failure(self, config: RuntimeConfig) -> str | None:
+        token_failure = self.tokens.failure(config)
+        if token_failure is not None:
+            return token_failure
+        if config.max_cost_nanousd is not None:
+            assert self.cost is not None
+            if self.cost.known_nanousd >= config.max_cost_nanousd:
+                return "cost_limit_exceeded"
+        return None
 
 
 class ElapsedBudgetExceeded(Exception):
@@ -233,8 +290,8 @@ async def _execute(
         state = state.model_copy(
             update={"steps_used": state.steps_used + 1, "error_code": "execution_interrupted"}
         )
-        if config.schema_version == 5 and started.interrupted.kind == "model":
-            state = state.model_copy(update={"tokens": state.tokens.add(TokenUsage())})
+        if config.schema_version >= 5 and started.interrupted.kind == "model":
+            state = state.account_model_usage(TokenUsage(), config)
         await store.complete(started.interrupted, state, error_code="execution_interrupted")
         return state
     if state.retry_source_id is not None and not allow_model_retries:
@@ -323,11 +380,11 @@ async def _execute(
         except Exception:
             # Only the provider/response boundary is normalized; storage errors propagate.
             failure = ProviderErrorCode.UNAVAILABLE.value
-        if config.schema_version == 5:
-            state = state.model_copy(update={"tokens": state.tokens.add(usage)})
-            token_failure = state.tokens.failure(config)
-            if token_failure is not None:
-                failure, retryable = token_failure, False
+        if config.schema_version >= 5:
+            state = state.account_model_usage(usage, config)
+            budget_failure = state.budget_failure(config)
+            if budget_failure is not None:
+                failure, retryable = budget_failure, False
             # The outcome boundary checks elapsed time and retains this usage even
             # when it discards a late response. No content is accepted before it.
         else:

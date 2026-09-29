@@ -71,3 +71,73 @@ def test_token_limits_require_version_five_and_both_strict_limits() -> None:
         )
     )
     assert config.max_input_tokens == 1
+
+
+def test_cost_pricing_requires_complete_matching_snapshot() -> None:
+    from runveil_core.runtime import ModelPricing
+
+    pricing = ModelPricing(
+        price_id="fixture-v1",
+        provider="scripted",
+        model="fixture",
+        input_nanousd_per_token=1250,
+        output_nanousd_per_token=2500,
+    )
+    config = RuntimeConfig(
+        schema_version=6,
+        provider="scripted",
+        model="fixture",
+        system_prompt="Public",
+        max_elapsed_seconds=30,
+        max_input_tokens=100,
+        max_total_output_tokens=100,
+        pricing=pricing,
+        max_cost_nanousd=100_000,
+    )
+    base = config.model_dump(mode="json")
+    for update in (
+        {"pricing": None},
+        {"max_cost_nanousd": None},
+        {"max_cost_nanousd": 0},
+        {"max_cost_nanousd": True},
+        {"max_cost_nanousd": 1_000_000_000_000_001},
+        {"schema_version": 5},
+    ):
+        with pytest.raises(ValidationError):
+            RuntimeConfig.model_validate_json(json.dumps(base | update))
+    for price_update in (
+        {"provider": "other"},
+        {"model": "other"},
+        {"currency": "EUR"},
+        {"input_nanousd_per_token": None},
+        {"input_nanousd_per_token": 0.5},
+        {"input_nanousd_per_token": True},
+        {"input_nanousd_per_token": -1},
+        {"output_nanousd_per_token": 1_000_000_001},
+    ):
+        with pytest.raises(ValidationError):
+            RuntimeConfig.model_validate_json(
+                json.dumps(base | {"pricing": pricing.model_dump(mode="json") | price_update})
+            )
+
+
+def test_cost_is_exact_and_partial_usage_remains_unknown_even_at_zero_rates() -> None:
+    from runveil_core.models import TokenUsage
+    from runveil_core.runtime import CostAccounting, ModelPricing, TokenAccounting
+
+    price = ModelPricing(
+        price_id="fractional-cent",
+        provider="scripted",
+        model="fixture",
+        input_nanousd_per_token=3,
+        output_nanousd_per_token=7,
+    )
+    tokens = TokenAccounting().add(TokenUsage(input_tokens=1, output_tokens=1))
+    tokens = tokens.add(TokenUsage(input_tokens=2, output_tokens=3))
+    assert CostAccounting.from_tokens(tokens, price).known_nanousd == 37
+    tokens = tokens.add(TokenUsage(input_tokens=5))
+    cost = CostAccounting.from_tokens(tokens, price)
+    assert cost.known_nanousd == 52 and cost.unknown_attempts == 1
+    free = price.model_copy(update={"input_nanousd_per_token": 0, "output_nanousd_per_token": 0})
+    assert CostAccounting.from_tokens(tokens, free).unknown_attempts == 1
+    assert CostAccounting.from_tokens(tokens, free).known_nanousd == 0
