@@ -1,6 +1,6 @@
 # Architecture
 
-## Implemented through Phase 6A; approval foundation awaiting review
+## Implemented through Phase 6B; worker approval integration awaiting review
 
 ```mermaid
 flowchart LR
@@ -297,3 +297,26 @@ read-only tool authorization remain unchanged. It deliberately does not claim
 model-driven approval recovery, patch application, HTTP or UI support. See
 [ADR 0021](docs/adr/0021-durable-patch-review.md) and
 [approval operations](docs/operations/APPROVALS.md).
+
+## Phase 6B worker approval integration
+
+Configuration/checkpoint version 10 adds the offline `repository-review-v1`
+profile. It uses the existing model ToolAction and read-only authorization pipeline
+to propose a bounded replacement, validated against one disclosed repository
+snapshot. Its adapter fingerprint extends the existing workspace identity. No
+binding or implementation hash for earlier repository tools is changed.
+
+The successful proposal tool outcome, approval ID/checkpoint, immutable request,
+requested event, WAITING_FOR_APPROVAL transition and lease release are atomic under
+the live worker fence. Core stops at that boundary. A trusted operator resolver
+checks revision, digest, profile and model/tool provenance. Approval checkpoints
+its decision in RUNNING; rejection terminates. A later claim validates the entire
+freshly captured workspace binding and approved provenance before continuing.
+Counters and the original deadline survive the wait; expired approved runs stop
+before dispatch. Interrupted proposal intent is conservatively failed without replay.
+
+Phase 6A's unenrolled review workflow remains separate. Neither profile writes any
+file or creates mutation authorization. Controlled writing, authenticated HTTP/UI
+and live hosted approval acceptance remain unimplemented. See
+[ADR 0022](docs/adr/0022-worker-patch-review.md) and
+[Phase 6B handoff](docs/operations/PHASE_6B.md).

@@ -12,7 +12,7 @@ commit or push is authorized.
 | 3     | Minimal persisted execution loop                          | Implemented; continued by Phase 4 request |
 | 4     | Typed tools and authorization                             | Implemented through Phase 4B              |
 | 5     | Durable worker, retries, idempotency and budgets          | Complete; Phase 6 continuation authorized |
-| 6     | Human approval and controlled mutations                   | Phase 6A implemented; review pending      |
+| 6     | Human approval and controlled mutations                   | Phase 6B implemented; review pending      |
 | 7     | Telemetry and trace UI                                    | Planned                                   |
 | 8     | Deterministic evaluation harness                          | Planned                                   |
 | 9     | Statistical comparison                                    | Planned                                   |
@@ -175,7 +175,7 @@ acceptance a separate opt-in activity. Phase 6 continuation was authorized on
 
 ## Phase 6 review gates
 
-- **6A — Implemented; review pending:** durable single-file patch proposal,
+- **6A — Implemented; Phase 6B continuation authorized:** durable single-file patch proposal,
   exact-content digest, atomic request/checkpoint/pause, revision-bound one-time
   approval or rejection and local inspection/decision CLI. Approval resumes to a
   persisted review result; rejection terminates. No patch is applied in this slice,
@@ -185,10 +185,20 @@ acceptance a separate opt-in activity. Phase 6 continuation was authorized on
   This is an isolated review workflow, not model-driven worker recovery or full
   Phase 6 acceptance. HTTP/UI and controlled patch writing remain outstanding.
 
+- **6B — Implemented; review pending:** offline model-driven repository proposal,
+  exact snapshot preimage validation, fenced atomic worker suspension/lease release,
+  one-time decisions and checkpoint continuation under a fresh workspace binding.
+  Approval wait preserves the original elapsed deadline and accounting; uncertain
+  proposal intent fails without replay. Existing Phase 6A approvals remain separate.
+  No patch writing, hosted acceptance, broker extension or API/UI is claimed. See
+  [ADR 0022](docs/adr/0022-worker-patch-review.md),
+  [operations](docs/operations/APPROVALS.md#workspace-bound-worker-review-phase-6b)
+  and [handoff](docs/operations/PHASE_6B.md).
+
 ## Recommended next slice
 
-After review, integrate one model-proposed single-file replacement with durable
-worker approval suspension/recovery and explicit workspace/preimage identity.
-Define single-use mutation and uncertain-effect behavior before enabling a writer;
-then expose decisions through authenticated API/UI. Do not reuse a Phase 6A
-review-only approval as permission to write.
+After review, implement one controlled single-file writer in an explicitly new
+profile, with single-use mutation intent, exact approved proposal/workspace/policy
+binding, fresh preimage validation and conservative uncertain-effect recovery.
+Existing review-only approvals must not become write permission. API/UI and
+reviewer authentication remain further Phase 6 work.
