@@ -103,12 +103,13 @@ uv run python -m runveil_evaluations --suite code-reading --split held-out --out
 ```
 
 Development should score **8/16 → 16/16**, held-out **4/8 → 8/8**. Each three-step
-baseline fails only the search/read tasks at `step_limit_exceeded`; five-step
-candidates finish exactly at the permitted budget. These rates are deliberately
+baseline fails only the search/read tasks at `step_limit_exceeded`. Search-then-read
+candidates finish exactly at the five-step budget; single-read cases consume three
+steps under either configuration. These rates are deliberately
 constructed budget effects, not model improvement estimates. Synthetic token/cost
 accounting retains the Phase 8A labels; wall-clock timing is not reproducible.
 
 See [ADR 0030](../adr/0030-controlled-code-reading-benchmark.md) and the
-[Phase 8B handoff](PHASE_8B.md) for verification and retained reports. Full Phase 8
-acceptance needs a separate scope audit; code repair/test execution and statistical
-inference have not been brought forward from later phases.
+[Phase 8B handoff](PHASE_8B.md) for verification and retained reports. The
+[Phase 8 closure audit](PHASE_8.md) accepts this scripted scope; code repair/test
+execution and statistical inference have not been brought forward from later phases.

@@ -108,3 +108,4 @@ For the separate, explicitly opt-in hosted check, see
 - [Phase 7 integrated acceptance and closure](PHASE_7.md)
 - [Offline deterministic evaluation and benchmark selection](EVALUATIONS.md)
 - [Controlled code-reading benchmark and split discipline](BENCHMARK.md)
+- [Phase 8 evaluation acceptance and scope audit](PHASE_8.md)

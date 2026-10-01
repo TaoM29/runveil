@@ -1,0 +1,1529 @@
+{
+  "audited_at": "2026-10-01T19:19:51.638442+00:00",
+  "source_commit": "2e385b808298466d858b4d0f829b441d7d54db0c",
+  "scope": "offline-scripted-read-only-harness",
+  "retained_file_sha256": {
+    "docs/operations/evidence/phase8/calibration.json": "a96160c6a4b18f96470970aeff5db66950424a68762092a3804cf61efb42c86c",
+    "docs/operations/evidence/phase8b/development.json": "598337d43c9f9b5b312fd08c57b6531445f7a383a0bfc9003ccbb421eef31cd8",
+    "docs/operations/evidence/phase8b/held-out.json": "9fce54125eb14938afd01caf6366462acba56ddda7f9e8a7743434055d47922a",
+    "docs/operations/evidence/phase8b/acceptance.json": "9bf38598e037d48ee160f220afea580f3c274e083237bcee3fa979674a71d717"
+  },
+  "implementation_digest": "54da9c2724c708237c8f235d31b95b045fe31442b8b26cae1ab3c6dcbbb71265",
+  "suite_digests": {
+    "code-reading-calibration:development": "f035436a7fe09c020f4d24de1d1ab5f7ece9725e7b1e429b94f144b388c17ef2",
+    "controlled-code-reading:development": "b1992916d46a1f5d7b5748069f5de387166a4a4a3aa184fae23e7d0fe997de49",
+    "controlled-code-reading:held-out": "6a95d546f370e70b0b1bb128a91d66ff5f7b88ef9d2388d07a84b45465fe481f"
+  },
+  "retained_report_arithmetic_independently_recomputed": true,
+  "historical_8a_fingerprint_treated_as_historical": true,
+  "current_implementation_matches_8b": true,
+  "rejected_comparisons": [
+    "different_split",
+    "relabeled_split",
+    "changed_source",
+    "missing_case",
+    "reordered_cases",
+    "implementation_mismatch",
+    "reused_run_id",
+    "same_agent_version"
+  ],
+  "fresh_cases": [
+    {
+      "split": "development",
+      "baseline": {
+        "id": "5d80fd73-58fb-493a-8f54-e77199a52956",
+        "suite_digest": "b1992916d46a1f5d7b5748069f5de387166a4a4a3aa184fae23e7d0fe997de49",
+        "implementation_digest": "54da9c2724c708237c8f235d31b95b045fe31442b8b26cae1ab3c6dcbbb71265",
+        "agent_version_id": "328e4ee3-7081-42a2-b7e9-0387886e3368",
+        "agent_version_number": 1,
+        "configuration": {
+          "schema_version": 8,
+          "workspace": null,
+          "max_model_calls": 3,
+          "max_tool_calls": 2,
+          "max_identical_tool_calls": 2,
+          "pricing": {
+            "price_id": "synthetic-eval-v1",
+            "provider": "scripted",
+            "model": "eval-fixture-v1",
+            "currency": "USD",
+            "input_nanousd_per_token": 1000,
+            "output_nanousd_per_token": 2000
+          },
+          "max_cost_nanousd": 1000000,
+          "max_input_tokens": 1000,
+          "max_total_output_tokens": 1000,
+          "max_elapsed_seconds": 60,
+          "model_retry": {
+            "max_retries": 0,
+            "base_delay_seconds": 1
+          },
+          "tool_policy": {
+            "allowed_tools": ["repository.read_file", "repository.search"],
+            "permissions": ["read"]
+          },
+          "provider": "scripted",
+          "model": "eval-fixture-v1",
+          "system_prompt": "Inspect the public code fixture using only granted read tools.",
+          "max_steps": 3,
+          "temperature": 0.0,
+          "max_output_tokens": 1024,
+          "timeout_seconds": 5.0
+        },
+        "started_at": "2026-10-01T19:19:26.721193Z",
+        "finished_at": "2026-10-01T19:19:33.528582Z",
+        "cases": [
+          {
+            "case_id": "defaults-retries",
+            "run_id": "d6b5cf71-125d-407d-9f1b-c011fe50a8de",
+            "status": "SUCCEEDED",
+            "grade": "pass",
+            "error_code": null,
+            "event_sequence": 17,
+            "steps": 3,
+            "model_calls": 2,
+            "tool_calls": 1,
+            "retries": 0,
+            "elapsed_ms": 337.745,
+            "tokens": {
+              "attempts": 2,
+              "input_tokens": 20,
+              "output_tokens": 10,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 40000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "defaults-keyword-only",
+            "run_id": "c6e949f9-6d19-4acd-98bb-34b23e288db7",
+            "status": "FAILED",
+            "grade": "runtime_failure",
+            "error_code": "step_limit_exceeded",
+            "event_sequence": 19,
+            "steps": 3,
+            "model_calls": 2,
+            "tool_calls": 1,
+            "retries": 0,
+            "elapsed_ms": 320.983,
+            "tokens": {
+              "attempts": 2,
+              "input_tokens": 20,
+              "output_tokens": 10,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 40000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "branches-inclusive",
+            "run_id": "0c6939d8-52fe-4b53-828e-77b9450fd21d",
+            "status": "SUCCEEDED",
+            "grade": "pass",
+            "error_code": null,
+            "event_sequence": 17,
+            "steps": 3,
+            "model_calls": 2,
+            "tool_calls": 1,
+            "retries": 0,
+            "elapsed_ms": 329.957,
+            "tokens": {
+              "attempts": 2,
+              "input_tokens": 20,
+              "output_tokens": 10,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 40000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "branches-first-match",
+            "run_id": "bcb2d1d7-aa52-4413-9d43-b5e8227fbe1a",
+            "status": "FAILED",
+            "grade": "runtime_failure",
+            "error_code": "step_limit_exceeded",
+            "event_sequence": 19,
+            "steps": 3,
+            "model_calls": 2,
+            "tool_calls": 1,
+            "retries": 0,
+            "elapsed_ms": 354.346,
+            "tokens": {
+              "attempts": 2,
+              "input_tokens": 20,
+              "output_tokens": 10,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 40000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "collections-copy",
+            "run_id": "6c84924a-b4a3-4865-8b56-032be9aca9bd",
+            "status": "SUCCEEDED",
+            "grade": "pass",
+            "error_code": null,
+            "event_sequence": 17,
+            "steps": 3,
+            "model_calls": 2,
+            "tool_calls": 1,
+            "retries": 0,
+            "elapsed_ms": 271.086,
+            "tokens": {
+              "attempts": 2,
+              "input_tokens": 20,
+              "output_tokens": 10,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 40000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "collections-fallback",
+            "run_id": "b6acdce9-7340-41a0-bd4c-6f08e7d8f3ec",
+            "status": "FAILED",
+            "grade": "runtime_failure",
+            "error_code": "step_limit_exceeded",
+            "event_sequence": 19,
+            "steps": 3,
+            "model_calls": 2,
+            "tool_calls": 1,
+            "retries": 0,
+            "elapsed_ms": 304.053,
+            "tokens": {
+              "attempts": 2,
+              "input_tokens": 20,
+              "output_tokens": 10,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 40000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "strings-normalize",
+            "run_id": "d6129914-5094-498a-b217-7fabf7da2b01",
+            "status": "SUCCEEDED",
+            "grade": "pass",
+            "error_code": null,
+            "event_sequence": 17,
+            "steps": 3,
+            "model_calls": 2,
+            "tool_calls": 1,
+            "retries": 0,
+            "elapsed_ms": 269.138,
+            "tokens": {
+              "attempts": 2,
+              "input_tokens": 20,
+              "output_tokens": 10,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 40000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "strings-split-limit",
+            "run_id": "b95cbd19-d3c8-4d46-85f0-8301fdec71f6",
+            "status": "FAILED",
+            "grade": "runtime_failure",
+            "error_code": "step_limit_exceeded",
+            "event_sequence": 19,
+            "steps": 3,
+            "model_calls": 2,
+            "tool_calls": 1,
+            "retries": 0,
+            "elapsed_ms": 434.58000000000004,
+            "tokens": {
+              "attempts": 2,
+              "input_tokens": 20,
+              "output_tokens": 10,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 40000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "iteration-range",
+            "run_id": "af6300f4-ec3b-4233-8d8d-8e6de173b565",
+            "status": "SUCCEEDED",
+            "grade": "pass",
+            "error_code": null,
+            "event_sequence": 17,
+            "steps": 3,
+            "model_calls": 2,
+            "tool_calls": 1,
+            "retries": 0,
+            "elapsed_ms": 513.088,
+            "tokens": {
+              "attempts": 2,
+              "input_tokens": 20,
+              "output_tokens": 10,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 40000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "iteration-filter",
+            "run_id": "e3aa9518-2700-4a94-a544-a75648290767",
+            "status": "FAILED",
+            "grade": "runtime_failure",
+            "error_code": "step_limit_exceeded",
+            "event_sequence": 19,
+            "steps": 3,
+            "model_calls": 2,
+            "tool_calls": 1,
+            "retries": 0,
+            "elapsed_ms": 301.49199999999996,
+            "tokens": {
+              "attempts": 2,
+              "input_tokens": 20,
+              "output_tokens": 10,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 40000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "exceptions-fallback",
+            "run_id": "29cf9b4d-89f8-4d25-9d2f-68ddf62746f9",
+            "status": "SUCCEEDED",
+            "grade": "pass",
+            "error_code": null,
+            "event_sequence": 17,
+            "steps": 3,
+            "model_calls": 2,
+            "tool_calls": 1,
+            "retries": 0,
+            "elapsed_ms": 270.257,
+            "tokens": {
+              "attempts": 2,
+              "input_tokens": 20,
+              "output_tokens": 10,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 40000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "exceptions-finally",
+            "run_id": "065c7f0a-86ec-4aca-9514-a5f9e19a3a94",
+            "status": "FAILED",
+            "grade": "runtime_failure",
+            "error_code": "step_limit_exceeded",
+            "event_sequence": 19,
+            "steps": 3,
+            "model_calls": 2,
+            "tool_calls": 1,
+            "retries": 0,
+            "elapsed_ms": 330.93600000000004,
+            "tokens": {
+              "attempts": 2,
+              "input_tokens": 20,
+              "output_tokens": 10,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 40000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "scope-shadowing",
+            "run_id": "2891f8e9-7833-4ef5-afff-28b39c7d18b1",
+            "status": "SUCCEEDED",
+            "grade": "pass",
+            "error_code": null,
+            "event_sequence": 17,
+            "steps": 3,
+            "model_calls": 2,
+            "tool_calls": 1,
+            "retries": 0,
+            "elapsed_ms": 241.697,
+            "tokens": {
+              "attempts": 2,
+              "input_tokens": 20,
+              "output_tokens": 10,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 40000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "scope-closure",
+            "run_id": "f2bced00-79a9-4f6f-8201-d30655642c32",
+            "status": "FAILED",
+            "grade": "runtime_failure",
+            "error_code": "step_limit_exceeded",
+            "event_sequence": 19,
+            "steps": 3,
+            "model_calls": 2,
+            "tool_calls": 1,
+            "retries": 0,
+            "elapsed_ms": 338.972,
+            "tokens": {
+              "attempts": 2,
+              "input_tokens": 20,
+              "output_tokens": 10,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 40000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "inspection-async",
+            "run_id": "fc8c1b01-2c7d-4d00-9cf6-d48a1332e711",
+            "status": "SUCCEEDED",
+            "grade": "pass",
+            "error_code": null,
+            "event_sequence": 17,
+            "steps": 3,
+            "model_calls": 2,
+            "tool_calls": 1,
+            "retries": 0,
+            "elapsed_ms": 463.711,
+            "tokens": {
+              "attempts": 2,
+              "input_tokens": 20,
+              "output_tokens": 10,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 40000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "inspection-resource-mode",
+            "run_id": "de46da23-70a7-4d2e-9587-3514658f8fd8",
+            "status": "FAILED",
+            "grade": "runtime_failure",
+            "error_code": "step_limit_exceeded",
+            "event_sequence": 19,
+            "steps": 3,
+            "model_calls": 2,
+            "tool_calls": 1,
+            "retries": 0,
+            "elapsed_ms": 446.24,
+            "tokens": {
+              "attempts": 2,
+              "input_tokens": 20,
+              "output_tokens": 10,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 40000,
+              "unknown_attempts": 0
+            }
+          }
+        ]
+      },
+      "candidate": {
+        "id": "194711de-d279-4b52-b1e5-0394085420d2",
+        "suite_digest": "b1992916d46a1f5d7b5748069f5de387166a4a4a3aa184fae23e7d0fe997de49",
+        "implementation_digest": "54da9c2724c708237c8f235d31b95b045fe31442b8b26cae1ab3c6dcbbb71265",
+        "agent_version_id": "d4a3ffb7-6222-4e27-a10b-2cdf004e06b8",
+        "agent_version_number": 2,
+        "configuration": {
+          "schema_version": 8,
+          "workspace": null,
+          "max_model_calls": 3,
+          "max_tool_calls": 2,
+          "max_identical_tool_calls": 2,
+          "pricing": {
+            "price_id": "synthetic-eval-v1",
+            "provider": "scripted",
+            "model": "eval-fixture-v1",
+            "currency": "USD",
+            "input_nanousd_per_token": 1000,
+            "output_nanousd_per_token": 2000
+          },
+          "max_cost_nanousd": 1000000,
+          "max_input_tokens": 1000,
+          "max_total_output_tokens": 1000,
+          "max_elapsed_seconds": 60,
+          "model_retry": {
+            "max_retries": 0,
+            "base_delay_seconds": 1
+          },
+          "tool_policy": {
+            "allowed_tools": ["repository.read_file", "repository.search"],
+            "permissions": ["read"]
+          },
+          "provider": "scripted",
+          "model": "eval-fixture-v1",
+          "system_prompt": "Inspect the public code fixture using only granted read tools.",
+          "max_steps": 5,
+          "temperature": 0.0,
+          "max_output_tokens": 1024,
+          "timeout_seconds": 5.0
+        },
+        "started_at": "2026-10-01T19:19:33.528880Z",
+        "finished_at": "2026-10-01T19:19:40.990827Z",
+        "cases": [
+          {
+            "case_id": "defaults-retries",
+            "run_id": "911b7c17-b26b-449c-b14b-271bf26b6e98",
+            "status": "SUCCEEDED",
+            "grade": "pass",
+            "error_code": null,
+            "event_sequence": 17,
+            "steps": 3,
+            "model_calls": 2,
+            "tool_calls": 1,
+            "retries": 0,
+            "elapsed_ms": 233.941,
+            "tokens": {
+              "attempts": 2,
+              "input_tokens": 20,
+              "output_tokens": 10,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 40000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "defaults-keyword-only",
+            "run_id": "d18cd060-eff1-4753-ab8c-9c1887de5daa",
+            "status": "SUCCEEDED",
+            "grade": "pass",
+            "error_code": null,
+            "event_sequence": 25,
+            "steps": 5,
+            "model_calls": 3,
+            "tool_calls": 2,
+            "retries": 0,
+            "elapsed_ms": 517.1519999999999,
+            "tokens": {
+              "attempts": 3,
+              "input_tokens": 30,
+              "output_tokens": 15,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 60000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "branches-inclusive",
+            "run_id": "efdde632-04f7-46e7-bb51-b1fff6cfb7cd",
+            "status": "SUCCEEDED",
+            "grade": "pass",
+            "error_code": null,
+            "event_sequence": 17,
+            "steps": 3,
+            "model_calls": 2,
+            "tool_calls": 1,
+            "retries": 0,
+            "elapsed_ms": 400.646,
+            "tokens": {
+              "attempts": 2,
+              "input_tokens": 20,
+              "output_tokens": 10,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 40000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "branches-first-match",
+            "run_id": "71a88e14-6bcc-411a-a1c7-e2011417a7c9",
+            "status": "SUCCEEDED",
+            "grade": "pass",
+            "error_code": null,
+            "event_sequence": 25,
+            "steps": 5,
+            "model_calls": 3,
+            "tool_calls": 2,
+            "retries": 0,
+            "elapsed_ms": 702.8050000000001,
+            "tokens": {
+              "attempts": 3,
+              "input_tokens": 30,
+              "output_tokens": 15,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 60000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "collections-copy",
+            "run_id": "a7b13179-d036-4360-85df-609441fea43d",
+            "status": "SUCCEEDED",
+            "grade": "pass",
+            "error_code": null,
+            "event_sequence": 17,
+            "steps": 3,
+            "model_calls": 2,
+            "tool_calls": 1,
+            "retries": 0,
+            "elapsed_ms": 241.491,
+            "tokens": {
+              "attempts": 2,
+              "input_tokens": 20,
+              "output_tokens": 10,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 40000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "collections-fallback",
+            "run_id": "868648d1-fee8-4b7e-8056-b22655c3c7c8",
+            "status": "SUCCEEDED",
+            "grade": "pass",
+            "error_code": null,
+            "event_sequence": 25,
+            "steps": 5,
+            "model_calls": 3,
+            "tool_calls": 2,
+            "retries": 0,
+            "elapsed_ms": 642.865,
+            "tokens": {
+              "attempts": 3,
+              "input_tokens": 30,
+              "output_tokens": 15,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 60000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "strings-normalize",
+            "run_id": "0fd86fea-a135-4951-8513-ae63a3356eb3",
+            "status": "SUCCEEDED",
+            "grade": "pass",
+            "error_code": null,
+            "event_sequence": 17,
+            "steps": 3,
+            "model_calls": 2,
+            "tool_calls": 1,
+            "retries": 0,
+            "elapsed_ms": 574.212,
+            "tokens": {
+              "attempts": 2,
+              "input_tokens": 20,
+              "output_tokens": 10,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 40000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "strings-split-limit",
+            "run_id": "1ffa5a0c-0543-40d1-81ac-471eccf55ba3",
+            "status": "SUCCEEDED",
+            "grade": "pass",
+            "error_code": null,
+            "event_sequence": 25,
+            "steps": 5,
+            "model_calls": 3,
+            "tool_calls": 2,
+            "retries": 0,
+            "elapsed_ms": 406.479,
+            "tokens": {
+              "attempts": 3,
+              "input_tokens": 30,
+              "output_tokens": 15,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 60000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "iteration-range",
+            "run_id": "549688d8-7274-4123-bf2c-909f87f9387e",
+            "status": "SUCCEEDED",
+            "grade": "pass",
+            "error_code": null,
+            "event_sequence": 17,
+            "steps": 3,
+            "model_calls": 2,
+            "tool_calls": 1,
+            "retries": 0,
+            "elapsed_ms": 260.53,
+            "tokens": {
+              "attempts": 2,
+              "input_tokens": 20,
+              "output_tokens": 10,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 40000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "iteration-filter",
+            "run_id": "09812c03-1379-4d20-bcc1-defc2dd7084b",
+            "status": "SUCCEEDED",
+            "grade": "pass",
+            "error_code": null,
+            "event_sequence": 25,
+            "steps": 5,
+            "model_calls": 3,
+            "tool_calls": 2,
+            "retries": 0,
+            "elapsed_ms": 405.387,
+            "tokens": {
+              "attempts": 3,
+              "input_tokens": 30,
+              "output_tokens": 15,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 60000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "exceptions-fallback",
+            "run_id": "1501ae32-188e-4206-946b-76aa92ae533c",
+            "status": "SUCCEEDED",
+            "grade": "pass",
+            "error_code": null,
+            "event_sequence": 17,
+            "steps": 3,
+            "model_calls": 2,
+            "tool_calls": 1,
+            "retries": 0,
+            "elapsed_ms": 215.09900000000002,
+            "tokens": {
+              "attempts": 2,
+              "input_tokens": 20,
+              "output_tokens": 10,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 40000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "exceptions-finally",
+            "run_id": "9c19fc7a-800b-4bad-be11-ecc0cc695173",
+            "status": "SUCCEEDED",
+            "grade": "pass",
+            "error_code": null,
+            "event_sequence": 25,
+            "steps": 5,
+            "model_calls": 3,
+            "tool_calls": 2,
+            "retries": 0,
+            "elapsed_ms": 347.534,
+            "tokens": {
+              "attempts": 3,
+              "input_tokens": 30,
+              "output_tokens": 15,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 60000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "scope-shadowing",
+            "run_id": "a4bcc300-b2db-4dc5-9b41-c97a4be2d02b",
+            "status": "SUCCEEDED",
+            "grade": "pass",
+            "error_code": null,
+            "event_sequence": 17,
+            "steps": 3,
+            "model_calls": 2,
+            "tool_calls": 1,
+            "retries": 0,
+            "elapsed_ms": 328.719,
+            "tokens": {
+              "attempts": 2,
+              "input_tokens": 20,
+              "output_tokens": 10,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 40000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "scope-closure",
+            "run_id": "458b8066-8476-4797-b812-936551945422",
+            "status": "SUCCEEDED",
+            "grade": "pass",
+            "error_code": null,
+            "event_sequence": 25,
+            "steps": 5,
+            "model_calls": 3,
+            "tool_calls": 2,
+            "retries": 0,
+            "elapsed_ms": 329.954,
+            "tokens": {
+              "attempts": 3,
+              "input_tokens": 30,
+              "output_tokens": 15,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 60000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "inspection-async",
+            "run_id": "cbf9b3ce-f76c-4078-b0ce-ec35376e7ebf",
+            "status": "SUCCEEDED",
+            "grade": "pass",
+            "error_code": null,
+            "event_sequence": 17,
+            "steps": 3,
+            "model_calls": 2,
+            "tool_calls": 1,
+            "retries": 0,
+            "elapsed_ms": 283.46700000000004,
+            "tokens": {
+              "attempts": 2,
+              "input_tokens": 20,
+              "output_tokens": 10,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 40000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "inspection-resource-mode",
+            "run_id": "a1b1d6a6-0e3b-4126-baba-b9edc23133d0",
+            "status": "SUCCEEDED",
+            "grade": "pass",
+            "error_code": null,
+            "event_sequence": 25,
+            "steps": 5,
+            "model_calls": 3,
+            "tool_calls": 2,
+            "retries": 0,
+            "elapsed_ms": 414.439,
+            "tokens": {
+              "attempts": 3,
+              "input_tokens": 30,
+              "output_tokens": 15,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 60000,
+              "unknown_attempts": 0
+            }
+          }
+        ]
+      }
+    },
+    {
+      "split": "held-out",
+      "baseline": {
+        "id": "a4cd6b53-58c2-4d72-98d3-a09e0236864a",
+        "suite_digest": "6a95d546f370e70b0b1bb128a91d66ff5f7b88ef9d2388d07a84b45465fe481f",
+        "implementation_digest": "54da9c2724c708237c8f235d31b95b045fe31442b8b26cae1ab3c6dcbbb71265",
+        "agent_version_id": "ec2edbe8-0151-411c-8b4c-7c5b9691dedb",
+        "agent_version_number": 1,
+        "configuration": {
+          "schema_version": 8,
+          "workspace": null,
+          "max_model_calls": 3,
+          "max_tool_calls": 2,
+          "max_identical_tool_calls": 2,
+          "pricing": {
+            "price_id": "synthetic-eval-v1",
+            "provider": "scripted",
+            "model": "eval-fixture-v1",
+            "currency": "USD",
+            "input_nanousd_per_token": 1000,
+            "output_nanousd_per_token": 2000
+          },
+          "max_cost_nanousd": 1000000,
+          "max_input_tokens": 1000,
+          "max_total_output_tokens": 1000,
+          "max_elapsed_seconds": 60,
+          "model_retry": {
+            "max_retries": 0,
+            "base_delay_seconds": 1
+          },
+          "tool_policy": {
+            "allowed_tools": ["repository.read_file", "repository.search"],
+            "permissions": ["read"]
+          },
+          "provider": "scripted",
+          "model": "eval-fixture-v1",
+          "system_prompt": "Inspect the public code fixture using only granted read tools.",
+          "max_steps": 3,
+          "temperature": 0.0,
+          "max_output_tokens": 1024,
+          "timeout_seconds": 5.0
+        },
+        "started_at": "2026-10-01T19:19:41.705185Z",
+        "finished_at": "2026-10-01T19:19:45.716197Z",
+        "cases": [
+          {
+            "case_id": "defaults-captured-value",
+            "run_id": "16472239-5a92-4a90-84b8-7facf32646bb",
+            "status": "SUCCEEDED",
+            "grade": "pass",
+            "error_code": null,
+            "event_sequence": 17,
+            "steps": 3,
+            "model_calls": 2,
+            "tool_calls": 1,
+            "retries": 0,
+            "elapsed_ms": 302.577,
+            "tokens": {
+              "attempts": 2,
+              "input_tokens": 20,
+              "output_tokens": 10,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 40000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "branches-short-circuit",
+            "run_id": "429bf0e9-d131-485c-85c4-cfd49996c8dc",
+            "status": "FAILED",
+            "grade": "runtime_failure",
+            "error_code": "step_limit_exceeded",
+            "event_sequence": 19,
+            "steps": 3,
+            "model_calls": 2,
+            "tool_calls": 1,
+            "retries": 0,
+            "elapsed_ms": 280.852,
+            "tokens": {
+              "attempts": 2,
+              "input_tokens": 20,
+              "output_tokens": 10,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 40000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "collections-alias",
+            "run_id": "382876d5-c875-44d3-a17f-196b3518e751",
+            "status": "SUCCEEDED",
+            "grade": "pass",
+            "error_code": null,
+            "event_sequence": 17,
+            "steps": 3,
+            "model_calls": 2,
+            "tool_calls": 1,
+            "retries": 0,
+            "elapsed_ms": 486.425,
+            "tokens": {
+              "attempts": 2,
+              "input_tokens": 20,
+              "output_tokens": 10,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 40000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "strings-suffix",
+            "run_id": "59f7de35-815c-45b5-a541-791a895a8b09",
+            "status": "FAILED",
+            "grade": "runtime_failure",
+            "error_code": "step_limit_exceeded",
+            "event_sequence": 19,
+            "steps": 3,
+            "model_calls": 2,
+            "tool_calls": 1,
+            "retries": 0,
+            "elapsed_ms": 526.2170000000001,
+            "tokens": {
+              "attempts": 2,
+              "input_tokens": 20,
+              "output_tokens": 10,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 40000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "iteration-zip-bound",
+            "run_id": "57a28d5a-56e3-47f8-97da-58a17d0508e9",
+            "status": "SUCCEEDED",
+            "grade": "pass",
+            "error_code": null,
+            "event_sequence": 17,
+            "steps": 3,
+            "model_calls": 2,
+            "tool_calls": 1,
+            "retries": 0,
+            "elapsed_ms": 366.30600000000004,
+            "tokens": {
+              "attempts": 2,
+              "input_tokens": 20,
+              "output_tokens": 10,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 40000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "exceptions-else",
+            "run_id": "d6ce87c7-14cc-4586-9100-cb5cfa2f7ce3",
+            "status": "FAILED",
+            "grade": "runtime_failure",
+            "error_code": "step_limit_exceeded",
+            "event_sequence": 19,
+            "steps": 3,
+            "model_calls": 2,
+            "tool_calls": 1,
+            "retries": 0,
+            "elapsed_ms": 311.988,
+            "tokens": {
+              "attempts": 2,
+              "input_tokens": 20,
+              "output_tokens": 10,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 40000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "scope-nonlocal",
+            "run_id": "86f5b8a3-382f-440f-bfc5-f6f381c59a27",
+            "status": "SUCCEEDED",
+            "grade": "pass",
+            "error_code": null,
+            "event_sequence": 17,
+            "steps": 3,
+            "model_calls": 2,
+            "tool_calls": 1,
+            "retries": 0,
+            "elapsed_ms": 456.248,
+            "tokens": {
+              "attempts": 2,
+              "input_tokens": 20,
+              "output_tokens": 10,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 40000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "inspection-handler-type",
+            "run_id": "de987492-d6d2-4272-831e-05bc2b5d1f4a",
+            "status": "FAILED",
+            "grade": "runtime_failure",
+            "error_code": "step_limit_exceeded",
+            "event_sequence": 19,
+            "steps": 3,
+            "model_calls": 2,
+            "tool_calls": 1,
+            "retries": 0,
+            "elapsed_ms": 573.585,
+            "tokens": {
+              "attempts": 2,
+              "input_tokens": 20,
+              "output_tokens": 10,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 40000,
+              "unknown_attempts": 0
+            }
+          }
+        ]
+      },
+      "candidate": {
+        "id": "c2736c2d-ffbc-4c9c-955d-8849d80bd460",
+        "suite_digest": "6a95d546f370e70b0b1bb128a91d66ff5f7b88ef9d2388d07a84b45465fe481f",
+        "implementation_digest": "54da9c2724c708237c8f235d31b95b045fe31442b8b26cae1ab3c6dcbbb71265",
+        "agent_version_id": "28711d5b-1620-404c-b8e7-bdbe1ab3429d",
+        "agent_version_number": 2,
+        "configuration": {
+          "schema_version": 8,
+          "workspace": null,
+          "max_model_calls": 3,
+          "max_tool_calls": 2,
+          "max_identical_tool_calls": 2,
+          "pricing": {
+            "price_id": "synthetic-eval-v1",
+            "provider": "scripted",
+            "model": "eval-fixture-v1",
+            "currency": "USD",
+            "input_nanousd_per_token": 1000,
+            "output_nanousd_per_token": 2000
+          },
+          "max_cost_nanousd": 1000000,
+          "max_input_tokens": 1000,
+          "max_total_output_tokens": 1000,
+          "max_elapsed_seconds": 60,
+          "model_retry": {
+            "max_retries": 0,
+            "base_delay_seconds": 1
+          },
+          "tool_policy": {
+            "allowed_tools": ["repository.read_file", "repository.search"],
+            "permissions": ["read"]
+          },
+          "provider": "scripted",
+          "model": "eval-fixture-v1",
+          "system_prompt": "Inspect the public code fixture using only granted read tools.",
+          "max_steps": 5,
+          "temperature": 0.0,
+          "max_output_tokens": 1024,
+          "timeout_seconds": 5.0
+        },
+        "started_at": "2026-10-01T19:19:45.716590Z",
+        "finished_at": "2026-10-01T19:19:50.064813Z",
+        "cases": [
+          {
+            "case_id": "defaults-captured-value",
+            "run_id": "66b8ae04-d81f-415d-9909-741402828f52",
+            "status": "SUCCEEDED",
+            "grade": "pass",
+            "error_code": null,
+            "event_sequence": 17,
+            "steps": 3,
+            "model_calls": 2,
+            "tool_calls": 1,
+            "retries": 0,
+            "elapsed_ms": 271.571,
+            "tokens": {
+              "attempts": 2,
+              "input_tokens": 20,
+              "output_tokens": 10,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 40000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "branches-short-circuit",
+            "run_id": "b2ff9707-9d39-4e5d-a2e9-4341f92ded51",
+            "status": "SUCCEEDED",
+            "grade": "pass",
+            "error_code": null,
+            "event_sequence": 25,
+            "steps": 5,
+            "model_calls": 3,
+            "tool_calls": 2,
+            "retries": 0,
+            "elapsed_ms": 556.621,
+            "tokens": {
+              "attempts": 3,
+              "input_tokens": 30,
+              "output_tokens": 15,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 60000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "collections-alias",
+            "run_id": "1c84eaa8-9923-4345-93a5-3f81c06a9d3f",
+            "status": "SUCCEEDED",
+            "grade": "pass",
+            "error_code": null,
+            "event_sequence": 17,
+            "steps": 3,
+            "model_calls": 2,
+            "tool_calls": 1,
+            "retries": 0,
+            "elapsed_ms": 346.119,
+            "tokens": {
+              "attempts": 2,
+              "input_tokens": 20,
+              "output_tokens": 10,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 40000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "strings-suffix",
+            "run_id": "05ef4a68-f3c6-4533-860b-6fb37aad02a1",
+            "status": "SUCCEEDED",
+            "grade": "pass",
+            "error_code": null,
+            "event_sequence": 25,
+            "steps": 5,
+            "model_calls": 3,
+            "tool_calls": 2,
+            "retries": 0,
+            "elapsed_ms": 668.45,
+            "tokens": {
+              "attempts": 3,
+              "input_tokens": 30,
+              "output_tokens": 15,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 60000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "iteration-zip-bound",
+            "run_id": "999a0305-4bfc-4062-9e71-5dc8640beefa",
+            "status": "SUCCEEDED",
+            "grade": "pass",
+            "error_code": null,
+            "event_sequence": 17,
+            "steps": 3,
+            "model_calls": 2,
+            "tool_calls": 1,
+            "retries": 0,
+            "elapsed_ms": 369.53799999999995,
+            "tokens": {
+              "attempts": 2,
+              "input_tokens": 20,
+              "output_tokens": 10,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 40000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "exceptions-else",
+            "run_id": "c67074be-9166-4ebe-b237-a5cf501bc648",
+            "status": "SUCCEEDED",
+            "grade": "pass",
+            "error_code": null,
+            "event_sequence": 25,
+            "steps": 5,
+            "model_calls": 3,
+            "tool_calls": 2,
+            "retries": 0,
+            "elapsed_ms": 469.82,
+            "tokens": {
+              "attempts": 3,
+              "input_tokens": 30,
+              "output_tokens": 15,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 60000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "scope-nonlocal",
+            "run_id": "16adfb95-387b-4fc8-878e-5ffef5e63dc2",
+            "status": "SUCCEEDED",
+            "grade": "pass",
+            "error_code": null,
+            "event_sequence": 17,
+            "steps": 3,
+            "model_calls": 2,
+            "tool_calls": 1,
+            "retries": 0,
+            "elapsed_ms": 369.40299999999996,
+            "tokens": {
+              "attempts": 2,
+              "input_tokens": 20,
+              "output_tokens": 10,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 40000,
+              "unknown_attempts": 0
+            }
+          },
+          {
+            "case_id": "inspection-handler-type",
+            "run_id": "e62d070d-87f9-4bc3-a2cd-c254002fc76d",
+            "status": "SUCCEEDED",
+            "grade": "pass",
+            "error_code": null,
+            "event_sequence": 25,
+            "steps": 5,
+            "model_calls": 3,
+            "tool_calls": 2,
+            "retries": 0,
+            "elapsed_ms": 613.0649999999999,
+            "tokens": {
+              "attempts": 3,
+              "input_tokens": 30,
+              "output_tokens": 15,
+              "unknown_attempts": 0,
+              "last_usage": {
+                "input_tokens": 10,
+                "output_tokens": 5
+              }
+            },
+            "cost": {
+              "known_nanousd": 60000,
+              "unknown_attempts": 0
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "fresh_vs_retained_equal_excluding_ids_timing_batch_metadata": true,
+  "direct_database_reconciled_runs": 48,
+  "direct_database_checks": [
+    "configuration",
+    "terminal_status",
+    "summary_and_ordered_successful_tool_grades",
+    "intent_counts",
+    "checkpoint_steps_errors_tokens_cost"
+  ],
+  "cli_existing_output_exit": 1,
+  "cli_invalid_split_exit": 2,
+  "cli_refusals_created_no_runs": true,
+  "oracle_review": "Assistant source inspection; no independent human sign-off or executable oracle claimed.",
+  "held_out_exposure": "Public known answers; fresh scripted plumbing verification only, no tuning or generalization claim.",
+  "database_retention": "Task-owned disposable database removed after audit; fresh run IDs are evidence references only."
+}

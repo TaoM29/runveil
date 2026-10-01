@@ -1,6 +1,6 @@
 # Architecture
 
-## Implemented through Phase 8B; controlled benchmark review pending
+## Implemented through Phase 8; scripted evaluation closure review pending
 
 ```mermaid
 flowchart LR
@@ -474,3 +474,17 @@ and known budget effects. Case inventory and exact-answer rationales are reviewe
 alongside frozen digests; substantive corpus changes require a new version. See
 [ADR 0030](docs/adr/0030-controlled-code-reading-benchmark.md) and
 [benchmark discipline](docs/operations/BENCHMARK.md).
+
+## Phase 8 closure evidence
+
+Phase 8C audits retained content/provenance and aggregates, reproduces both corpus
+partitions in fresh CLI processes and reconciles 48 new executions directly with
+PostgreSQL records. Existing guards reject incompatible comparisons and unsupported CLI
+selections and report overwrites. No application boundary, benchmark or test changes
+were needed. Report shape validation and aggregate recomputation are not artifact
+authentication; the original database remains the execution authority.
+
+Closure covers the ADR 0029–0030 scripted read-only harness, not model competence,
+hidden holdouts or sandboxed coding. General provider selection is not required for
+the demonstrated two-budget comparison gate and remains future work. See the
+[closure audit](docs/operations/PHASE_8.md) and [handoff](docs/operations/PHASE_8C.md).

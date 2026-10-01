@@ -14,7 +14,7 @@ creating output or database state. There is no combined score across splits.
 
 Every task has a small public source fixture, unambiguous exact answer and an
 explicit read or search-then-read requirement. Cover defaults, branches, collections,
-strings, iteration, exceptions, scope and source inspection. Human-reviewed answer
+strings, iteration, exceptions, scope and source inspection. Source-reviewed answer
 rationales accompany the inventory. Source fixtures are data; never import, eval,
 exec or launch them. Reuse the existing frozen contracts, exact scorer, read-tool
 allowlist, claimed execution, immutable three/five-step configurations and local
@@ -43,3 +43,9 @@ quality. Synthetic usage/pricing and variable timing retain Phase 8A meanings.
 Existing failure/authorization tests remain the security evidence; a larger set of
 successful scripts is not a replacement for them. Full Phase 8 closure needs a
 separate acceptance/scope audit; Phase 9 statistics and Phase 10 sandbox remain later.
+
+## Phase 8C claim clarification
+
+The retained record establishes assistant source inspection of answer rationales,
+not independent human sign-off. The wording above was corrected accordingly during
+the [closure audit](../operations/PHASE_8.md); benchmark/scoring behavior is unchanged.
