@@ -62,7 +62,7 @@ Used a separate task-owned Compose project and port; preserved existing services
 and `.env`:
 
 ```sh
-export PATH=/Users/taom/.nvm/versions/node/v24.19.0/bin:$PATH
+export PATH="$HOME/.nvm/versions/node/v24.19.0/bin:$PATH"
 POSTGRES_USER=runveil POSTGRES_PASSWORD=runveil-local-only POSTGRES_DB=runveil POSTGRES_PORT=55433 docker compose -p runveil-phase3 up -d --wait --wait-timeout 90
 export DATABASE_URL='postgresql+psycopg://runveil:runveil-local-only@127.0.0.1:55433/runveil'
 export RUNVEIL_TEST_DATABASE_URL='postgresql+psycopg://runveil:runveil-local-only@127.0.0.1:55433/postgres'

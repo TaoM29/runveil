@@ -25,31 +25,31 @@ Executed on macOS with Python 3.12.14, uv 0.12.19, Node 24.19.0,
 Docker Engine 28.5.2 and Compose 2.40.3. Node and uv installation directories
 were added to PATH for verification. Commands run from the repository root:
 
-| Command                                                                                                            | Result                                                                |
-| ------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------- |
-| `uv sync --locked --all-packages`                                                                                  | Passed; lock matches manifests                                        |
-| `npm ci`                                                                                                           | Passed; clean locked install                                          |
-| `uv run ruff format --check .`                                                                                     | Passed                                                                |
-| `uv run ruff check .`                                                                                              | Passed                                                                |
-| `uv run mypy`                                                                                                      | Passed; five project Python files                                     |
-| `uv run pytest`                                                                                                    | Passed; two API tests                                                 |
-| `npm run format:check`                                                                                             | Passed                                                                |
-| `npm run lint`                                                                                                     | Passed; zero warnings                                                 |
-| `npm run typecheck`                                                                                                | Passed; generated route types and strict TypeScript                   |
-| `npm test`                                                                                                         | Passed; one web health contract test                                  |
-| `npm run build`                                                                                                    | Passed; production Next.js build                                      |
-| `uv run python scripts/smoke.py`                                                                                   | Passed; real API health, web health and rendered production home page |
-| `docker compose config --quiet`                                                                                    | Passed with local `.env`                                              |
-| `docker compose up -d --wait --wait-timeout 90`                                                                    | Passed; PostgreSQL healthy                                            |
-| `docker compose exec -T postgres psql -U runveil -d runveil -v ON_ERROR_STOP=1 -c 'SELECT 1;'`                     | Passed; returned 1                                                    |
-| `docker compose ps`                                                                                                | Healthy; loopback port binding confirmed                              |
-| `docker compose down`                                                                                              | Passed; database volume preserved                                     |
-| `uv run uvicorn runveil_api.main:app --reload --host 127.0.0.1 --port 8000`                                        | Development server booted                                             |
-| `npm run dev:web`                                                                                                  | Development server booted                                             |
-| `curl --fail --silent http://127.0.0.1:8000/health`                                                                | HTTP 200; expected API JSON                                           |
-| `curl --fail --silent http://127.0.0.1:3000/health`                                                                | HTTP 200; expected web JSON                                           |
-| `npm audit`                                                                                                        | Zero reported vulnerabilities                                         |
-| `cmp docs/PROJECT_PLAN.md '/Users/taom/.codex/attachments/878c9ed0-157e-4097-b542-b56bc5d197ba/Innlimt tekst.txt'` | Identical to supplied charter                                         |
+| Command                                                                                        | Result                                                                |
+| ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `uv sync --locked --all-packages`                                                              | Passed; lock matches manifests                                        |
+| `npm ci`                                                                                       | Passed; clean locked install                                          |
+| `uv run ruff format --check .`                                                                 | Passed                                                                |
+| `uv run ruff check .`                                                                          | Passed                                                                |
+| `uv run mypy`                                                                                  | Passed; five project Python files                                     |
+| `uv run pytest`                                                                                | Passed; two API tests                                                 |
+| `npm run format:check`                                                                         | Passed                                                                |
+| `npm run lint`                                                                                 | Passed; zero warnings                                                 |
+| `npm run typecheck`                                                                            | Passed; generated route types and strict TypeScript                   |
+| `npm test`                                                                                     | Passed; one web health contract test                                  |
+| `npm run build`                                                                                | Passed; production Next.js build                                      |
+| `uv run python scripts/smoke.py`                                                               | Passed; real API health, web health and rendered production home page |
+| `docker compose config --quiet`                                                                | Passed with local `.env`                                              |
+| `docker compose up -d --wait --wait-timeout 90`                                                | Passed; PostgreSQL healthy                                            |
+| `docker compose exec -T postgres psql -U runveil -d runveil -v ON_ERROR_STOP=1 -c 'SELECT 1;'` | Passed; returned 1                                                    |
+| `docker compose ps`                                                                            | Healthy; loopback port binding confirmed                              |
+| `docker compose down`                                                                          | Passed; database volume preserved                                     |
+| `uv run uvicorn runveil_api.main:app --reload --host 127.0.0.1 --port 8000`                    | Development server booted                                             |
+| `npm run dev:web`                                                                              | Development server booted                                             |
+| `curl --fail --silent http://127.0.0.1:8000/health`                                            | HTTP 200; expected API JSON                                           |
+| `curl --fail --silent http://127.0.0.1:3000/health`                                            | HTTP 200; expected web JSON                                           |
+| `npm audit`                                                                                    | Zero reported vulnerabilities                                         |
+| Byte comparison of `docs/PROJECT_PLAN.md` with the supplied charter                            | Identical to supplied charter                                         |
 
 Both development servers and the database container were stopped after checks.
 The production smoke script cleans up its own processes. Initial formatting and

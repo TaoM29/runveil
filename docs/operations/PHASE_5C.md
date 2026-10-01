@@ -72,7 +72,7 @@ Environment: macOS, Python 3.12.14, uv 0.12.19, Node 24.19.0, Docker PostgreSQL 
 Used a disposable Compose project, preserving existing services and `.env`:
 
 ```sh
-export PATH=/Users/taom/.nvm/versions/node/v24.19.0/bin:$PATH
+export PATH="$HOME/.nvm/versions/node/v24.19.0/bin:$PATH"
 POSTGRES_USER=runveil POSTGRES_PASSWORD=runveil-local-only POSTGRES_DB=runveil POSTGRES_PORT=55435 docker compose -p runveil-phase5c up -d --wait --wait-timeout 90
 export DATABASE_URL='postgresql+psycopg://runveil:runveil-local-only@127.0.0.1:55435/runveil'
 export RUNVEIL_TEST_DATABASE_URL='postgresql+psycopg://runveil:runveil-local-only@127.0.0.1:55435/postgres'
