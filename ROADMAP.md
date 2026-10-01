@@ -12,7 +12,7 @@ commit or push is authorized.
 | 3     | Minimal persisted execution loop                          | Implemented; continued by Phase 4 request |
 | 4     | Typed tools and authorization                             | Implemented through Phase 4B              |
 | 5     | Durable worker, retries, idempotency and budgets          | Complete; Phase 6 continuation authorized |
-| 6     | Human approval and controlled mutations                   | Phase 6D implemented; review pending      |
+| 6     | Human approval and controlled mutations                   | Phase 6E implemented; review pending      |
 | 7     | Telemetry and trace UI                                    | Planned                                   |
 | 8     | Deterministic evaluation harness                          | Planned                                   |
 | 9     | Statistical comparison                                    | Planned                                   |
@@ -204,7 +204,7 @@ acceptance a separate opt-in activity. Phase 6 continuation was authorized on
   See [ADR 0023](docs/adr/0023-controlled-single-file-mutation.md),
   [operations](docs/operations/PATCHES.md) and [handoff](docs/operations/PHASE_6C.md).
 
-- **6D — Implemented; review pending:** authenticated local operator HTTP inspection
+- **6D — Implemented; Phase 6E continuation authorized:** authenticated local operator HTTP inspection
   and approve/reject decisions across the three existing approval profiles.
   Exact proposal/workspace/mutation inspection, profile/ID/revision/digest binding,
   strict bounded requests and existing atomic resolvers preserve execution authority.
@@ -212,10 +212,18 @@ acceptance a separate opt-in activity. Phase 6 continuation was authorized on
   See [ADR 0024](docs/adr/0024-local-operator-approval-api.md),
   [operations](docs/operations/APPROVAL_API.md) and [handoff](docs/operations/PHASE_6D.md).
 
+- **6E — Implemented; review pending:** small single-run approval console with
+  memory-only credentials, exact proposal/workspace/mutation inspection, explicit
+  profile consequences and inspection-bound decisions. A bounded local proxy
+  forwards caller authentication without acquiring write or worker-start authority.
+  Stale responses are discarded; uncertain decisions require new inspection.
+  See [ADR 0025](docs/adr/0025-local-approval-console.md),
+  [operations](docs/operations/APPROVAL_CONSOLE.md) and [handoff](docs/operations/PHASE_6E.md).
+
 ## Recommended next slice
 
-After review, add a small operator UI for exact proposal inspection and decisions
-using the Phase 6D API. Keep credentials out of browser persistence and make the
-review-only versus patch consequences explicit. Preserve inspection bindings,
-uncertain-response handling and separate execution authorization. Complete HTTP/UI
-acceptance together; stronger sandbox isolation remains later work.
+After review, consolidate Phase 6 acceptance and closure evidence, including a
+full-browser approval/rejection demonstration against the real local worker.
+Keep the current operational UI scope and all existing execution boundaries.
+Do not begin Phase 7 telemetry or broaden deployment/authentication scope until
+Phase 6 closure is reviewed.

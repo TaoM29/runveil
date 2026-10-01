@@ -1,10 +1,11 @@
 # Architecture
 
-## Implemented through Phase 6D; local approval API awaiting review
+## Implemented through Phase 6E; local approval console awaiting review
 
 ```mermaid
 flowchart LR
     Browser --> Web[Next.js console :3000]
+    Web -->|caller bearer / fixed local approval routes| API
     Client[HTTP client] --> API[FastAPI :8000]
     Compose[Docker Compose] --> PG[(PostgreSQL :5432)]
     API -->|readiness and authenticated approval transactions| PG
@@ -31,9 +32,8 @@ flowchart LR
 Both applications expose `GET /health` with a typed/structured service identity.
 These endpoints report liveness. The API also has `/ready`, a bounded database
 connectivity probe. PostgreSQL has its own Compose health check. Schema migration
-is an explicit operation. The web console remains the Phase 0 foundation; the
-local operator API exposes authenticated approval inspection/decisions. There are
-no web-to-API requests yet.
+is an explicit operation. The web console exposes single-run approval inspection
+and decisions through a bounded same-origin proxy to the local authenticated operator API.
 
 The root uv workspace locks Python dependencies in `uv.lock`; the API uses a src
 layout and is installed as a real package. The npm workspace uses one root lockfile.
@@ -318,7 +318,8 @@ before dispatch. Interrupted proposal intent is conservatively failed without re
 
 Phase 6A's unenrolled review workflow remains separate. Neither profile writes any
 file or creates mutation authorization. Controlled writing and authenticated HTTP
-are added in Phase 6C/6D below; UI and live hosted approval acceptance remain open. See
+are added in Phase 6C/6D below, with the local UI in Phase 6E. Live hosted approval
+acceptance remains open. See
 [ADR 0022](docs/adr/0022-worker-patch-review.md) and
 [Phase 6B handoff](docs/operations/PHASE_6B.md).
 
@@ -356,4 +357,17 @@ Inspection includes workspace fingerprints and mutation outcomes. HTTP cannot
 submit work, grant WRITE, dispatch tools or change the workspace binding. Shared
 credentials do not provide named reviewer attribution or per-run isolation.
 See [ADR 0024](docs/adr/0024-local-operator-approval-api.md) and
-[API operations](docs/operations/APPROVAL_API.md). The console remains deferred.
+[API operations](docs/operations/APPROVAL_API.md).
+
+## Phase 6E local approval console
+
+The home page inspects one known run and sends exact inspection-bound decisions.
+Credentials stay in page memory; the server has no shared credential. The narrow
+proxy accepts only local Host/Origin and a fixed configured loopback API target,
+forwards caller bearer authentication, bounds streaming bodies/time, denies
+redirects and returns no-store responses. The UI renders proposal text without HTML,
+distinguishes review-only and write-capable approvals, exposes mutation uncertainty,
+and invalidates stale responses and decision controls after failures/input changes.
+No submission, worker dispatch, execution grant or filesystem access is added.
+See [ADR 0025](docs/adr/0025-local-approval-console.md) and
+[console operations](docs/operations/APPROVAL_CONSOLE.md).
