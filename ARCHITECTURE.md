@@ -275,7 +275,6 @@ approvals and sandbox boundaries remain future slices.
 
 ## Open decisions
 
-- Public product/repository name and license.
 - Future additional provider profiles/capabilities.
 - Broader admission failure classification and hosted retry/idempotency semantics.
 - Sandbox threat model and AWS cost/deployment details.

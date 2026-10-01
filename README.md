@@ -162,4 +162,4 @@ The development servers are not a public deployment configuration.
 
 Runveil is a development/portfolio project. Sharing its source does not require
 a domain or a product launch. See [project naming context](docs/architecture/NAMING.md).
-No license has been selected, and no license grant is implied by this repository.
+Licensed under the [MIT License](LICENSE).
