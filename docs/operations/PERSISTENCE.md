@@ -4,7 +4,8 @@
 
 Export `DATABASE_URL` using the `postgresql+psycopg://` scheme, a database name,
 and the correct credentials/host/port. Percent-encode special characters in URL
-credentials. `.env.example` provides local-only examples. Python does not read
+credentials. The [development quickstart](DEVELOPMENT.md#local-quickstart) provides
+local-only examples. Python does not read
 `.env` implicitly. Do not commit real database credentials.
 
 From the repository root, after `uv sync --locked --all-packages`:

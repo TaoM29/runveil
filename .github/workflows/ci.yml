@@ -14,6 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
+      POSTGRES_PASSWORD: runveil-local-only
       DATABASE_URL: postgresql+psycopg://runveil:runveil-local-only@127.0.0.1:5432/runveil
       RUNVEIL_TEST_DATABASE_URL: postgresql+psycopg://runveil:runveil-local-only@127.0.0.1:5432/postgres
     steps:
@@ -33,7 +34,6 @@ jobs:
       - run: uv run mypy
       - name: Start local dependencies
         run: |
-          cp .env.example .env
           docker compose config --quiet
           docker compose up -d --wait --wait-timeout 90
           docker compose exec -T postgres psql -U runveil -d runveil -v ON_ERROR_STOP=1 -c 'SELECT 1;'

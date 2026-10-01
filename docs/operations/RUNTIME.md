@@ -3,7 +3,7 @@
 The unclaimed embedding executes a new, unenrolled QUEUED run in the calling Python
 process. Phase 5A adds a separate [durable fixture worker](WORKER.md) with leases,
 validated checkpoint resume and conservative interruption failure. There is no
-HTTP execution endpoint. Migrate PostgreSQL and export `DATABASE_URL` using the README
+HTTP execution endpoint. Migrate PostgreSQL and export `DATABASE_URL` using the [development guide](DEVELOPMENT.md)
 quickstart, then run:
 
 ```sh

@@ -95,7 +95,7 @@ Run the offline contract checks with:
 
 ```sh
 uv run pytest packages/agent_core/tests/test_models.py
-# With the test database configured as in README:
+# With the test database configured as in docs/operations/DEVELOPMENT.md:
 uv run pytest packages/persistence/tests/test_invocations.py -k normalized
 ```
 

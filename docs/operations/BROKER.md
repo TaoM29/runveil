@@ -7,7 +7,7 @@ paid services or queue emulators. No live AWS acceptance has been performed.
 
 ## Commands and prerequisites
 
-Install locked dependencies and migrate through `0007` using the README setup.
+Install locked dependencies and migrate through `0007` using the [development setup](DEVELOPMENT.md#local-quickstart).
 A queue must already exist. This slice does not create queues, IAM roles, redrive
 policies or infrastructure. Only commercial regional HTTPS URLs are accepted;
 FIFO, custom endpoints, China/GovCloud and queue URL query parameters are unsupported.

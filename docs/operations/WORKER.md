@@ -6,7 +6,7 @@ See [ADR 0011](../adr/0011-durable-fixture-worker.md) for ownership and recovery
 
 ## Run locally
 
-Complete the README dependency/database setup, then:
+Complete the [development setup](DEVELOPMENT.md#local-quickstart), then:
 
 ```sh
 uv sync --locked --all-packages

@@ -37,7 +37,7 @@ boundaries, not reasons to expand the completion slice into new features.
 
 ## Reproduce the process demonstration
 
-Use the README's locked dependency and local PostgreSQL setup. The admin role must
+Use the [development guide](DEVELOPMENT.md) for locked dependencies and local PostgreSQL setup. The admin role must
 have CREATEDB. From the repository root, on POSIX (Linux/macOS):
 
 ```sh

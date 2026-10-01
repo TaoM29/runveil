@@ -4,7 +4,7 @@ services:
     image: postgres:17.9-bookworm
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-runveil}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Copy .env.example to .env and set a local password}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD for local development; see docs/operations/DEVELOPMENT.md}
       POSTGRES_DB: ${POSTGRES_DB:-runveil}
     ports:
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
