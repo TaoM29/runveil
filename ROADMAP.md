@@ -13,7 +13,7 @@ commit or push is authorized.
 | 4     | Typed tools and authorization                             | Implemented through Phase 4B                 |
 | 5     | Durable worker, retries, idempotency and budgets          | Complete; Phase 6 continuation authorized    |
 | 6     | Human approval and controlled mutations                   | Complete; Phase 7 continuation authorized    |
-| 7     | Telemetry and trace UI                                    | Implemented through Phase 7A; review pending |
+| 7     | Telemetry and trace UI                                    | Implemented through Phase 7B; review pending |
 | 8     | Deterministic evaluation harness                          | Planned                                      |
 | 9     | Statistical comparison                                    | Planned                                      |
 | 10    | Sandboxed software engineering application                | Planned                                      |
@@ -239,16 +239,25 @@ Phase 7 continuation was authorized on 2026-10-01.
 
 ## Phase 7 review gates
 
-- **7A — Implemented; review pending:** separate read-only trace capability,
+- **7A — Implemented; Phase 7B continuation authorized:** separate read-only trace capability,
   consistent database snapshots, bounded ordered event pagination, invocation
   correlation/outcomes/durations, retry links, checkpoint token/cost accounting,
   approval metadata and bounded final summary. No execution/authorization changes.
   See [ADR 0026](docs/adr/0026-durable-run-trace.md),
   [operations](docs/operations/TRACES.md) and [handoff](docs/operations/PHASE_7A.md).
-  OpenTelemetry, structured logs, per-attempt usage/latency projection, trace UI
-  and full Phase 7 acceptance remain open.
+  Per-attempt usage/latency projection remains deferred.
+
+- **7B — Implemented; review pending:** operational single-run trace console,
+  separate memory-only read credential, bounded GET proxy and watermark-bound
+  event pages. Unknown accounting, persisted timing and approval limitations remain
+  explicit. Browser verification covers completed/paused runs and 113-event
+  pagination, with no mutation authority. See
+  [ADR 0027](docs/adr/0027-local-trace-console.md), [operations](docs/operations/TRACES.md)
+  and [handoff](docs/operations/PHASE_7B.md).
+  OpenTelemetry, structured logs and full Phase 7 acceptance remain open.
 
 ## Recommended next slice
 
-Review Phase 7A, then add a focused trace UI over this authenticated durable API.
-Keep telemetry/export a separate reviewable slice; Phase 7 is not complete.
+Review Phase 7B, then implement focused OpenTelemetry instrumentation and safe
+structured logging/correlation for the existing execution boundaries. Preserve
+persisted history as authority; Phase 7 is not complete.

@@ -11,8 +11,9 @@ proposes changes in an isolated environment, with human approval before applying
 them. Today, the backend supports durable execution and controlled read-only
 repository tools, durable patch reviews and approved single-file replacement in a
 controlled local checkout. A local authenticated API and small operator console
-expose approval inspection and decisions. A separate read-only trace API exposes
-ordered execution evidence and persisted accounting. Hosted approval flows, sandbox isolation and evaluation remain
+expose approval inspection and decisions. A separate read-only trace API and
+[trace console](docs/operations/TRACES.md) expose ordered execution evidence and
+persisted accounting. Hosted approval flows, sandbox isolation and evaluation remain
 future work.
 
 Reliability is verified with deterministic tests and worker-process crash/recovery

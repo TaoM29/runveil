@@ -1,11 +1,11 @@
 # Architecture
 
-## Implemented through Phase 7A; trace API review pending
+## Implemented through Phase 7B; trace console review pending
 
 ```mermaid
 flowchart LR
     Browser --> Web[Next.js console :3000]
-    Web -->|caller bearer / fixed local approval routes| API
+    Web -->|caller bearer / fixed local approval and trace routes| API
     Client[HTTP client] --> API[FastAPI :8000]
     Compose[Docker Compose] --> PG[(PostgreSQL :5432)]
     API -->|readiness, approvals and read-only traces| PG
@@ -395,3 +395,19 @@ dependency changes are required. This source of durable evidence precedes the
 trace UI and best-effort OpenTelemetry/log export, which remain unimplemented.
 See [ADR 0026](docs/adr/0026-durable-run-trace.md) and
 [trace operations](docs/operations/TRACES.md).
+
+## Phase 7B local trace console
+
+`/traces` renders the durable trace API through a bounded GET-only same-origin
+proxy. The operator supplies a separate read credential retained only in browser
+memory; no server credential or execution/decision authority is added. Each page
+contains at most 50 ordered events, validates its identity/watermark and replaces
+the previous page. Refresh restarts inspection; conflicts and stale responses
+cannot mix snapshots. Unknown usage, cost subtotals, incomplete history and
+persisted wall-time semantics are explicit. All payload-derived text is escaped.
+
+The only shared extraction is the existing bounded response stream reader used
+by both concrete proxies. The API, runtime, persistence and worker remain unchanged.
+OpenTelemetry and structured logs remain future work. See
+[ADR 0027](docs/adr/0027-local-trace-console.md) and
+[handoff](docs/operations/PHASE_7B.md).
