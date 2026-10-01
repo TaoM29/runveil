@@ -88,8 +88,9 @@ Migration 0010 adds only the unique intent index. If unsupported historical rows
 already contain multiple `repository.apply_patch` calls in one run, migration
 fails rather than deleting history. Inspect and resolve schema adoption separately.
 Downgrade removes the database's single-intent guard and is not a recovery action.
-No SQS support, hosted acceptance, API/UI, Git commit/push or arbitrary command
-execution is included in this profile.
+The [local approval HTTP API](APPROVAL_API.md) can inspect and decide these
+approvals; worker execution still uses the explicit CLI. No SQS support, hosted
+acceptance, UI, Git commit/push or arbitrary command execution is included.
 
 The root directory must be owned by the process user and not group/other-writable.
 The staged pathname must still refer to the opened private inode before replacement.

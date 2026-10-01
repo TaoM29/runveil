@@ -4,8 +4,10 @@ The durable **review-only** workflows below cannot apply patches. Their
 model/tool execution still denies mutations. `SUCCEEDED` means the proposal review
 completed, never that a file was changed. A separate Phase 6C
 [controlled patch profile](PATCHES.md) can write after its own approval and operator
-grant. These review-only profiles cannot authorize it. Hosted approval acceptance,
-HTTP endpoints and UI remain unimplemented. The Phase 6B integration is below.
+grant. These review-only profiles cannot authorize it. The local
+[approval HTTP API](APPROVAL_API.md) exposes inspection and decisions for these
+profiles. Hosted approval acceptance and UI remain unimplemented. The Phase 6B
+integration is below.
 
 After the [development setup](DEVELOPMENT.md), with `DATABASE_URL` exported:
 

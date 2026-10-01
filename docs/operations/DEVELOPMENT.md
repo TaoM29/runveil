@@ -99,4 +99,5 @@ For the separate, explicitly opt-in hosted check, see
 - [Quarantine inspection and release](ADMISSION.md)
 - [Local durable patch review](APPROVALS.md)
 - [Controlled approved file replacement](PATCHES.md)
+- [Authenticated local approval API](APPROVAL_API.md)
 - [Phase 5 acceptance evidence](PHASE_5.md)
