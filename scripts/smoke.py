@@ -1,4 +1,4 @@
-"""Boot both real HTTP servers and verify their public foundation contracts."""
+"""Boot both real HTTP servers and verify their public HTTP contracts."""
 
 import json
 import os
@@ -87,8 +87,14 @@ def main() -> None:
             with urlopen(f"http://127.0.0.1:{web_port}/", timeout=5) as response:
                 html = response.read().decode()
                 if response.status != 200 or "Runveil" not in html or "Web console" not in html:
-                    raise RuntimeError("Web page did not render the foundation content")
-            print("PASS web: production home page")
+                    raise RuntimeError("Web page did not render the console")
+                if (
+                    response.headers.get("X-Frame-Options") != "DENY"
+                    or response.headers.get("Content-Security-Policy") != "frame-ancestors 'none'"
+                    or response.headers.get("Referrer-Policy") != "no-referrer"
+                ):
+                    raise RuntimeError("Web console security headers are missing")
+            print("PASS web: production home page and framing/referrer protections")
             expected_ready = bool(os.environ.get("DATABASE_URL"))
             try:
                 with urlopen(f"http://127.0.0.1:{api_port}/ready", timeout=5) as readiness:
