@@ -12,6 +12,8 @@ from runveil_core.agents import JsonValue
 from runveil_core.models import Contract
 
 REVIEW_CONFIGURATION: dict[str, JsonValue] = {"workflow": "patch-review-v1"}
+PROPOSAL_TOOL = "repository.propose_patch"
+REVIEW_PROFILE = "repository-review-v1"
 MAX_PROPOSAL_BYTES = 65_536
 
 

@@ -6,11 +6,12 @@ import asyncio
 import json
 from dataclasses import dataclass
 from typing import Annotated, Literal, Protocol
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from pydantic import Field, model_validator
 
 from runveil_core.agents import JsonValue
+from runveil_core.approvals import PROPOSAL_TOOL
 from runveil_core.models import (
     Contract,
     FinalResult,
@@ -56,7 +57,7 @@ class ModelPricing(Contract):
 
 
 class RuntimeConfig(Contract):
-    schema_version: Literal[2, 3, 4, 5, 6, 7, 8, 9] = 2
+    schema_version: Literal[2, 3, 4, 5, 6, 7, 8, 9, 10] = 2
     workspace: WorkspaceIdentity | None = None
     max_model_calls: Annotated[int, Field(ge=0, le=64)] | None = None
     max_tool_calls: Annotated[int, Field(ge=0, le=64)] | None = None
@@ -107,8 +108,12 @@ class RuntimeConfig(Contract):
                 raise ValueError("Invocation limits require both model and tool limits")
         elif self.max_model_calls is not None or self.max_tool_calls is not None:
             raise ValueError("Invocation limits require configuration version 8 or later")
-        if (self.schema_version == 9) != (self.workspace is not None):
-            raise ValueError("Workspace identity requires configuration version 9 and a binding")
+        if (self.schema_version >= 9) != (self.workspace is not None):
+            raise ValueError(
+                "Workspace identity requires configuration version 9 or later and a binding"
+            )
+        if self.schema_version == 10 and PROPOSAL_TOOL not in self.tool_policy.allowed_tools:
+            raise ValueError("Worker review requires the pinned proposal tool")
         return self
 
 
@@ -157,7 +162,9 @@ class CostAccounting(Contract):
 
 
 class RuntimeState(Contract):
-    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9] = 2
+    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10] = 2
+    approval_id: UUID | None = None
+    approval_resolved: bool = False
     cost: CostAccounting | None = None
     tokens: TokenAccounting = Field(default_factory=TokenAccounting)
     retries_scheduled: Annotated[int, Field(ge=0, le=3)] = 0
@@ -168,6 +175,14 @@ class RuntimeState(Contract):
     error_code: str | None = None
     next_tool: ToolAction | None = None
     source_model_id: UUID | None = None
+
+    @model_validator(mode="after")
+    def approval_version(self) -> RuntimeState:
+        if self.schema_version < 10 and (self.approval_id is not None or self.approval_resolved):
+            raise ValueError("Approval state requires version 10")
+        if self.approval_resolved and self.approval_id is None:
+            raise ValueError("Resolved approval requires an identity")
+        return self
 
     def account_model_usage(self, usage: TokenUsage, config: RuntimeConfig) -> RuntimeState:
         tokens = self.tokens.add(usage)
@@ -367,7 +382,14 @@ async def _execute(
                     "source_model_id": None,
                 }
             )
+            reviewing = config.schema_version == 10 and action.tool_name == PROPOSAL_TOOL
+            if reviewing:
+                state = state.model_copy(
+                    update={"approval_id": uuid4(), "approval_resolved": False}
+                )
             cursor = await store.complete(pending, state, result=observation)
+            if reviewing:
+                return state
             continue
         request = ModelRequest(
             model=config.model,
