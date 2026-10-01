@@ -52,6 +52,9 @@ async def main() -> int:
             else:
                 request = await approvals.get(args.run_id)
             run = await RunRepository(session).get(request.run_id)
+            version = await AgentRepository(session).get_version(run.agent_version_id)
+            if version.configuration != REVIEW_CONFIGURATION:
+                raise ValueError("Not a standalone review run")
             output = {
                 "request": request.model_dump(mode="json"),
                 "run_status": run.status.value,

@@ -207,6 +207,8 @@ async def main() -> int:
                 run = await RunRepository(session).get(args.run_id)
                 version = await AgentRepository(session).get_version(run.agent_version_id)
                 config = RuntimeConfig.model_validate_json(version.configuration_json)
+                if config.schema_version != 10:
+                    raise ValueError("Not a review-only worker run")
                 output = {
                     "request": request.model_dump(mode="json"),
                     "run_status": run.status,

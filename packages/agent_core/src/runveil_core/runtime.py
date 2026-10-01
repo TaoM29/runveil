@@ -11,7 +11,7 @@ from uuid import UUID, uuid4
 from pydantic import Field, model_validator
 
 from runveil_core.agents import JsonValue
-from runveil_core.approvals import PROPOSAL_TOOL
+from runveil_core.approvals import PROPOSAL_TOOL, PatchProposal
 from runveil_core.models import (
     Contract,
     FinalResult,
@@ -26,6 +26,7 @@ from runveil_core.models import (
     ToolAction,
     validate_response,
 )
+from runveil_core.mutations import APPLY_TOOL, PatchWriter, authorize_patch
 from runveil_core.tools import ToolError, ToolErrorCode, ToolPolicy, ToolRegistry
 
 
@@ -57,7 +58,7 @@ class ModelPricing(Contract):
 
 
 class RuntimeConfig(Contract):
-    schema_version: Literal[2, 3, 4, 5, 6, 7, 8, 9, 10] = 2
+    schema_version: Literal[2, 3, 4, 5, 6, 7, 8, 9, 10, 11] = 2
     workspace: WorkspaceIdentity | None = None
     max_model_calls: Annotated[int, Field(ge=0, le=64)] | None = None
     max_tool_calls: Annotated[int, Field(ge=0, le=64)] | None = None
@@ -112,8 +113,13 @@ class RuntimeConfig(Contract):
             raise ValueError(
                 "Workspace identity requires configuration version 9 or later and a binding"
             )
-        if self.schema_version == 10 and PROPOSAL_TOOL not in self.tool_policy.allowed_tools:
+        if self.schema_version >= 10 and PROPOSAL_TOOL not in self.tool_policy.allowed_tools:
             raise ValueError("Worker review requires the pinned proposal tool")
+        if self.schema_version == 11:
+            try:
+                authorize_patch(self.tool_policy, self.tool_policy)
+            except ToolError:
+                raise ValueError("Patch configuration requires an explicit WRITE grant") from None
         return self
 
 
@@ -162,7 +168,7 @@ class CostAccounting(Contract):
 
 
 class RuntimeState(Contract):
-    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10] = 2
+    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] = 2
     approval_id: UUID | None = None
     approval_resolved: bool = False
     cost: CostAccounting | None = None
@@ -241,6 +247,12 @@ class Pending:
 
 
 class ExecutionStore(Protocol):
+    async def approved_patch(self, cursor: Cursor) -> PatchProposal: ...
+
+    async def apply_patch(
+        self, pending: Pending, writer: PatchWriter, operator: ToolPolicy
+    ) -> RuntimeState: ...
+
     async def start(self, run_id: UUID, task: str, provider: str) -> Started: ...
 
     async def remaining_seconds(
@@ -284,6 +296,7 @@ async def execute(
     tools: ToolRegistry | None = None,
     tool_policy: ToolPolicy | None = None,
     allow_model_retries: bool = False,
+    patch_writer: PatchWriter | None = None,
 ) -> RuntimeState:
     """Execute from the store's validated start/resume boundary; never replay intent."""
     try:
@@ -296,6 +309,7 @@ async def execute(
             tools=tools,
             tool_policy=tool_policy,
             allow_model_retries=allow_model_retries,
+            patch_writer=patch_writer,
         )
     except BudgetExceeded as exc:
         return exc.state
@@ -311,6 +325,7 @@ async def _execute(
     tools: ToolRegistry | None = None,
     tool_policy: ToolPolicy | None = None,
     allow_model_retries: bool = False,
+    patch_writer: PatchWriter | None = None,
 ) -> RuntimeState:
     """Execute from the store's validated start/resume boundary; never replay intent."""
     registry = tools if tools is not None else ToolRegistry()
@@ -334,6 +349,23 @@ async def _execute(
             state = state.account_model_usage(TokenUsage(), config)
         await store.complete(started.interrupted, state, error_code="execution_interrupted")
         return state
+    if config.schema_version == 11 and state.approval_resolved:
+        authorize_patch(config.tool_policy, operator_policy)
+        if patch_writer is None or patch_writer.workspace != config.workspace:
+            raise ValueError("Approved patch requires the verified writer binding")
+        if state.steps_used >= config.max_steps:
+            state = state.model_copy(update={"error_code": "step_limit_exceeded"})
+            await store.exhaust(cursor, state)
+            return state
+        proposal = await store.approved_patch(cursor)
+        pending = await store.request(
+            cursor,
+            kind="tool",
+            tool_name=APPLY_TOOL,
+            payload=proposal.model_dump(mode="json"),
+            config=config,
+        )
+        return await store.apply_patch(pending, patch_writer, operator_policy)
     if state.retry_source_id is not None and not allow_model_retries:
         raise ValueError("Resuming model retries requires the operator retry grant")
     while True:
@@ -382,7 +414,7 @@ async def _execute(
                     "source_model_id": None,
                 }
             )
-            reviewing = config.schema_version == 10 and action.tool_name == PROPOSAL_TOOL
+            reviewing = config.schema_version >= 10 and action.tool_name == PROPOSAL_TOOL
             if reviewing:
                 state = state.model_copy(
                     update={"approval_id": uuid4(), "approval_resolved": False}
