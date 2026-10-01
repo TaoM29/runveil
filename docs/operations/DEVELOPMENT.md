@@ -109,3 +109,4 @@ For the separate, explicitly opt-in hosted check, see
 - [Offline deterministic evaluation and benchmark selection](EVALUATIONS.md)
 - [Controlled code-reading benchmark and split discipline](BENCHMARK.md)
 - [Phase 8 evaluation acceptance and scope audit](PHASE_8.md)
+- [Paired statistical calibration and methodology](STATISTICS.md)

@@ -1,6 +1,6 @@
 # Architecture
 
-## Implemented through Phase 8; scripted evaluation closure review pending
+## Implemented through Phase 9A; statistical-method review pending
 
 ```mermaid
 flowchart LR
@@ -488,3 +488,19 @@ Closure covers the ADR 0029–0030 scripted read-only harness, not model compete
 hidden holdouts or sandboxed coding. General provider selection is not required for
 the demonstrated two-budget comparison gate and remains future work. See the
 [closure audit](docs/operations/PHASE_8.md) and [handoff](docs/operations/PHASE_8C.md).
+
+## Phase 9A paired statistical reporting
+
+The evaluator optionally wraps the existing comparison with an exact empirical
+paired bootstrap percentile interval for binary success-rate differences. Integer
+convolution over at most 30 pairs avoids Monte Carlo error and new dependencies.
+Comparison identity/coverage guards run before summaries; failures stay in the
+denominator and unknown costs prevent complete mean-cost claims. Persisted elapsed
+summaries retain their storage-inclusive meaning. The default Phase 8 format and
+historical artifacts are preserved.
+
+This is a descriptive statistical-method demonstration over scripted data, not
+model inference or an automatic regression gate. No runtime, persistence, security,
+authorization or observability boundary changes. See
+[ADR 0031](docs/adr/0031-exact-paired-statistics.md) and
+[methodology](docs/operations/STATISTICS.md).

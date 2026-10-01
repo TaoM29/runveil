@@ -80,7 +80,7 @@ loader, arbitrary provider configuration or code execution is supported. The lar
 corpus supplies 24 controlled code-reading cases and a public reserved partition;
 it is not a secret or contamination-free held-out model assessment. Broader provider
 selection remains future work; [Phase 8 acceptance](PHASE_8.md) closes the documented
-scripted scope. Statistical uncertainty is Phase 9,
+scripted scope. Opt-in [statistical summaries](STATISTICS.md) are implemented in Phase 9A,
 and sandboxed execution is Phase 10. See [ADR 0029](../adr/0029-offline-evaluation-harness.md)
 and [ADR 0030](../adr/0030-controlled-code-reading-benchmark.md).
 
@@ -92,3 +92,7 @@ still trusts its case grades and metadata and is not authentication of imported 
 No untrusted report-import endpoint is provided. Authoritative score verification
 requires the original database records; temporary acceptance databases are removed
 after inspection. See the [closure audit](PHASE_8.md) for evidence and claim limits.
+
+Use `--statistics` for a separately versioned wrapper containing paired uncertainty,
+elapsed/cost summaries and failure categories. Default output stays unchanged.
+See the [methodology and limitations](STATISTICS.md) before interpreting bounds.

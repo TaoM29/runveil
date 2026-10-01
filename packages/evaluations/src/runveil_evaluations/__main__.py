@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from runveil_evaluations.benchmark import select_suite
 from runveil_evaluations.runner import run_calibration
+from runveil_evaluations.statistics import statistical_report
 
 
 async def main() -> int:
@@ -17,6 +18,9 @@ async def main() -> int:
     parser.add_argument("--output", type=Path, required=True, help="New local JSON report path")
     parser.add_argument("--suite", choices=("calibration", "code-reading"), default="calibration")
     parser.add_argument("--split", choices=("development", "held-out"), default="development")
+    parser.add_argument(
+        "--statistics", action="store_true", help="Include paired statistical summaries"
+    )
     args = parser.parse_args()
     try:
         suite = select_suite(args.suite, args.split)
@@ -27,7 +31,8 @@ async def main() -> int:
         engine = create_engine(database_url())
         try:
             report = await run_calibration(async_sessionmaker(engine), suite)
-            output.write(report.model_dump_json(indent=2) + "\n")
+            artifact = statistical_report(report) if args.statistics else report
+            output.write(artifact.model_dump_json(indent=2) + "\n")
         finally:
             await engine.dispose()
     print(

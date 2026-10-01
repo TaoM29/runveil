@@ -7,6 +7,7 @@ from runveil_core.models import ToolAction
 from runveil_evaluations.contracts import Comparison, EvalCase, EvalSuite, compare
 from runveil_evaluations.fixtures import SUITE, finish
 from runveil_evaluations.runner import run_calibration, run_suite, score_case
+from runveil_evaluations.statistics import statistical_report
 from runveil_persistence.models import ModelInvocationRow, ToolCallRow
 from runveil_persistence.repositories import AgentRepository
 from sqlalchemy import func, select
@@ -21,6 +22,11 @@ async def test_calibration_repeats_and_scores_durable_evidence(database: AsyncEn
     second = await run_calibration(sessions)
     assert Comparison.model_validate_json(first.model_dump_json()) == first
     for report in (first, second):
+        statistics = statistical_report(report)
+        assert statistics.success.improved == 1 and statistics.success.regressed == 0
+        assert statistics.success.lower == 0 and statistics.success.upper == 1
+        assert statistics.baseline_summary.runtime_failures == 1
+        assert statistics.candidate_summary.mean_total_nanousd == 40_000
         assert report.baseline_metrics.passed == 2 and report.candidate_metrics.passed == 3
         assert report.baseline_metrics.runtime_failures == 1
         assert report.baseline_metrics.cases == report.candidate_metrics.cases == 3
