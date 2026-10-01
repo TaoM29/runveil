@@ -1,13 +1,13 @@
 # Architecture
 
-## Implemented through Phase 6C; controlled writer awaiting review
+## Implemented through Phase 6D; local approval API awaiting review
 
 ```mermaid
 flowchart LR
     Browser --> Web[Next.js console :3000]
     Client[HTTP client] --> API[FastAPI :8000]
     Compose[Docker Compose] --> PG[(PostgreSQL :5432)]
-    API -->|readiness query| PG
+    API -->|readiness and authenticated approval transactions| PG
     Persistence[Async repositories and Alembic] --> PG
     Persistence --> Domain[Immutable versions, run lifecycle and history snapshots]
     Scripted[Offline scripted provider] --> Contracts[Model contracts and action validation]
@@ -31,8 +31,9 @@ flowchart LR
 Both applications expose `GET /health` with a typed/structured service identity.
 These endpoints report liveness. The API also has `/ready`, a bounded database
 connectivity probe. PostgreSQL has its own Compose health check. Schema migration
-is an explicit operation. The web console remains the Phase 0 foundation; there
-are no domain HTTP endpoints or web-to-API requests yet.
+is an explicit operation. The web console remains the Phase 0 foundation; the
+local operator API exposes authenticated approval inspection/decisions. There are
+no web-to-API requests yet.
 
 The root uv workspace locks Python dependencies in `uv.lock`; the API uses a src
 layout and is installed as a real package. The npm workspace uses one root lockfile.
@@ -316,8 +317,8 @@ Counters and the original deadline survive the wait; expired approved runs stop
 before dispatch. Interrupted proposal intent is conservatively failed without replay.
 
 Phase 6A's unenrolled review workflow remains separate. Neither profile writes any
-file or creates mutation authorization. Controlled writing, authenticated HTTP/UI
-and live hosted approval acceptance remain unimplemented. See
+file or creates mutation authorization. Controlled writing and authenticated HTTP
+are added in Phase 6C/6D below; UI and live hosted approval acceptance remain open. See
 [ADR 0022](docs/adr/0022-worker-patch-review.md) and
 [Phase 6B handoff](docs/operations/PHASE_6B.md).
 
@@ -345,3 +346,14 @@ Post-I/O expiry is conservatively uncertain. Success commits the applied result
 and terminal state; duplicate selection cannot repeat it. See
 [ADR 0023](docs/adr/0023-controlled-single-file-mutation.md),
 [operations](docs/operations/PATCHES.md) and [handoff](docs/operations/PHASE_6C.md).
+
+## Phase 6D local operator approval API
+
+Phase 6D adds a fail-closed local operator bearer capability for exact approval
+inspection and decisions. It binds profile/approval ID/revision/digest, delegates
+to existing transactional resolvers and acknowledges only committed decisions.
+Inspection includes workspace fingerprints and mutation outcomes. HTTP cannot
+submit work, grant WRITE, dispatch tools or change the workspace binding. Shared
+credentials do not provide named reviewer attribution or per-run isolation.
+See [ADR 0024](docs/adr/0024-local-operator-approval-api.md) and
+[API operations](docs/operations/APPROVAL_API.md). The console remains deferred.
