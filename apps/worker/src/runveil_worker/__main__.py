@@ -16,6 +16,7 @@ from runveil_worker.repository_worker import (
     submit_repository,
     work_repository_once,
 )
+from runveil_worker.telemetry import telemetry
 from runveil_worker.worker import (
     BUDGET_PROFILE,
     CALLS_PROFILE,
@@ -107,7 +108,8 @@ async def main() -> int:
 
 if __name__ == "__main__":
     try:
-        raise SystemExit(asyncio.run(main()))
+        with telemetry():
+            raise SystemExit(asyncio.run(main()))
     except KeyboardInterrupt:
         pass
     except Exception:
