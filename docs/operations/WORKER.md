@@ -387,3 +387,9 @@ job from selection. Approving checkpoints a RUNNING continuation; a fresh worker
 must match the workspace before any further dispatch. Rejection is terminal.
 No file is written. This profile is not supported by the fixture worker CLI or
 SQS consumer. See [approval operations](APPROVALS.md#workspace-bound-worker-review-phase-6b).
+
+Phase 6C's distinct `runveil_worker.patch_worker` supports one approved replacement
+with an explicit execution-time WRITE grant. It claims before workspace capture so
+terminal duplicates and uncertain-intent cleanup require no filesystem access.
+The ordinary review/fixture workers cannot adopt these runs. See
+[controlled patch operations](PATCHES.md) before using the write-capable profile.

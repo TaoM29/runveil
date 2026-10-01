@@ -318,3 +318,15 @@ Run-row locks serialize decisions with cancellation, and execution resume rechec
 approval/model/tool provenance after workspace binding. The Phase 6A repository
 continues to refuse enrolled runs. No migration or existing worker deadline changes
 are needed; see [ADR 0022](../adr/0022-worker-patch-review.md).
+
+## Single-use mutation intent
+
+Migration 0010 adds a partial unique index on `tool_calls.run_id` for
+`repository.apply_patch`. The new version-11 profile consumes this intent before
+filesystem I/O and never retries it. Final dispatch and outcome share run/job locks;
+this bounded local operation is the explicit exception to outside-transaction I/O.
+A filesystem replacement and database commit cannot be atomic. Terminal-only
+recovery records `patch_outcome_unknown` without filesystem access if intent lacks
+an outcome. No new table or mutable approval capability is added. See
+[ADR 0023](../adr/0023-controlled-single-file-mutation.md) for transaction boundaries,
+trusted-checkout requirements and downgrade limitations.
