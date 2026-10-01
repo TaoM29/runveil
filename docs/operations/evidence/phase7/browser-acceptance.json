@@ -1,0 +1,105 @@
+{
+  "completed": {
+    "run_id": "35bf8a97-b6ee-4ba1-98f5-de627e0d76ae",
+    "status": "SUCCEEDED",
+    "event_sequence": 17,
+    "model_calls": 2,
+    "tool_calls": 1,
+    "checkpoint": {
+      "event_sequence": 16,
+      "schema_version": 8,
+      "tokens": {
+        "attempts": 2,
+        "input_tokens": 20,
+        "output_tokens": 10,
+        "unknown_attempts": 0,
+        "last_usage": {
+          "input_tokens": 10,
+          "output_tokens": 5
+        }
+      },
+      "cost": {
+        "known_nanousd": 50000,
+        "unknown_attempts": 0
+      },
+      "retries_scheduled": 0,
+      "error_code": null,
+      "final_summary": "Runveil fixture verified.",
+      "final_summary_truncated": false
+    },
+    "approval": null
+  },
+  "paused": {
+    "run_id": "59489129-8256-447a-9fad-6555323f4851",
+    "status": "WAITING_FOR_APPROVAL",
+    "event_sequence": 22,
+    "model_calls": 2,
+    "tool_calls": 2,
+    "checkpoint": {
+      "event_sequence": 20,
+      "schema_version": 11,
+      "tokens": {
+        "attempts": 2,
+        "input_tokens": 20,
+        "output_tokens": 10,
+        "unknown_attempts": 0,
+        "last_usage": {
+          "input_tokens": 10,
+          "output_tokens": 5
+        }
+      },
+      "cost": {
+        "known_nanousd": 50000,
+        "unknown_attempts": 0
+      },
+      "retries_scheduled": 0,
+      "error_code": null,
+      "final_summary": null,
+      "final_summary_truncated": false
+    },
+    "approval": {
+      "id": "ae82cd13-38e7-4e9a-82bf-2df8a3113d6c",
+      "status": "PENDING",
+      "requested_at": "2026-10-01T17:15:05.481850Z",
+      "decided_at": null
+    }
+  },
+  "paginated": {
+    "run_id": "2f2598e4-10a5-4db8-929b-ef6e6464831d",
+    "status": "SUCCEEDED",
+    "event_sequence": 113,
+    "model_calls": 14,
+    "tool_calls": 13,
+    "checkpoint": {
+      "event_sequence": 112,
+      "schema_version": 2,
+      "tokens": null,
+      "cost": null,
+      "retries_scheduled": null,
+      "error_code": null,
+      "final_summary": "Public paginated trace complete.",
+      "final_summary_truncated": false
+    },
+    "approval": null
+  },
+  "verification": {
+    "browser_pages": [
+      [1, 50],
+      [51, 100],
+      [101, 113]
+    ],
+    "mutations": 0,
+    "paused_file_unchanged": true,
+    "post_status": 405,
+    "credential_in_server_logs": false,
+    "browser_checks": [
+      "success totals and final summary",
+      "pending approval metadata",
+      "pagination across 113 events",
+      "wrong token refused",
+      "Forget clears fields",
+      "reload clears fields",
+      "approval navigation and back clears fields"
+    ]
+  }
+}
