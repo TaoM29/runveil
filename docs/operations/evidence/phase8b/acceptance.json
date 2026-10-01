@@ -1,0 +1,33 @@
+{
+  "verified_at": "2026-10-01T19:07:23.377785+00:00",
+  "scope": "scripted-harness-acceptance-not-model-quality",
+  "implementation_digest": "54da9c2724c708237c8f235d31b95b045fe31442b8b26cae1ab3c6dcbbb71265",
+  "development_digest": "b1992916d46a1f5d7b5748069f5de387166a4a4a3aa184fae23e7d0fe997de49",
+  "held_out_digest": "6a95d546f370e70b0b1bb128a91d66ff5f7b88ef9d2388d07a84b45465fe481f",
+  "development_cases": 16,
+  "held_out_cases": 8,
+  "development_passed": [8, 16],
+  "held_out_passed": [4, 8],
+  "repeat_development_eval_ids": [
+    "2bc4da32-ca48-49dd-bda8-4feeb48ff0fc",
+    "29fc0b77-b796-48f3-9c1b-11772fe43149"
+  ],
+  "repeat_equal_excluding_run_ids_elapsed_and_batch_metadata": true,
+  "raw_database_reconciled_runs": 80,
+  "reconciled_fields": [
+    "agent_version_configuration",
+    "run_status",
+    "steps",
+    "model_intents",
+    "tool_intents",
+    "checkpoint_tokens",
+    "checkpoint_cost"
+  ],
+  "invalid_calibration_held_out_exit": 2,
+  "invalid_selection_created_no_output_or_runs": true,
+  "existing_output_exit": 1,
+  "existing_output_preserved_and_created_no_runs": true,
+  "held_out_exposure": "Public author-reviewed fixtures; only scripted checks, no model/provider tuning.",
+  "counts_are_case_denominators_not_repeated_samples": true,
+  "database_retention": "Disposable verification database; removed after acceptance."
+}

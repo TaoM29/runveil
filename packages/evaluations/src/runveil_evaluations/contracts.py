@@ -34,7 +34,7 @@ class EvalSuite(Contract):
     schema_version: Literal[1] = 1
     name: Name
     version: Name
-    split: Literal["development"] = "development"
+    split: Literal["development", "held-out"] = "development"
     scorer: Literal["exact-summary-and-tools-v1"] = "exact-summary-and-tools-v1"
     cases: Annotated[tuple[EvalCase, ...], Field(min_length=1, max_length=30)]
 

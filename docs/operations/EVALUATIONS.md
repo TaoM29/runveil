@@ -1,4 +1,4 @@
-# Offline evaluation calibration (Phase 8A)
+# Offline evaluation (Phases 8A–8B)
 
 Run from the repository root after the [development setup](DEVELOPMENT.md), with
 `DATABASE_URL` pointing at a migrated local PostgreSQL database:
@@ -7,7 +7,21 @@ Run from the repository root after the [development setup](DEVELOPMENT.md), with
 uv run python -m runveil_evaluations --output /tmp/runveil-evaluation.json
 ```
 
-The output path must not exist. The command creates one agent, two immutable
+The command above preserves the original three-case calibration. Phase 8B also
+provides a versioned 24-case code-reading corpus, selected one partition at a time:
+
+```sh
+uv run python -m runveil_evaluations --suite code-reading --output /tmp/code-reading-development.json
+uv run python -m runveil_evaluations --suite code-reading --split held-out --output /tmp/code-reading-held-out.json
+```
+
+Development has 16 cases (32 runtime runs); held-out has 8 (16 runtime runs).
+Expected pass counts are 8/16 → 16/16 and 4/8 → 8/8 respectively. Each report retains
+its selected split and complete denominator. No merged score is produced. Unsupported
+suite/split choices fail before output or database creation. The calibration suite
+has no held-out split. See the [inventory, rationales and split discipline](BENCHMARK.md).
+
+The output path must not exist. The original calibration creates one agent, two immutable
 versions and six ordinary durable runs with existing job claims under the dedicated
 `eval-calibration-v1` profile. It executes sequentially with no hosted provider,
 approval decisions, shell execution or writes to your
@@ -24,7 +38,7 @@ message; they do not masquerade as scored runtime failures or a complete batch.
 
 The report includes:
 
-- Full versioned development suite, including task, public fixture, script and oracle.
+- Full versioned selected suite and split, including task, public fixture, script and oracle.
 - Canonical SHA-256 suite identity covering all content and the scoring version.
 - Separate EvalRun IDs, persisted agent-version IDs/numbers and full configurations.
 - Source/dependency fingerprint covering core, persistence, tools and evaluator,
@@ -61,8 +75,10 @@ output path for a fresh batch. No uncertain invocation is replayed automatically
 The implementation fingerprint detects source changes during a batch but is not a
 supply-chain attestation; database/server/OS differences can still affect timing.
 
-Only the built-in public suite is exposed through the CLI. No file/plugin grader
-loader, arbitrary provider configuration, code execution or held-out dataset is
-supported. The approximately 20–30 controlled coding cases and broader version
-selection remain future Phase 8 work; statistical uncertainty is Phase 9, and
-sandboxed execution is Phase 10. See [ADR 0029](../adr/0029-offline-evaluation-harness.md).
+Only the built-in public suites are exposed through the CLI. No file/plugin grader
+loader, arbitrary provider configuration or code execution is supported. The larger
+corpus supplies 24 controlled code-reading cases and a public reserved partition;
+it is not a secret or contamination-free held-out model assessment. Broader provider
+selection and full Phase 8 acceptance remain open; statistical uncertainty is Phase 9,
+and sandboxed execution is Phase 10. See [ADR 0029](../adr/0029-offline-evaluation-harness.md)
+and [ADR 0030](../adr/0030-controlled-code-reading-benchmark.md).

@@ -14,7 +14,7 @@ commit or push is authorized.
 | 5     | Durable worker, retries, idempotency and budgets          | Complete; Phase 6 continuation authorized |
 | 6     | Human approval and controlled mutations                   | Complete; Phase 7 continuation authorized |
 | 7     | Telemetry and trace UI                                    | Complete; Phase 8 continuation authorized |
-| 8     | Deterministic evaluation harness                          | 8A implemented; review pending            |
+| 8     | Deterministic evaluation harness                          | 8B implemented; review pending            |
 | 9     | Statistical comparison                                    | Planned                                   |
 | 10    | Sandboxed software engineering application                | Planned                                   |
 | 11    | MCP adapter through existing policy                       | Planned                                   |
@@ -283,7 +283,7 @@ Phase 8 continuation was authorized on 2026-10-01.
 
 ## Phase 8 review gates
 
-- **8A — Implemented; review pending:** immutable versioned suite/case contracts,
+- **8A — Implemented; Phase 8B continuation authorized:** immutable versioned suite/case contracts,
   PostgreSQL-backed scripted execution, deterministic scoring from persisted evidence,
   EvalRun/case-result JSON snapshots, full provenance and paired aggregate comparison.
   Three public code-reading calibration cases compare two immutable step budgets;
@@ -291,10 +291,19 @@ Phase 8 continuation was authorized on 2026-10-01.
   telemetry or UI change. See [ADR 0029](docs/adr/0029-offline-evaluation-harness.md),
   [operations](docs/operations/EVALUATIONS.md) and [handoff](docs/operations/PHASE_8A.md).
 
+- **8B — Implemented; review pending:** a frozen 24-case controlled code-reading
+  corpus across eight subjects, with disjoint 16-case development and 8-case held-out
+  partitions, explicit CLI selection, content digests and reviewed answer rationales.
+  Existing claimed execution/scoring compares both step budgets within each partition;
+  reports cannot mix splits. The original calibration remains available. This is
+  scripted harness evidence, not model quality, hidden holdout or code repair evidence.
+  See [ADR 0030](docs/adr/0030-controlled-code-reading-benchmark.md),
+  [benchmark inventory](docs/operations/BENCHMARK.md) and [handoff](docs/operations/PHASE_8B.md).
+
 ## Recommended next slice
 
-Review 8A, then expand the versioned controlled coding benchmark toward the charter's
-20–30 cases with deterministic oracles and explicit development/held-out discipline,
-within the existing read-only boundary. Plan sandbox-dependent coding/test execution
-separately. Full Phase 8 acceptance and Phase 9 statistics remain open; no automatic
-continuation is authorized.
+Review 8B, then conduct a focused Phase 8 acceptance/scope audit against the charter,
+including the limits of scripted read-only comparisons and any remaining provider
+selection requirements. Do not equate 24 code-reading fixtures with sandboxed code
+repair or model-quality evidence. Full Phase 8 closure and Phase 9 statistics remain
+open; no automatic continuation is authorized.

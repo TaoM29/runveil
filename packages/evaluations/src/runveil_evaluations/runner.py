@@ -174,16 +174,18 @@ async def run_suite(
     )
 
 
-async def run_calibration(sessions: async_sessionmaker[AsyncSession]) -> Comparison:
+async def run_calibration(
+    sessions: async_sessionmaker[AsyncSession], suite: EvalSuite = SUITE
+) -> Comparison:
     implementation = implementation_digest()
     async with sessions.begin() as session:
         agent = await AgentRepository(session).create("Offline evaluation calibration")
     baseline = await run_suite(
-        sessions, SUITE, agent_id=agent.id, max_steps=3, implementation=implementation
+        sessions, suite, agent_id=agent.id, max_steps=3, implementation=implementation
     )
     candidate = await run_suite(
-        sessions, SUITE, agent_id=agent.id, max_steps=5, implementation=implementation
+        sessions, suite, agent_id=agent.id, max_steps=5, implementation=implementation
     )
     if implementation_digest() != implementation:
         raise ValueError("Implementation changed during evaluation")
-    return compare(SUITE, baseline, candidate)
+    return compare(suite, baseline, candidate)

@@ -130,3 +130,43 @@ async def test_oracle_failures_and_untrusted_tool_requests_do_not_pass(
     # Unadvertised mutation is rejected during model-response validation, before tool intent.
     assert result.cases[3].error_code == "invalid_response"
     assert result.cases[3].tool_calls == 0
+
+
+async def test_controlled_benchmark_partitions_keep_complete_separate_denominators(
+    database: AsyncEngine,
+) -> None:
+    from runveil_evaluations.benchmark import DEVELOPMENT, HELD_OUT
+
+    sessions = async_sessionmaker(database)
+    development = await run_calibration(sessions, DEVELOPMENT)
+    held_out = await run_calibration(sessions, HELD_OUT)
+    for report, count in ((development, 16), (held_out, 8)):
+        assert report.baseline_metrics.cases == report.candidate_metrics.cases == count
+        assert report.baseline_metrics.passed == count // 2
+        assert report.candidate_metrics.passed == count
+        assert report.baseline_metrics.runtime_failures == count // 2
+        assert report.candidate_metrics.steps == count * 4
+        assert report.candidate_metrics.model_calls == count * 5 // 2
+        assert report.candidate_metrics.tool_calls == count * 3 // 2
+        assert report.candidate_metrics.unknown_token_attempts == 0
+        assert report.candidate_metrics.unknown_cost_attempts == 0
+        for fixture, baseline, candidate in zip(
+            report.suite.cases, report.baseline.cases, report.candidate.cases, strict=True
+        ):
+            assert baseline.case_id == candidate.case_id == fixture.id
+            assert candidate.grade == "pass"
+            assert baseline.grade == (
+                "pass" if len(fixture.expected_tools) == 1 else "runtime_failure"
+            )
+            if baseline.grade == "runtime_failure":
+                assert baseline.error_code == "step_limit_exceeded"
+        assert Comparison.model_validate_json(report.model_dump_json()) == report
+    with pytest.raises(ValueError, match="identical benchmark"):
+        compare(DEVELOPMENT, development.baseline, held_out.candidate)
+    # Partition relabeling also changes suite identity, even with unchanged cases.
+    with pytest.raises(ValueError, match="identical benchmark"):
+        compare(
+            DEVELOPMENT.model_copy(update={"split": "held-out"}),
+            development.baseline,
+            development.candidate,
+        )

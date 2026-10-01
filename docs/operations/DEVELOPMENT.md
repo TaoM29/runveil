@@ -106,5 +106,5 @@ For the separate, explicitly opt-in hosted check, see
 - [Authenticated read-only run traces and browser console](TRACES.md)
 - [Opt-in execution telemetry and JSON output](TELEMETRY.md)
 - [Phase 7 integrated acceptance and closure](PHASE_7.md)
-
-- [Offline deterministic evaluation calibration](EVALUATIONS.md)
+- [Offline deterministic evaluation and benchmark selection](EVALUATIONS.md)
+- [Controlled code-reading benchmark and split discipline](BENCHMARK.md)

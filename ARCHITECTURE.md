@@ -1,6 +1,6 @@
 # Architecture
 
-## Implemented through Phase 8A; evaluation foundation review pending
+## Implemented through Phase 8B; controlled benchmark review pending
 
 ```mermaid
 flowchart LR
@@ -458,3 +458,19 @@ identities vary; the scripted grades/counts reproduce. No database evaluation sc
 resumable batch, arbitrary code/test runner, hosted provider or statistical inference
 is introduced. See [ADR 0029](docs/adr/0029-offline-evaluation-harness.md) and
 [evaluation operations](docs/operations/EVALUATIONS.md).
+
+## Phase 8B controlled code-reading benchmark
+
+The evaluator adds a frozen 24-case public source-reading corpus with separate
+16-case development and 8-case held-out suites. CLI selection is closed and defaults
+to development; unsupported combinations fail before side effects. Split participates
+in content identity, so existing comparison guards refuse mixed partitions. The
+original calibration remains unchanged. No source fixture is executed, and no new
+runtime, provider, database or authorization boundary is introduced.
+
+The reserved partition is a documented tuning rule, not secrecy or proof against
+contamination. Scripts contain the answers and demonstrate only harness behavior
+and known budget effects. Case inventory and exact-answer rationales are reviewed
+alongside frozen digests; substantive corpus changes require a new version. See
+[ADR 0030](docs/adr/0030-controlled-code-reading-benchmark.md) and
+[benchmark discipline](docs/operations/BENCHMARK.md).

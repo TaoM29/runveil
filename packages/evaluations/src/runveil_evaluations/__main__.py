@@ -8,22 +8,33 @@ from pathlib import Path
 from runveil_persistence.database import create_engine, database_url
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
+from runveil_evaluations.benchmark import select_suite
 from runveil_evaluations.runner import run_calibration
 
 
 async def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True, help="New local JSON report path")
+    parser.add_argument("--suite", choices=("calibration", "code-reading"), default="calibration")
+    parser.add_argument("--split", choices=("development", "held-out"), default="development")
     args = parser.parse_args()
+    try:
+        suite = select_suite(args.suite, args.split)
+    except ValueError:
+        parser.error("The calibration suite has no held-out split")
     # Refuse existing files/symlinks before starting database work. Never overwrite evidence.
     with args.output.open("x", encoding="utf-8") as output:
         engine = create_engine(database_url())
         try:
-            report = await run_calibration(async_sessionmaker(engine))
+            report = await run_calibration(async_sessionmaker(engine), suite)
             output.write(report.model_dump_json(indent=2) + "\n")
         finally:
             await engine.dispose()
-    print(f"Calibration: {report.baseline_metrics.passed}/3 -> {report.candidate_metrics.passed}/3")
+    print(
+        f"{suite.name} ({suite.split}): "
+        f"{report.baseline_metrics.passed}/{len(suite.cases)} -> "
+        f"{report.candidate_metrics.passed}/{len(suite.cases)}"
+    )
     return 0
 
 
