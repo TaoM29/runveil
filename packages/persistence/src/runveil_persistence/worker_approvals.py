@@ -8,6 +8,7 @@ from runveil_core.agents import JsonValue
 from runveil_core.approvals import PROPOSAL_TOOL, REVIEW_PROFILE, ApprovalRequest, PatchProposal
 from runveil_core.errors import InvalidTransition, NotFound, RevisionConflict
 from runveil_core.models import Message, ModelRequest, ModelResponse, ToolAction, validate_response
+from runveil_core.mutations import PATCH_PROFILE
 from runveil_core.runs import RunStatus
 from runveil_core.runtime import Pending, RuntimeConfig, RuntimeState
 from sqlalchemy import select
@@ -36,9 +37,9 @@ async def validate_review_state(
     row = await session.get(ApprovalRow, state.approval_id, populate_existing=True)
     job = await session.get(JobRow, run_id)
     if (
-        config.schema_version != 10
+        config.schema_version not in (10, 11)
         or job is None
-        or job.profile != REVIEW_PROFILE
+        or job.profile != (PATCH_PROFILE if config.schema_version == 11 else REVIEW_PROFILE)
         or row is None
         or row.run_id != run_id
     ):
@@ -100,7 +101,7 @@ async def prepare_pause(
         raise ValueError("Approval boundary requires prior state")
     call = await session.get(ToolCallRow, pending.id) if pending.kind == "tool" else None
     reviewing = (
-        config.schema_version == 10
+        config.schema_version in (10, 11)
         and call is not None
         and call.tool_name == PROPOSAL_TOOL
         and result is not None
@@ -115,7 +116,7 @@ async def prepare_pause(
     job = await session.get(JobRow, pending.cursor.run_id)
     if (
         job is None
-        or job.profile != REVIEW_PROFILE
+        or job.profile != (PATCH_PROFILE if config.schema_version == 11 else REVIEW_PROFILE)
         or previous.approval_id is not None
         or state.approval_id is None
         or state.approval_resolved
@@ -175,6 +176,7 @@ async def resolve_worker_review(
     decision: Literal["APPROVED", "REJECTED"],
     expected_revision: int,
     expected_digest: str,
+    profile: str = REVIEW_PROFILE,
 ) -> ApprovalRequest:
     if decision not in ("APPROVED", "REJECTED"):
         raise ValueError("Unknown decision")
@@ -192,7 +194,7 @@ async def resolve_worker_review(
     if run.status != RunStatus.WAITING_FOR_APPROVAL:
         raise InvalidTransition("Run is not waiting for approval")
     job = await session.get(JobRow, run_id, with_for_update=True, populate_existing=True)
-    if job is None or job.profile != REVIEW_PROFILE:
+    if profile not in (REVIEW_PROFILE, PATCH_PROFILE) or job is None or job.profile != profile:
         raise ValueError("Not a worker review")
     if job.token is not None or job.expires_at is not None:
         raise OwnershipLost("Waiting approval must have released its worker")

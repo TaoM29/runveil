@@ -9,8 +9,17 @@ from uuid import UUID, uuid4
 
 from pydantic import ValidationError
 from runveil_core.agents import JsonValue
+from runveil_core.approvals import PatchProposal
 from runveil_core.errors import InvalidTransition
-from runveil_core.models import Message, ModelRequest, ModelResponse, TokenUsage, validate_response
+from runveil_core.models import (
+    FinalResult,
+    Message,
+    ModelRequest,
+    ModelResponse,
+    TokenUsage,
+    validate_response,
+)
+from runveil_core.mutations import APPLY_TOOL, PatchWriter, authorize_patch
 from runveil_core.runs import RunStatus
 from runveil_core.runtime import (
     BudgetExceeded,
@@ -22,6 +31,7 @@ from runveil_core.runtime import (
     RuntimeState,
     Started,
 )
+from runveil_core.tools import ToolError, ToolPolicy
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -29,6 +39,7 @@ from runveil_persistence.history import HistoryRepository, lock_running_run
 from runveil_persistence.invocations import InvocationRepository
 from runveil_persistence.jobs import Claim, database_now, fence
 from runveil_persistence.models import EventRow, JobRow, ModelInvocationRow, ToolCallRow
+from runveil_persistence.mutations import authorized_patch
 from runveil_persistence.repositories import AgentRepository, RunRepository
 from runveil_persistence.worker_approvals import pause_review, prepare_pause, validate_review_state
 
@@ -397,6 +408,21 @@ class PostgresExecutionStore:
             raise ValueError("Only tool requests require a tool name")
         blocked: RuntimeState | None = None
         async with self._boundary(cursor) as (session, _):
+            if tool_name == APPLY_TOOL:
+                pinned, _, proposal = await authorized_patch(session, cursor.run_id)
+                if (
+                    config != pinned
+                    or model_invocation_id is not None
+                    or payload != proposal.model_dump(mode="json")
+                ):
+                    raise ValueError("Mutation intent differs from exact approved proposal")
+                prior = await session.scalar(
+                    select(ToolCallRow.id).where(
+                        ToolCallRow.run_id == cursor.run_id, ToolCallRow.tool_name == APPLY_TOOL
+                    )
+                )
+                if prior is not None:
+                    raise ValueError("Mutation intent has already been consumed")
             blocked = await self._check_request_budget(session, cursor, kind, tool_name, payload)
             if blocked is None:
                 invocations = InvocationRepository(session)
@@ -575,7 +601,7 @@ class PostgresExecutionStore:
                     if response.usage != state.tokens.last_usage:
                         raise ValueError("Outcome usage differs from accounting")
             approval = None
-            if state.schema_version == 10:
+            if state.schema_version >= 10:
                 approval = await prepare_pause(session, pending, previous, state, config, result)
             invocations = InvocationRepository(session)
             complete = (
@@ -629,6 +655,124 @@ class PostgresExecutionStore:
                     expected_sequence=cursor.sequence,
                 )
             return cursor
+
+    async def approved_patch(self, cursor: Cursor) -> PatchProposal:
+        async with self._boundary(cursor) as (session, _):
+            _, _, proposal = await authorized_patch(session, cursor.run_id)
+            return proposal
+
+    async def apply_patch(
+        self, pending: Pending, writer: PatchWriter, operator: ToolPolicy
+    ) -> RuntimeState:
+        cursor = pending.cursor
+        async with self._boundary(cursor, pending=pending) as (session, _):
+            config, previous, proposal = await authorized_patch(session, cursor.run_id)
+            authorize_patch(config.tool_policy, operator)
+            if writer.workspace != config.workspace:
+                raise ValueError("Writer workspace differs from approval binding")
+            call = await session.get(ToolCallRow, pending.id)
+            if (
+                pending.kind != "tool"
+                or call is None
+                or call.run_id != cursor.run_id
+                or call.status != "REQUESTED"
+                or call.tool_name != APPLY_TOOL
+                or call.request != proposal.model_dump(mode="json")
+                or call.requested_event_sequence != cursor.sequence
+            ):
+                raise ValueError("Invalid mutation intent")
+            failure: str | None = None
+            try:
+                # Synchronous under row locks to serialize normal cancellation/claim races.
+                writer.apply(proposal)
+            except ToolError as exc:
+                failure = exc.code.value
+            except Exception:
+                failure = "patch_outcome_unknown"
+            job = await session.get(JobRow, cursor.run_id)
+            now = await database_now(session)
+            if (
+                job is None
+                or job.deadline_at is None
+                or job.deadline_at <= now
+                or job.expires_at is None
+                or job.expires_at <= now
+            ):
+                failure = "patch_outcome_unknown"
+            state = previous.model_copy(
+                update={
+                    "steps_used": previous.steps_used + 1,
+                    "error_code": failure,
+                    "final_result": None
+                    if failure
+                    else FinalResult(
+                        summary="Applied the exact approved single-file replacement.", artifacts=()
+                    ),
+                }
+            )
+            await self._finish_patch(session, pending, state, proposal)
+            return state
+
+    async def _finish_patch(
+        self, session: AsyncSession, pending: Pending, state: RuntimeState, proposal: PatchProposal
+    ) -> None:
+        cursor = pending.cursor
+        await InvocationRepository(session).complete_tool(
+            cursor.run_id,
+            pending.id,
+            state=state.model_dump(mode="json"),
+            result={"applied": True, "digest": proposal.digest}
+            if state.error_code is None
+            else None,
+            error_code=state.error_code,
+            expected_revision=cursor.revision,
+            expected_sequence=cursor.sequence,
+        )
+        checkpoint = await HistoryRepository(session).latest_checkpoint(cursor.run_id)
+        assert checkpoint is not None
+        await RunRepository(session).transition(
+            cursor.run_id,
+            RunStatus.FAILED if state.error_code else RunStatus.SUCCEEDED,
+            expected_revision=cursor.revision,
+            expected_sequence=checkpoint.event_sequence,
+        )
+
+    async def fail_uncertain_patch(self) -> RuntimeState:
+        """Terminal-only recovery, independent of the possibly changed filesystem."""
+        if self.claim is None or self.expected_config is None:
+            raise ValueError("Mutation recovery requires a claim and pinned configuration")
+        started = await self.start(
+            self.claim.run_id, self.claim.task, self.expected_config.provider
+        )
+        pending = started.interrupted
+        if pending is None:
+            raise ValueError("No interrupted mutation to terminate")
+        async with self.sessions.begin() as session:
+            await fence(session, pending.cursor.run_id, self.claim)
+            await lock_running_run(
+                session,
+                pending.cursor.run_id,
+                expected_revision=pending.cursor.revision,
+                expected_sequence=pending.cursor.sequence,
+            )
+            _, previous, proposal = await authorized_patch(session, pending.cursor.run_id)
+            call = await session.get(ToolCallRow, pending.id)
+            if (
+                pending.kind != "tool"
+                or call is None
+                or call.tool_name != APPLY_TOOL
+                or call.status != "REQUESTED"
+                or call.request != proposal.model_dump(mode="json")
+            ):
+                raise ValueError("Recovery requires the exact outstanding mutation")
+            state = previous.model_copy(
+                update={
+                    "steps_used": previous.steps_used + 1,
+                    "error_code": "patch_outcome_unknown",
+                }
+            )
+            await self._finish_patch(session, pending, state, proposal)
+            return state
 
     async def schedule_retry(
         self, pending: Pending, state: RuntimeState, *, error_code: str
