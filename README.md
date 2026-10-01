@@ -1,8 +1,8 @@
 # Runveil
 
-A production-style runtime for reliable, observable and evaluable AI agents.
+A custom Python runtime for durable, bounded AI-agent execution.
 
-**Working name · Phase 5 acceptance complete; ready for closure review. Phase 2 hosted acceptance complete.** This repository contains
+**Development project · Phase 5 complete. Phase 2 hosted acceptance complete.** This repository contains
 immutable agent versions, persisted runs with validated lifecycle transitions,
 ordered execution history, checkpoint snapshots, model/tool request and outcome
 records, PostgreSQL migrations and integration tests, plus normalized model
@@ -156,11 +156,10 @@ For the optional SQS submission/relay/consumer path, see [broker operations](doc
 Repository tool setup and limits are documented in [repository tools](docs/operations/REPOSITORY_TOOLS.md).
 Model contract usage is documented in [model operations](docs/operations/MODELS.md).
 Repository usage and state rules are documented in [persistence operations](docs/operations/PERSISTENCE.md).
-Reliability, evaluation, security, inference benchmarks and AWS deployment remain
-planned work. Application containers and production delivery are not implemented.
+Evaluation, production security hardening, inference benchmarks and AWS deployment
+remain planned work. Application containers and production delivery are not implemented.
 The development servers are not a public deployment configuration.
 
-The previous name had collisions; Runveil still needs public-name clearance.
-See [naming research](docs/architecture/NAMING.md).
-A final public name and license must be selected before release. No license grant
-is implied by this scaffold.
+Runveil is a development/portfolio project. Sharing its source does not require
+a domain or a product launch. See [project naming context](docs/architecture/NAMING.md).
+No license has been selected, and no license grant is implied by this repository.
