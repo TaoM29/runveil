@@ -11,6 +11,13 @@ export default function Home() {
         Inspect one existing run and decide its exact proposal. Submission and
         worker execution remain separate operator steps.
       </p>
+      {/* Full navigation clears the approval credential before trace inspection. */}
+      <a
+        className="mt-6 inline-block underline underline-offset-4"
+        href="/traces"
+      >
+        Open read-only run traces
+      </a>
       <ApprovalConsole />
       <a
         className="mt-8 inline-block underline underline-offset-4"
