@@ -1,6 +1,6 @@
 # Architecture
 
-## Implemented through Phase 5; acceptance complete
+## Implemented through Phase 6A; approval foundation awaiting review
 
 ```mermaid
 flowchart LR
@@ -271,7 +271,7 @@ demonstration alongside the existing boundary tests. Phase 5 is ready for closur
 review within the accepted scope; see the [acceptance audit](docs/operations/PHASE_5.md).
 
 Broader broker operational hardening, general/hosted retries, richer billing models,
-approvals and sandbox boundaries remain future slices.
+general approval integration and sandbox boundaries remain future slices.
 
 ## Open decisions
 
@@ -280,3 +280,20 @@ approvals and sandbox boundaries remain future slices.
 - Sandbox threat model and AWS cost/deployment details.
 
 These are reviewed in their relevant phase, not settled by empty abstractions.
+
+## Phase 6A approval foundation
+
+The dedicated `patch-review-v1` workflow persists one bounded single-file proposal
+and its digest in migration 0009. Request, event, checkpoint and approval pause are
+atomic. A trusted local operator resolves the exact proposal using the inspected
+run revision and digest. Approval resumes only to checkpoint a completed review;
+rejection terminates without resuming. Neither path invokes a model/tool or writes
+a file. Immutable request identity and one-time outcome guards prevent replacement
+or repeated decisions. Cancellation invalidates resolution.
+
+This workflow refuses worker-enrolled runs and other version configurations.
+Existing runtime checkpoint schemas, worker claims, budgets, retry/recovery and
+read-only tool authorization remain unchanged. It deliberately does not claim
+model-driven approval recovery, patch application, HTTP or UI support. See
+[ADR 0021](docs/adr/0021-durable-patch-review.md) and
+[approval operations](docs/operations/APPROVALS.md).

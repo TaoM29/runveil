@@ -11,8 +11,8 @@ commit or push is authorized.
 | 2     | Provider protocol, scripted and hosted providers          | Implemented; hosted acceptance complete   |
 | 3     | Minimal persisted execution loop                          | Implemented; continued by Phase 4 request |
 | 4     | Typed tools and authorization                             | Implemented through Phase 4B              |
-| 5     | Durable worker, retries, idempotency and budgets          | Acceptance complete; closure review       |
-| 6     | Human approval and controlled mutations                   | Planned                                   |
+| 5     | Durable worker, retries, idempotency and budgets          | Complete; Phase 6 continuation authorized |
+| 6     | Human approval and controlled mutations                   | Phase 6A implemented; review pending      |
 | 7     | Telemetry and trace UI                                    | Planned                                   |
 | 8     | Deterministic evaluation harness                          | Planned                                   |
 | 9     | Statistical comparison                                    | Planned                                   |
@@ -170,12 +170,25 @@ The charter's worker-crash/restart/recovery/success and duplicate-message gates 
 now demonstrated across actual process death. Live AWS/IAM acceptance, deployment
 operations, hosted retry safety and exactly-once external effects are not claimed.
 The SQS target is offline verified; live infrastructure remains Phase 12, with live
-acceptance a separate opt-in activity. Stop for closure review before Phase 6.
+acceptance a separate opt-in activity. Phase 6 continuation was authorized on
+2026-10-01.
+
+## Phase 6 review gates
+
+- **6A — Implemented; review pending:** durable single-file patch proposal,
+  exact-content digest, atomic request/checkpoint/pause, revision-bound one-time
+  approval or rejection and local inspection/decision CLI. Approval resumes to a
+  persisted review result; rejection terminates. No patch is applied in this slice,
+  and existing worker/runtime mutation denial remains intact. See
+  [ADR 0021](docs/adr/0021-durable-patch-review.md),
+  [operations](docs/operations/APPROVALS.md) and [handoff](docs/operations/PHASE_6A.md).
+  This is an isolated review workflow, not model-driven worker recovery or full
+  Phase 6 acceptance. HTTP/UI and controlled patch writing remain outstanding.
 
 ## Recommended next slice
 
-After review and separate authorization, begin Phase 6A: durable approval requests
-and pause/resume for one controlled patch proposal. Establish that no patch is
-applied before required approval and rejection prevents action; keep mutation
-gated until that boundary exists and is reviewed. No Phase 6 implementation is
-included in the Phase 5 completion work.
+After review, integrate one model-proposed single-file replacement with durable
+worker approval suspension/recovery and explicit workspace/preimage identity.
+Define single-use mutation and uncertain-effect behavior before enabling a writer;
+then expose decisions through authenticated API/UI. Do not reuse a Phase 6A
+review-only approval as permission to write.
