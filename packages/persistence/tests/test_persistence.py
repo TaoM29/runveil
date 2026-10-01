@@ -69,6 +69,7 @@ async def test_migration_round_trip_and_metadata(empty_database: AsyncEngine) ->
             "worker_jobs",
             "worker_outbox",
             "worker_admission_events",
+            "approval_requests",
         }
         assert await connection.scalar(text("SELECT count(*) FROM worker_jobs")) == 1
         assert (
