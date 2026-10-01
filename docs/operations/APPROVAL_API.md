@@ -3,7 +3,8 @@
 Phase 6D adds inspection and decisions for already-created Phase 6A, 6B and 6C
 approvals. See [ADR 0024](../adr/0024-local-operator-approval-api.md).
 The [review](APPROVALS.md) and [patch](PATCHES.md) CLIs still create and run work.
-The console is not connected yet.
+The [local operator console](APPROVAL_CONSOLE.md) uses these endpoints through a
+bounded same-origin proxy.
 
 ## Enable locally
 

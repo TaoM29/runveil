@@ -100,4 +100,5 @@ For the separate, explicitly opt-in hosted check, see
 - [Local durable patch review](APPROVALS.md)
 - [Controlled approved file replacement](PATCHES.md)
 - [Authenticated local approval API](APPROVAL_API.md)
+- [Local operator console](APPROVAL_CONSOLE.md)
 - [Phase 5 acceptance evidence](PHASE_5.md)
