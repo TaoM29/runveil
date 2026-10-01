@@ -27,6 +27,7 @@ from runveil_core.models import (
     validate_response,
 )
 from runveil_core.mutations import APPLY_TOOL, PatchWriter, authorize_patch
+from runveil_core.telemetry import observe
 from runveil_core.tools import ToolError, ToolErrorCode, ToolPolicy, ToolRegistry
 
 
@@ -299,20 +300,47 @@ async def execute(
     patch_writer: PatchWriter | None = None,
 ) -> RuntimeState:
     """Execute from the store's validated start/resume boundary; never replay intent."""
-    try:
-        return await _execute(
-            run_id,
-            task,
-            provider_name=provider_name,
-            provider=provider,
-            store=store,
-            tools=tools,
-            tool_policy=tool_policy,
-            allow_model_retries=allow_model_retries,
-            patch_writer=patch_writer,
+    with observe("agent.execute", root=True, run_id=str(run_id)) as telemetry:
+        try:
+            state = await _execute(
+                run_id,
+                task,
+                provider_name=provider_name,
+                provider=provider,
+                store=store,
+                tools=tools,
+                tool_policy=tool_policy,
+                allow_model_retries=allow_model_retries,
+                patch_writer=patch_writer,
+            )
+        except BudgetExceeded as exc:
+            state = exc.state
+        telemetry.fields(
+            outcome="failed"
+            if state.error_code
+            else "succeeded"
+            if state.final_result
+            else "approval_wait"
+            if state.approval_id and not state.approval_resolved
+            else "retry_wait"
+            if state.retry_source_id
+            else "returned",
+            steps=state.steps_used,
+            retries_scheduled=state.retries_scheduled,
         )
-    except BudgetExceeded as exc:
-        return exc.state
+        if state.schema_version >= 5:
+            telemetry.fields(
+                model_attempts=state.tokens.attempts,
+                input_tokens=state.tokens.input_tokens,
+                output_tokens=state.tokens.output_tokens,
+                unknown_usage_attempts=state.tokens.unknown_attempts,
+            )
+        if state.cost is not None:
+            telemetry.fields(
+                known_nanousd=state.cost.known_nanousd,
+                unknown_cost_attempts=state.cost.unknown_attempts,
+            )
+        return state
 
 
 async def _execute(
@@ -365,7 +393,15 @@ async def _execute(
             payload=proposal.model_dump(mode="json"),
             config=config,
         )
-        return await store.apply_patch(pending, patch_writer, operator_policy)
+        with observe(
+            "tool.apply_patch",
+            run_id=str(run_id),
+            invocation_id=str(pending.id),
+            request_sequence=pending.cursor.sequence,
+        ) as telemetry:
+            result = await store.apply_patch(pending, patch_writer, operator_policy)
+            telemetry.fields(outcome="failed" if result.error_code else "returned")
+            return result
     if state.retry_source_id is not None and not allow_model_retries:
         raise ValueError("Resuming model retries requires the operator retry grant")
     while True:
@@ -386,21 +422,30 @@ async def _execute(
             )
             state = state.model_copy(update={"steps_used": state.steps_used + 1})
             seconds = await remaining(pending)
-            try:
-                async with asyncio.timeout(seconds):
-                    observation = await registry.dispatch(
-                        action.tool_name, action.arguments, config.tool_policy, operator_policy
-                    )
-            except TimeoutError:
-                await remaining(pending)
-                state = state.model_copy(update={"error_code": ToolErrorCode.TIMEOUT.value})
-                await store.complete(pending, state, error_code=ToolErrorCode.TIMEOUT.value)
-                return state
-            except ToolError as exc:
-                await remaining(pending)
-                state = state.model_copy(update={"error_code": exc.code.value})
-                await store.complete(pending, state, error_code=exc.code.value)
-                return state
+            with observe(
+                "tool.dispatch",
+                run_id=str(run_id),
+                invocation_id=str(pending.id),
+                request_sequence=pending.cursor.sequence,
+            ) as telemetry:
+                try:
+                    async with asyncio.timeout(seconds):
+                        observation = await registry.dispatch(
+                            action.tool_name, action.arguments, config.tool_policy, operator_policy
+                        )
+                except TimeoutError:
+                    await remaining(pending)
+                    state = state.model_copy(update={"error_code": ToolErrorCode.TIMEOUT.value})
+                    await store.complete(pending, state, error_code=ToolErrorCode.TIMEOUT.value)
+                    telemetry.fields(outcome="failed")
+                    return state
+                except ToolError as exc:
+                    await remaining(pending)
+                    state = state.model_copy(update={"error_code": exc.code.value})
+                    await store.complete(pending, state, error_code=exc.code.value)
+                    telemetry.fields(outcome="failed")
+                    return state
+                telemetry.fields(outcome="returned")
             await remaining(pending)
             state = state.model_copy(
                 update={
@@ -444,21 +489,35 @@ async def _execute(
         failure: str | None = None
         retryable = False
         usage = TokenUsage()
-        try:
-            async with asyncio.timeout(timeout):
-                response = await provider.generate(request)
-            usage = response.usage
-            model_action = validate_response(request, response)
-        except ProviderError as exc:
-            if usage == TokenUsage():
-                usage = exc.usage
-            failure = exc.code.value
-            retryable = exc.code == ProviderErrorCode.RATE_LIMITED
-        except TimeoutError:
-            failure = ProviderErrorCode.TIMEOUT.value
-        except Exception:
-            # Only the provider/response boundary is normalized; storage errors propagate.
-            failure = ProviderErrorCode.UNAVAILABLE.value
+        with observe(
+            "model.attempt",
+            run_id=str(run_id),
+            invocation_id=str(pending.id),
+            request_sequence=pending.cursor.sequence,
+        ) as telemetry:
+            try:
+                async with asyncio.timeout(timeout):
+                    response = await provider.generate(request)
+                usage = response.usage
+                model_action = validate_response(request, response)
+            except ProviderError as exc:
+                if usage == TokenUsage():
+                    usage = exc.usage
+                failure = exc.code.value
+                retryable = exc.code == ProviderErrorCode.RATE_LIMITED
+            except TimeoutError:
+                failure = ProviderErrorCode.TIMEOUT.value
+            except Exception:
+                # Only the provider/response boundary is normalized; storage errors propagate.
+                failure = ProviderErrorCode.UNAVAILABLE.value
+            telemetry.fields(
+                outcome="failed" if failure else "returned",
+                usage_complete=usage.input_tokens is not None and usage.output_tokens is not None,
+            )
+            if usage.input_tokens is not None:
+                telemetry.fields(input_tokens=usage.input_tokens)
+            if usage.output_tokens is not None:
+                telemetry.fields(output_tokens=usage.output_tokens)
         if config.schema_version >= 5:
             state = state.account_model_usage(usage, config)
             budget_failure = state.budget_failure(config)

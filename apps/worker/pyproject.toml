@@ -2,7 +2,7 @@
 name = "runveil-worker"
 version = "0.1.0"
 requires-python = ">=3.12,<3.13"
-dependencies = ["runveil-agent-core", "runveil-persistence", "runveil-tool-runtime", "boto3>=1.42,<2"]
+dependencies = ["runveil-agent-core", "runveil-persistence", "runveil-tool-runtime", "boto3>=1.42,<2", "opentelemetry-sdk>=1.38,<2"]
 
 [tool.uv.sources]
 runveil-agent-core = { workspace = true }
