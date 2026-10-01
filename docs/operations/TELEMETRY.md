@@ -80,5 +80,6 @@ tracer supplied by a library caller. Abrupt shutdown may omit active spans entir
 No exporter failure authorizes replay or repairs persisted history.
 
 See [ADR 0028](../adr/0028-execution-telemetry.md) and
-[Phase 7C verification](PHASE_7C.md). Collector integration, metrics, cross-process
-propagation, per-attempt UI usage projection and Phase 7 closure remain separate work.
+[Phase 7C verification](PHASE_7C.md). [Phase 7 closure](PHASE_7.md) demonstrates
+integrated local acceptance. Collector integration, metrics, cross-process
+propagation and per-attempt UI usage projection remain separate work.

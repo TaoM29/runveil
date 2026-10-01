@@ -428,3 +428,15 @@ and abrupt death can omit spans entirely. The trace API/UI continues to read dur
 history with unchanged authentication. No collector, metrics or distributed
 propagation is introduced. See [ADR 0028](docs/adr/0028-execution-telemetry.md),
 [operations](docs/operations/TELEMETRY.md) and [handoff](docs/operations/PHASE_7C.md).
+
+## Phase 7 closure evidence
+
+Phase 7D demonstrates the production trace console, authenticated API/proxy,
+PostgreSQL records and opt-in OTel/JSON output together for completed, failed,
+retried and approval-wait runs. Exact invocation/event correlation and checkpoint
+accounting agree; trace access adds no approval or mutation authority. Credential
+clearing and separate capabilities were verified in the browser and over HTTP.
+No application or architecture change was needed for acceptance. See the
+[closure audit](docs/operations/PHASE_7.md) and [handoff](docs/operations/PHASE_7D.md).
+Retained local/security/telemetry-loss limits remain in force. Phase 8 requires
+separate authorization after closure review.

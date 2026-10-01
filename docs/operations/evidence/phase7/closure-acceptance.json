@@ -1,0 +1,2127 @@
+{
+  "source_commit": "584eae69aeb90cf0d9f6bbbbdf2affe9c1bcf0c4",
+  "runs": {
+    "completed": {
+      "trace": {
+        "schema_version": 1,
+        "run_id": "fbd238be-f064-4bff-8c07-e85b2268facd",
+        "agent_version_id": "cc468c93-ea45-4333-a62f-1c8ec0a18865",
+        "status": "SUCCEEDED",
+        "revision": 2,
+        "created_at": "2026-10-01T17:57:38.584158Z",
+        "started_at": "2026-10-01T17:57:39.383374Z",
+        "finished_at": "2026-10-01T17:57:39.637912Z",
+        "observed_at": "2026-10-01T17:57:39.797740Z",
+        "elapsed_ms": 254.53799999999998,
+        "event_sequence": 17,
+        "history_complete": true,
+        "model_calls": 2,
+        "tool_calls": 1,
+        "checkpoint": {
+          "event_sequence": 16,
+          "schema_version": 8,
+          "tokens": {
+            "attempts": 2,
+            "input_tokens": 20,
+            "output_tokens": 10,
+            "unknown_attempts": 0,
+            "last_usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          },
+          "cost": {
+            "known_nanousd": 50000,
+            "unknown_attempts": 0
+          },
+          "retries_scheduled": 0,
+          "error_code": null,
+          "final_summary": "Runveil fixture verified.",
+          "final_summary_truncated": false
+        },
+        "approval": null,
+        "events": [
+          {
+            "sequence": 1,
+            "kind": "run.created",
+            "run_revision": 0,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:38.607667Z",
+            "retry_of": null,
+            "to_status": "QUEUED",
+            "invocation": null
+          },
+          {
+            "sequence": 2,
+            "kind": "run.transitioned",
+            "run_revision": 1,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:39.385766Z",
+            "retry_of": null,
+            "to_status": "RUNNING",
+            "invocation": null
+          },
+          {
+            "sequence": 3,
+            "kind": "step.recorded",
+            "run_revision": 1,
+            "step_number": 1,
+            "created_at": "2026-10-01T17:57:39.401608Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 4,
+            "kind": "checkpoint.created",
+            "run_revision": 1,
+            "step_number": 1,
+            "created_at": "2026-10-01T17:57:39.403396Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 5,
+            "kind": "model.requested",
+            "run_revision": 1,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:39.451821Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": {
+              "id": "eb71e744-87d6-42cf-8f75-74962321a07e",
+              "kind": "model",
+              "name": "fixture-v1",
+              "provider": "scripted-fixture-calls-v1",
+              "model_invocation_id": null,
+              "status": "SUCCEEDED",
+              "requested_sequence": 5,
+              "completed_sequence": 6,
+              "requested_at": "2026-10-01T17:57:39.451821Z",
+              "completed_at": "2026-10-01T17:57:39.480866Z",
+              "duration_ms": 29.045,
+              "error_code": null
+            }
+          },
+          {
+            "sequence": 6,
+            "kind": "model.completed",
+            "run_revision": 1,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:39.480866Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": {
+              "id": "eb71e744-87d6-42cf-8f75-74962321a07e",
+              "kind": "model",
+              "name": "fixture-v1",
+              "provider": "scripted-fixture-calls-v1",
+              "model_invocation_id": null,
+              "status": "SUCCEEDED",
+              "requested_sequence": 5,
+              "completed_sequence": 6,
+              "requested_at": "2026-10-01T17:57:39.451821Z",
+              "completed_at": "2026-10-01T17:57:39.480866Z",
+              "duration_ms": 29.045,
+              "error_code": null
+            }
+          },
+          {
+            "sequence": 7,
+            "kind": "step.recorded",
+            "run_revision": 1,
+            "step_number": 2,
+            "created_at": "2026-10-01T17:57:39.485062Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 8,
+            "kind": "checkpoint.created",
+            "run_revision": 1,
+            "step_number": 2,
+            "created_at": "2026-10-01T17:57:39.486123Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 9,
+            "kind": "tool.requested",
+            "run_revision": 1,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:39.518342Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": {
+              "id": "ba3bcfc1-1c74-4154-bfa0-1e78e4f9003a",
+              "kind": "tool",
+              "name": "fixture.info",
+              "provider": null,
+              "model_invocation_id": "eb71e744-87d6-42cf-8f75-74962321a07e",
+              "status": "SUCCEEDED",
+              "requested_sequence": 9,
+              "completed_sequence": 10,
+              "requested_at": "2026-10-01T17:57:39.518342Z",
+              "completed_at": "2026-10-01T17:57:39.558510Z",
+              "duration_ms": 40.168,
+              "error_code": null
+            }
+          },
+          {
+            "sequence": 10,
+            "kind": "tool.completed",
+            "run_revision": 1,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:39.558510Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": {
+              "id": "ba3bcfc1-1c74-4154-bfa0-1e78e4f9003a",
+              "kind": "tool",
+              "name": "fixture.info",
+              "provider": null,
+              "model_invocation_id": "eb71e744-87d6-42cf-8f75-74962321a07e",
+              "status": "SUCCEEDED",
+              "requested_sequence": 9,
+              "completed_sequence": 10,
+              "requested_at": "2026-10-01T17:57:39.518342Z",
+              "completed_at": "2026-10-01T17:57:39.558510Z",
+              "duration_ms": 40.168,
+              "error_code": null
+            }
+          },
+          {
+            "sequence": 11,
+            "kind": "step.recorded",
+            "run_revision": 1,
+            "step_number": 3,
+            "created_at": "2026-10-01T17:57:39.564237Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 12,
+            "kind": "checkpoint.created",
+            "run_revision": 1,
+            "step_number": 3,
+            "created_at": "2026-10-01T17:57:39.565613Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 13,
+            "kind": "model.requested",
+            "run_revision": 1,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:39.597435Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": {
+              "id": "f9b37fb2-cae6-49e1-a58f-b952833dae0f",
+              "kind": "model",
+              "name": "fixture-v1",
+              "provider": "scripted-fixture-calls-v1",
+              "model_invocation_id": null,
+              "status": "SUCCEEDED",
+              "requested_sequence": 13,
+              "completed_sequence": 14,
+              "requested_at": "2026-10-01T17:57:39.597435Z",
+              "completed_at": "2026-10-01T17:57:39.623161Z",
+              "duration_ms": 25.726,
+              "error_code": null
+            }
+          },
+          {
+            "sequence": 14,
+            "kind": "model.completed",
+            "run_revision": 1,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:39.623161Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": {
+              "id": "f9b37fb2-cae6-49e1-a58f-b952833dae0f",
+              "kind": "model",
+              "name": "fixture-v1",
+              "provider": "scripted-fixture-calls-v1",
+              "model_invocation_id": null,
+              "status": "SUCCEEDED",
+              "requested_sequence": 13,
+              "completed_sequence": 14,
+              "requested_at": "2026-10-01T17:57:39.597435Z",
+              "completed_at": "2026-10-01T17:57:39.623161Z",
+              "duration_ms": 25.726,
+              "error_code": null
+            }
+          },
+          {
+            "sequence": 15,
+            "kind": "step.recorded",
+            "run_revision": 1,
+            "step_number": 4,
+            "created_at": "2026-10-01T17:57:39.628116Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 16,
+            "kind": "checkpoint.created",
+            "run_revision": 1,
+            "step_number": 4,
+            "created_at": "2026-10-01T17:57:39.629148Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 17,
+            "kind": "run.transitioned",
+            "run_revision": 2,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:39.639363Z",
+            "retry_of": null,
+            "to_status": "SUCCEEDED",
+            "invocation": null
+          }
+        ],
+        "next_after_sequence": null
+      },
+      "spans": [
+        {
+          "attributes": {
+            "input_tokens": 10,
+            "invocation_id": "eb71e744-87d6-42cf-8f75-74962321a07e",
+            "outcome": "returned",
+            "output_tokens": 5,
+            "request_sequence": 5,
+            "run_id": "fbd238be-f064-4bff-8c07-e85b2268facd",
+            "usage_complete": true
+          },
+          "end_ns": 1790877459467445000,
+          "event": "execution.span",
+          "name": "model.attempt",
+          "parent_span_id": "b1dc550839532579",
+          "service": "runveil-worker",
+          "span_id": "2cf3d3a6045f2c40",
+          "start_ns": 1790877459467204000,
+          "trace_id": "edf3ec207729c6402f14a3f980367d24"
+        },
+        {
+          "attributes": {
+            "invocation_id": "ba3bcfc1-1c74-4154-bfa0-1e78e4f9003a",
+            "outcome": "returned",
+            "request_sequence": 9,
+            "run_id": "fbd238be-f064-4bff-8c07-e85b2268facd"
+          },
+          "end_ns": 1790877459533355000,
+          "event": "execution.span",
+          "name": "tool.dispatch",
+          "parent_span_id": "b1dc550839532579",
+          "service": "runveil-worker",
+          "span_id": "c2c1e15af45cbbf6",
+          "start_ns": 1790877459532487000,
+          "trace_id": "edf3ec207729c6402f14a3f980367d24"
+        },
+        {
+          "attributes": {
+            "input_tokens": 10,
+            "invocation_id": "f9b37fb2-cae6-49e1-a58f-b952833dae0f",
+            "outcome": "returned",
+            "output_tokens": 5,
+            "request_sequence": 13,
+            "run_id": "fbd238be-f064-4bff-8c07-e85b2268facd",
+            "usage_complete": true
+          },
+          "end_ns": 1790877459608949000,
+          "event": "execution.span",
+          "name": "model.attempt",
+          "parent_span_id": "b1dc550839532579",
+          "service": "runveil-worker",
+          "span_id": "5107f8730bb1218c",
+          "start_ns": 1790877459608750000,
+          "trace_id": "edf3ec207729c6402f14a3f980367d24"
+        },
+        {
+          "attributes": {
+            "input_tokens": 20,
+            "known_nanousd": 50000,
+            "model_attempts": 2,
+            "outcome": "succeeded",
+            "output_tokens": 10,
+            "retries_scheduled": 0,
+            "run_id": "fbd238be-f064-4bff-8c07-e85b2268facd",
+            "steps": 3,
+            "unknown_cost_attempts": 0,
+            "unknown_usage_attempts": 0
+          },
+          "end_ns": 1790877459642319000,
+          "event": "execution.span",
+          "name": "agent.execute",
+          "parent_span_id": null,
+          "service": "runveil-worker",
+          "span_id": "b1dc550839532579",
+          "start_ns": 1790877459348326000,
+          "trace_id": "edf3ec207729c6402f14a3f980367d24"
+        }
+      ],
+      "raw_database_reconciled": true
+    },
+    "failed": {
+      "trace": {
+        "schema_version": 1,
+        "run_id": "1c1e00a0-cd9c-418e-b620-0ac193e38c29",
+        "agent_version_id": "06580ec7-7d72-4fec-a6c2-4d4973464211",
+        "status": "FAILED",
+        "revision": 2,
+        "created_at": "2026-10-01T17:57:40.471945Z",
+        "started_at": "2026-10-01T17:57:41.137320Z",
+        "finished_at": "2026-10-01T17:57:41.738431Z",
+        "observed_at": "2026-10-01T17:57:41.861445Z",
+        "elapsed_ms": 601.111,
+        "event_sequence": 28,
+        "history_complete": true,
+        "model_calls": 3,
+        "tool_calls": 2,
+        "checkpoint": {
+          "event_sequence": 26,
+          "schema_version": 7,
+          "tokens": {
+            "attempts": 3,
+            "input_tokens": 30,
+            "output_tokens": 15,
+            "unknown_attempts": 0,
+            "last_usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          },
+          "cost": {
+            "known_nanousd": 75000,
+            "unknown_attempts": 0
+          },
+          "retries_scheduled": 0,
+          "error_code": "repeated_tool_limit_exceeded",
+          "final_summary": null,
+          "final_summary_truncated": false
+        },
+        "approval": null,
+        "events": [
+          {
+            "sequence": 1,
+            "kind": "run.created",
+            "run_revision": 0,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:40.486574Z",
+            "retry_of": null,
+            "to_status": "QUEUED",
+            "invocation": null
+          },
+          {
+            "sequence": 2,
+            "kind": "run.transitioned",
+            "run_revision": 1,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:41.141233Z",
+            "retry_of": null,
+            "to_status": "RUNNING",
+            "invocation": null
+          },
+          {
+            "sequence": 3,
+            "kind": "step.recorded",
+            "run_revision": 1,
+            "step_number": 1,
+            "created_at": "2026-10-01T17:57:41.158733Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 4,
+            "kind": "checkpoint.created",
+            "run_revision": 1,
+            "step_number": 1,
+            "created_at": "2026-10-01T17:57:41.163669Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 5,
+            "kind": "model.requested",
+            "run_revision": 1,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:41.208799Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": {
+              "id": "b225e8c6-6380-4219-b315-994342a3bda0",
+              "kind": "model",
+              "name": "fixture-v1",
+              "provider": "scripted-fixture-loop-v1",
+              "model_invocation_id": null,
+              "status": "SUCCEEDED",
+              "requested_sequence": 5,
+              "completed_sequence": 6,
+              "requested_at": "2026-10-01T17:57:41.208799Z",
+              "completed_at": "2026-10-01T17:57:41.243231Z",
+              "duration_ms": 34.431999999999995,
+              "error_code": null
+            }
+          },
+          {
+            "sequence": 6,
+            "kind": "model.completed",
+            "run_revision": 1,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:41.243231Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": {
+              "id": "b225e8c6-6380-4219-b315-994342a3bda0",
+              "kind": "model",
+              "name": "fixture-v1",
+              "provider": "scripted-fixture-loop-v1",
+              "model_invocation_id": null,
+              "status": "SUCCEEDED",
+              "requested_sequence": 5,
+              "completed_sequence": 6,
+              "requested_at": "2026-10-01T17:57:41.208799Z",
+              "completed_at": "2026-10-01T17:57:41.243231Z",
+              "duration_ms": 34.431999999999995,
+              "error_code": null
+            }
+          },
+          {
+            "sequence": 7,
+            "kind": "step.recorded",
+            "run_revision": 1,
+            "step_number": 2,
+            "created_at": "2026-10-01T17:57:41.250637Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 8,
+            "kind": "checkpoint.created",
+            "run_revision": 1,
+            "step_number": 2,
+            "created_at": "2026-10-01T17:57:41.252315Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 9,
+            "kind": "tool.requested",
+            "run_revision": 1,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:41.292622Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": {
+              "id": "f6a2b1d4-708e-493d-91fb-67d7e0bb6ff2",
+              "kind": "tool",
+              "name": "fixture.info",
+              "provider": null,
+              "model_invocation_id": "b225e8c6-6380-4219-b315-994342a3bda0",
+              "status": "SUCCEEDED",
+              "requested_sequence": 9,
+              "completed_sequence": 10,
+              "requested_at": "2026-10-01T17:57:41.292622Z",
+              "completed_at": "2026-10-01T17:57:41.350138Z",
+              "duration_ms": 57.516,
+              "error_code": null
+            }
+          },
+          {
+            "sequence": 10,
+            "kind": "tool.completed",
+            "run_revision": 1,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:41.350138Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": {
+              "id": "f6a2b1d4-708e-493d-91fb-67d7e0bb6ff2",
+              "kind": "tool",
+              "name": "fixture.info",
+              "provider": null,
+              "model_invocation_id": "b225e8c6-6380-4219-b315-994342a3bda0",
+              "status": "SUCCEEDED",
+              "requested_sequence": 9,
+              "completed_sequence": 10,
+              "requested_at": "2026-10-01T17:57:41.292622Z",
+              "completed_at": "2026-10-01T17:57:41.350138Z",
+              "duration_ms": 57.516,
+              "error_code": null
+            }
+          },
+          {
+            "sequence": 11,
+            "kind": "step.recorded",
+            "run_revision": 1,
+            "step_number": 3,
+            "created_at": "2026-10-01T17:57:41.358752Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 12,
+            "kind": "checkpoint.created",
+            "run_revision": 1,
+            "step_number": 3,
+            "created_at": "2026-10-01T17:57:41.361236Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 13,
+            "kind": "model.requested",
+            "run_revision": 1,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:41.412168Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": {
+              "id": "aa228b3a-bd68-44cd-813b-64f52bab77dd",
+              "kind": "model",
+              "name": "fixture-v1",
+              "provider": "scripted-fixture-loop-v1",
+              "model_invocation_id": null,
+              "status": "SUCCEEDED",
+              "requested_sequence": 13,
+              "completed_sequence": 14,
+              "requested_at": "2026-10-01T17:57:41.412168Z",
+              "completed_at": "2026-10-01T17:57:41.450287Z",
+              "duration_ms": 38.119,
+              "error_code": null
+            }
+          },
+          {
+            "sequence": 14,
+            "kind": "model.completed",
+            "run_revision": 1,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:41.450287Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": {
+              "id": "aa228b3a-bd68-44cd-813b-64f52bab77dd",
+              "kind": "model",
+              "name": "fixture-v1",
+              "provider": "scripted-fixture-loop-v1",
+              "model_invocation_id": null,
+              "status": "SUCCEEDED",
+              "requested_sequence": 13,
+              "completed_sequence": 14,
+              "requested_at": "2026-10-01T17:57:41.412168Z",
+              "completed_at": "2026-10-01T17:57:41.450287Z",
+              "duration_ms": 38.119,
+              "error_code": null
+            }
+          },
+          {
+            "sequence": 15,
+            "kind": "step.recorded",
+            "run_revision": 1,
+            "step_number": 4,
+            "created_at": "2026-10-01T17:57:41.459207Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 16,
+            "kind": "checkpoint.created",
+            "run_revision": 1,
+            "step_number": 4,
+            "created_at": "2026-10-01T17:57:41.460787Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 17,
+            "kind": "tool.requested",
+            "run_revision": 1,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:41.507726Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": {
+              "id": "821d5f1e-098b-438c-9ae7-651e3194c0aa",
+              "kind": "tool",
+              "name": "fixture.info",
+              "provider": null,
+              "model_invocation_id": "aa228b3a-bd68-44cd-813b-64f52bab77dd",
+              "status": "SUCCEEDED",
+              "requested_sequence": 17,
+              "completed_sequence": 18,
+              "requested_at": "2026-10-01T17:57:41.507726Z",
+              "completed_at": "2026-10-01T17:57:41.567230Z",
+              "duration_ms": 59.504000000000005,
+              "error_code": null
+            }
+          },
+          {
+            "sequence": 18,
+            "kind": "tool.completed",
+            "run_revision": 1,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:41.567230Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": {
+              "id": "821d5f1e-098b-438c-9ae7-651e3194c0aa",
+              "kind": "tool",
+              "name": "fixture.info",
+              "provider": null,
+              "model_invocation_id": "aa228b3a-bd68-44cd-813b-64f52bab77dd",
+              "status": "SUCCEEDED",
+              "requested_sequence": 17,
+              "completed_sequence": 18,
+              "requested_at": "2026-10-01T17:57:41.507726Z",
+              "completed_at": "2026-10-01T17:57:41.567230Z",
+              "duration_ms": 59.504000000000005,
+              "error_code": null
+            }
+          },
+          {
+            "sequence": 19,
+            "kind": "step.recorded",
+            "run_revision": 1,
+            "step_number": 5,
+            "created_at": "2026-10-01T17:57:41.576350Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 20,
+            "kind": "checkpoint.created",
+            "run_revision": 1,
+            "step_number": 5,
+            "created_at": "2026-10-01T17:57:41.578523Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 21,
+            "kind": "model.requested",
+            "run_revision": 1,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:41.645871Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": {
+              "id": "c5988964-6d28-4590-9c5c-ee0a165e905a",
+              "kind": "model",
+              "name": "fixture-v1",
+              "provider": "scripted-fixture-loop-v1",
+              "model_invocation_id": null,
+              "status": "SUCCEEDED",
+              "requested_sequence": 21,
+              "completed_sequence": 22,
+              "requested_at": "2026-10-01T17:57:41.645871Z",
+              "completed_at": "2026-10-01T17:57:41.696383Z",
+              "duration_ms": 50.512,
+              "error_code": null
+            }
+          },
+          {
+            "sequence": 22,
+            "kind": "model.completed",
+            "run_revision": 1,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:41.696383Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": {
+              "id": "c5988964-6d28-4590-9c5c-ee0a165e905a",
+              "kind": "model",
+              "name": "fixture-v1",
+              "provider": "scripted-fixture-loop-v1",
+              "model_invocation_id": null,
+              "status": "SUCCEEDED",
+              "requested_sequence": 21,
+              "completed_sequence": 22,
+              "requested_at": "2026-10-01T17:57:41.645871Z",
+              "completed_at": "2026-10-01T17:57:41.696383Z",
+              "duration_ms": 50.512,
+              "error_code": null
+            }
+          },
+          {
+            "sequence": 23,
+            "kind": "step.recorded",
+            "run_revision": 1,
+            "step_number": 6,
+            "created_at": "2026-10-01T17:57:41.701697Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 24,
+            "kind": "checkpoint.created",
+            "run_revision": 1,
+            "step_number": 6,
+            "created_at": "2026-10-01T17:57:41.702769Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 25,
+            "kind": "step.recorded",
+            "run_revision": 1,
+            "step_number": 7,
+            "created_at": "2026-10-01T17:57:41.733057Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 26,
+            "kind": "checkpoint.created",
+            "run_revision": 1,
+            "step_number": 7,
+            "created_at": "2026-10-01T17:57:41.734144Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 27,
+            "kind": "budget.exceeded",
+            "run_revision": 1,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:41.736111Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 28,
+            "kind": "run.transitioned",
+            "run_revision": 2,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:41.739839Z",
+            "retry_of": null,
+            "to_status": "FAILED",
+            "invocation": null
+          }
+        ],
+        "next_after_sequence": null
+      },
+      "spans": [
+        {
+          "attributes": {
+            "input_tokens": 10,
+            "invocation_id": "b225e8c6-6380-4219-b315-994342a3bda0",
+            "outcome": "returned",
+            "output_tokens": 5,
+            "request_sequence": 5,
+            "run_id": "1c1e00a0-cd9c-418e-b620-0ac193e38c29",
+            "usage_complete": true
+          },
+          "end_ns": 1790877461226198000,
+          "event": "execution.span",
+          "name": "model.attempt",
+          "parent_span_id": "b85bc6af7379432b",
+          "service": "runveil-worker",
+          "span_id": "06235a4153c73e8b",
+          "start_ns": 1790877461225887000,
+          "trace_id": "05ed894e22140d13c622b983c97b8ad8"
+        },
+        {
+          "attributes": {
+            "invocation_id": "f6a2b1d4-708e-493d-91fb-67d7e0bb6ff2",
+            "outcome": "returned",
+            "request_sequence": 9,
+            "run_id": "1c1e00a0-cd9c-418e-b620-0ac193e38c29"
+          },
+          "end_ns": 1790877461312526000,
+          "event": "execution.span",
+          "name": "tool.dispatch",
+          "parent_span_id": "b85bc6af7379432b",
+          "service": "runveil-worker",
+          "span_id": "d3134da0f9dad104",
+          "start_ns": 1790877461311415000,
+          "trace_id": "05ed894e22140d13c622b983c97b8ad8"
+        },
+        {
+          "attributes": {
+            "input_tokens": 10,
+            "invocation_id": "aa228b3a-bd68-44cd-813b-64f52bab77dd",
+            "outcome": "returned",
+            "output_tokens": 5,
+            "request_sequence": 13,
+            "run_id": "1c1e00a0-cd9c-418e-b620-0ac193e38c29",
+            "usage_complete": true
+          },
+          "end_ns": 1790877461429853000,
+          "event": "execution.span",
+          "name": "model.attempt",
+          "parent_span_id": "b85bc6af7379432b",
+          "service": "runveil-worker",
+          "span_id": "c4dfac989e422c5b",
+          "start_ns": 1790877461429567000,
+          "trace_id": "05ed894e22140d13c622b983c97b8ad8"
+        },
+        {
+          "attributes": {
+            "invocation_id": "821d5f1e-098b-438c-9ae7-651e3194c0aa",
+            "outcome": "returned",
+            "request_sequence": 17,
+            "run_id": "1c1e00a0-cd9c-418e-b620-0ac193e38c29"
+          },
+          "end_ns": 1790877461529935000,
+          "event": "execution.span",
+          "name": "tool.dispatch",
+          "parent_span_id": "b85bc6af7379432b",
+          "service": "runveil-worker",
+          "span_id": "932239c946735646",
+          "start_ns": 1790877461528233000,
+          "trace_id": "05ed894e22140d13c622b983c97b8ad8"
+        },
+        {
+          "attributes": {
+            "input_tokens": 10,
+            "invocation_id": "c5988964-6d28-4590-9c5c-ee0a165e905a",
+            "outcome": "returned",
+            "output_tokens": 5,
+            "request_sequence": 21,
+            "run_id": "1c1e00a0-cd9c-418e-b620-0ac193e38c29",
+            "usage_complete": true
+          },
+          "end_ns": 1790877461677433000,
+          "event": "execution.span",
+          "name": "model.attempt",
+          "parent_span_id": "b85bc6af7379432b",
+          "service": "runveil-worker",
+          "span_id": "44c8e4050f4da079",
+          "start_ns": 1790877461677184000,
+          "trace_id": "05ed894e22140d13c622b983c97b8ad8"
+        },
+        {
+          "attributes": {
+            "input_tokens": 30,
+            "known_nanousd": 75000,
+            "model_attempts": 3,
+            "outcome": "failed",
+            "output_tokens": 15,
+            "retries_scheduled": 0,
+            "run_id": "1c1e00a0-cd9c-418e-b620-0ac193e38c29",
+            "steps": 5,
+            "unknown_cost_attempts": 0,
+            "unknown_usage_attempts": 0
+          },
+          "end_ns": 1790877461742421000,
+          "event": "execution.span",
+          "name": "agent.execute",
+          "parent_span_id": null,
+          "service": "runveil-worker",
+          "span_id": "b85bc6af7379432b",
+          "start_ns": 1790877461114515000,
+          "trace_id": "05ed894e22140d13c622b983c97b8ad8"
+        }
+      ],
+      "raw_database_reconciled": true
+    },
+    "retried": {
+      "trace": {
+        "schema_version": 1,
+        "run_id": "99b6078f-a959-47ab-b0a6-96bcefcdbbca",
+        "agent_version_id": "33f6f0b5-d1dc-4664-a2ae-b6f3af8bc47d",
+        "status": "SUCCEEDED",
+        "revision": 6,
+        "created_at": "2026-10-01T17:57:42.464907Z",
+        "started_at": "2026-10-01T17:57:43.205470Z",
+        "finished_at": "2026-10-01T17:57:48.609074Z",
+        "observed_at": "2026-10-01T17:57:48.740450Z",
+        "elapsed_ms": 5403.603999999999,
+        "event_sequence": 35,
+        "history_complete": true,
+        "model_calls": 4,
+        "tool_calls": 1,
+        "checkpoint": {
+          "event_sequence": 34,
+          "schema_version": 6,
+          "tokens": {
+            "attempts": 4,
+            "input_tokens": 20,
+            "output_tokens": 10,
+            "unknown_attempts": 0,
+            "last_usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          },
+          "cost": {
+            "known_nanousd": 50000,
+            "unknown_attempts": 0
+          },
+          "retries_scheduled": 2,
+          "error_code": null,
+          "final_summary": "Runveil fixture verified.",
+          "final_summary_truncated": false
+        },
+        "approval": null,
+        "events": [
+          {
+            "sequence": 1,
+            "kind": "run.created",
+            "run_revision": 0,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:42.487336Z",
+            "retry_of": null,
+            "to_status": "QUEUED",
+            "invocation": null
+          },
+          {
+            "sequence": 2,
+            "kind": "run.transitioned",
+            "run_revision": 1,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:43.207611Z",
+            "retry_of": null,
+            "to_status": "RUNNING",
+            "invocation": null
+          },
+          {
+            "sequence": 3,
+            "kind": "step.recorded",
+            "run_revision": 1,
+            "step_number": 1,
+            "created_at": "2026-10-01T17:57:43.219649Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 4,
+            "kind": "checkpoint.created",
+            "run_revision": 1,
+            "step_number": 1,
+            "created_at": "2026-10-01T17:57:43.221279Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 5,
+            "kind": "model.requested",
+            "run_revision": 1,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:43.259559Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": {
+              "id": "82b4b35b-35fe-4d1d-8019-edcd68cbdc05",
+              "kind": "model",
+              "name": "fixture-v1",
+              "provider": "scripted-fixture-cost-v1",
+              "model_invocation_id": null,
+              "status": "FAILED",
+              "requested_sequence": 5,
+              "completed_sequence": 6,
+              "requested_at": "2026-10-01T17:57:43.259559Z",
+              "completed_at": "2026-10-01T17:57:43.291972Z",
+              "duration_ms": 32.413,
+              "error_code": "provider_rate_limited"
+            }
+          },
+          {
+            "sequence": 6,
+            "kind": "model.failed",
+            "run_revision": 1,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:43.291972Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": {
+              "id": "82b4b35b-35fe-4d1d-8019-edcd68cbdc05",
+              "kind": "model",
+              "name": "fixture-v1",
+              "provider": "scripted-fixture-cost-v1",
+              "model_invocation_id": null,
+              "status": "FAILED",
+              "requested_sequence": 5,
+              "completed_sequence": 6,
+              "requested_at": "2026-10-01T17:57:43.259559Z",
+              "completed_at": "2026-10-01T17:57:43.291972Z",
+              "duration_ms": 32.413,
+              "error_code": "provider_rate_limited"
+            }
+          },
+          {
+            "sequence": 7,
+            "kind": "step.recorded",
+            "run_revision": 1,
+            "step_number": 2,
+            "created_at": "2026-10-01T17:57:43.297320Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 8,
+            "kind": "checkpoint.created",
+            "run_revision": 1,
+            "step_number": 2,
+            "created_at": "2026-10-01T17:57:43.298332Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 9,
+            "kind": "retry.scheduled",
+            "run_revision": 1,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:43.303861Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 10,
+            "kind": "run.transitioned",
+            "run_revision": 2,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:43.308842Z",
+            "retry_of": null,
+            "to_status": "RETRYING",
+            "invocation": null
+          },
+          {
+            "sequence": 11,
+            "kind": "run.transitioned",
+            "run_revision": 3,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:45.221166Z",
+            "retry_of": null,
+            "to_status": "RUNNING",
+            "invocation": null
+          },
+          {
+            "sequence": 12,
+            "kind": "step.recorded",
+            "run_revision": 3,
+            "step_number": 3,
+            "created_at": "2026-10-01T17:57:45.231006Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 13,
+            "kind": "checkpoint.created",
+            "run_revision": 3,
+            "step_number": 3,
+            "created_at": "2026-10-01T17:57:45.232208Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 14,
+            "kind": "model.requested",
+            "run_revision": 3,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:45.272587Z",
+            "retry_of": "82b4b35b-35fe-4d1d-8019-edcd68cbdc05",
+            "to_status": null,
+            "invocation": {
+              "id": "71ec6a8b-b1ae-4b6e-889f-0692335cd3e6",
+              "kind": "model",
+              "name": "fixture-v1",
+              "provider": "scripted-fixture-cost-v1",
+              "model_invocation_id": null,
+              "status": "FAILED",
+              "requested_sequence": 14,
+              "completed_sequence": 15,
+              "requested_at": "2026-10-01T17:57:45.272587Z",
+              "completed_at": "2026-10-01T17:57:45.308122Z",
+              "duration_ms": 35.535,
+              "error_code": "provider_rate_limited"
+            }
+          },
+          {
+            "sequence": 15,
+            "kind": "model.failed",
+            "run_revision": 3,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:45.308122Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": {
+              "id": "71ec6a8b-b1ae-4b6e-889f-0692335cd3e6",
+              "kind": "model",
+              "name": "fixture-v1",
+              "provider": "scripted-fixture-cost-v1",
+              "model_invocation_id": null,
+              "status": "FAILED",
+              "requested_sequence": 14,
+              "completed_sequence": 15,
+              "requested_at": "2026-10-01T17:57:45.272587Z",
+              "completed_at": "2026-10-01T17:57:45.308122Z",
+              "duration_ms": 35.535,
+              "error_code": "provider_rate_limited"
+            }
+          },
+          {
+            "sequence": 16,
+            "kind": "step.recorded",
+            "run_revision": 3,
+            "step_number": 4,
+            "created_at": "2026-10-01T17:57:45.316330Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 17,
+            "kind": "checkpoint.created",
+            "run_revision": 3,
+            "step_number": 4,
+            "created_at": "2026-10-01T17:57:45.318124Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 18,
+            "kind": "retry.scheduled",
+            "run_revision": 3,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:45.328423Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 19,
+            "kind": "run.transitioned",
+            "run_revision": 4,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:45.334124Z",
+            "retry_of": null,
+            "to_status": "RETRYING",
+            "invocation": null
+          },
+          {
+            "sequence": 20,
+            "kind": "run.transitioned",
+            "run_revision": 5,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:48.292754Z",
+            "retry_of": null,
+            "to_status": "RUNNING",
+            "invocation": null
+          },
+          {
+            "sequence": 21,
+            "kind": "step.recorded",
+            "run_revision": 5,
+            "step_number": 5,
+            "created_at": "2026-10-01T17:57:48.303495Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 22,
+            "kind": "checkpoint.created",
+            "run_revision": 5,
+            "step_number": 5,
+            "created_at": "2026-10-01T17:57:48.305274Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 23,
+            "kind": "model.requested",
+            "run_revision": 5,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:48.357191Z",
+            "retry_of": "71ec6a8b-b1ae-4b6e-889f-0692335cd3e6",
+            "to_status": null,
+            "invocation": {
+              "id": "628c6e74-a52c-4cdb-89b0-c8f8cabac107",
+              "kind": "model",
+              "name": "fixture-v1",
+              "provider": "scripted-fixture-cost-v1",
+              "model_invocation_id": null,
+              "status": "SUCCEEDED",
+              "requested_sequence": 23,
+              "completed_sequence": 24,
+              "requested_at": "2026-10-01T17:57:48.357191Z",
+              "completed_at": "2026-10-01T17:57:48.393240Z",
+              "duration_ms": 36.049,
+              "error_code": null
+            }
+          },
+          {
+            "sequence": 24,
+            "kind": "model.completed",
+            "run_revision": 5,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:48.393240Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": {
+              "id": "628c6e74-a52c-4cdb-89b0-c8f8cabac107",
+              "kind": "model",
+              "name": "fixture-v1",
+              "provider": "scripted-fixture-cost-v1",
+              "model_invocation_id": null,
+              "status": "SUCCEEDED",
+              "requested_sequence": 23,
+              "completed_sequence": 24,
+              "requested_at": "2026-10-01T17:57:48.357191Z",
+              "completed_at": "2026-10-01T17:57:48.393240Z",
+              "duration_ms": 36.049,
+              "error_code": null
+            }
+          },
+          {
+            "sequence": 25,
+            "kind": "step.recorded",
+            "run_revision": 5,
+            "step_number": 6,
+            "created_at": "2026-10-01T17:57:48.399755Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 26,
+            "kind": "checkpoint.created",
+            "run_revision": 5,
+            "step_number": 6,
+            "created_at": "2026-10-01T17:57:48.400913Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 27,
+            "kind": "tool.requested",
+            "run_revision": 5,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:48.437609Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": {
+              "id": "b60f6d2e-4ae6-4048-a2ec-b8a0f4228efd",
+              "kind": "tool",
+              "name": "fixture.info",
+              "provider": null,
+              "model_invocation_id": "628c6e74-a52c-4cdb-89b0-c8f8cabac107",
+              "status": "SUCCEEDED",
+              "requested_sequence": 27,
+              "completed_sequence": 28,
+              "requested_at": "2026-10-01T17:57:48.437609Z",
+              "completed_at": "2026-10-01T17:57:48.488180Z",
+              "duration_ms": 50.571,
+              "error_code": null
+            }
+          },
+          {
+            "sequence": 28,
+            "kind": "tool.completed",
+            "run_revision": 5,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:48.488180Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": {
+              "id": "b60f6d2e-4ae6-4048-a2ec-b8a0f4228efd",
+              "kind": "tool",
+              "name": "fixture.info",
+              "provider": null,
+              "model_invocation_id": "628c6e74-a52c-4cdb-89b0-c8f8cabac107",
+              "status": "SUCCEEDED",
+              "requested_sequence": 27,
+              "completed_sequence": 28,
+              "requested_at": "2026-10-01T17:57:48.437609Z",
+              "completed_at": "2026-10-01T17:57:48.488180Z",
+              "duration_ms": 50.571,
+              "error_code": null
+            }
+          },
+          {
+            "sequence": 29,
+            "kind": "step.recorded",
+            "run_revision": 5,
+            "step_number": 7,
+            "created_at": "2026-10-01T17:57:48.494398Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 30,
+            "kind": "checkpoint.created",
+            "run_revision": 5,
+            "step_number": 7,
+            "created_at": "2026-10-01T17:57:48.496435Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 31,
+            "kind": "model.requested",
+            "run_revision": 5,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:48.539694Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": {
+              "id": "52a96c9b-976b-4056-8040-b97b6933c998",
+              "kind": "model",
+              "name": "fixture-v1",
+              "provider": "scripted-fixture-cost-v1",
+              "model_invocation_id": null,
+              "status": "SUCCEEDED",
+              "requested_sequence": 31,
+              "completed_sequence": 32,
+              "requested_at": "2026-10-01T17:57:48.539694Z",
+              "completed_at": "2026-10-01T17:57:48.582763Z",
+              "duration_ms": 43.069,
+              "error_code": null
+            }
+          },
+          {
+            "sequence": 32,
+            "kind": "model.completed",
+            "run_revision": 5,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:48.582763Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": {
+              "id": "52a96c9b-976b-4056-8040-b97b6933c998",
+              "kind": "model",
+              "name": "fixture-v1",
+              "provider": "scripted-fixture-cost-v1",
+              "model_invocation_id": null,
+              "status": "SUCCEEDED",
+              "requested_sequence": 31,
+              "completed_sequence": 32,
+              "requested_at": "2026-10-01T17:57:48.539694Z",
+              "completed_at": "2026-10-01T17:57:48.582763Z",
+              "duration_ms": 43.069,
+              "error_code": null
+            }
+          },
+          {
+            "sequence": 33,
+            "kind": "step.recorded",
+            "run_revision": 5,
+            "step_number": 8,
+            "created_at": "2026-10-01T17:57:48.593243Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 34,
+            "kind": "checkpoint.created",
+            "run_revision": 5,
+            "step_number": 8,
+            "created_at": "2026-10-01T17:57:48.595082Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 35,
+            "kind": "run.transitioned",
+            "run_revision": 6,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:48.612007Z",
+            "retry_of": null,
+            "to_status": "SUCCEEDED",
+            "invocation": null
+          }
+        ],
+        "next_after_sequence": null
+      },
+      "spans": [
+        {
+          "attributes": {
+            "input_tokens": 0,
+            "invocation_id": "82b4b35b-35fe-4d1d-8019-edcd68cbdc05",
+            "outcome": "failed",
+            "output_tokens": 0,
+            "request_sequence": 5,
+            "run_id": "99b6078f-a959-47ab-b0a6-96bcefcdbbca",
+            "usage_complete": true
+          },
+          "end_ns": 1790877463275352000,
+          "event": "execution.span",
+          "name": "model.attempt",
+          "parent_span_id": "a6aa3b53083a166d",
+          "service": "runveil-worker",
+          "span_id": "13ac7040661c296d",
+          "start_ns": 1790877463275228000,
+          "trace_id": "5f1ce121d6ee71e724a42b4c5e4112a2"
+        },
+        {
+          "attributes": {
+            "input_tokens": 0,
+            "known_nanousd": 0,
+            "model_attempts": 1,
+            "outcome": "retry_wait",
+            "output_tokens": 0,
+            "retries_scheduled": 1,
+            "run_id": "99b6078f-a959-47ab-b0a6-96bcefcdbbca",
+            "steps": 1,
+            "unknown_cost_attempts": 0,
+            "unknown_usage_attempts": 0
+          },
+          "end_ns": 1790877463312761000,
+          "event": "execution.span",
+          "name": "agent.execute",
+          "parent_span_id": null,
+          "service": "runveil-worker",
+          "span_id": "a6aa3b53083a166d",
+          "start_ns": 1790877463189474000,
+          "trace_id": "5f1ce121d6ee71e724a42b4c5e4112a2"
+        },
+        {
+          "attributes": {
+            "input_tokens": 0,
+            "invocation_id": "71ec6a8b-b1ae-4b6e-889f-0692335cd3e6",
+            "outcome": "failed",
+            "output_tokens": 0,
+            "request_sequence": 14,
+            "run_id": "99b6078f-a959-47ab-b0a6-96bcefcdbbca",
+            "usage_complete": true
+          },
+          "end_ns": 1790877465288895000,
+          "event": "execution.span",
+          "name": "model.attempt",
+          "parent_span_id": "614ab0ec9640466f",
+          "service": "runveil-worker",
+          "span_id": "0da3730cae43080d",
+          "start_ns": 1790877465288779000,
+          "trace_id": "ffd9292a2e76fe3ea342d5dfd72fa00c"
+        },
+        {
+          "attributes": {
+            "input_tokens": 0,
+            "known_nanousd": 0,
+            "model_attempts": 2,
+            "outcome": "retry_wait",
+            "output_tokens": 0,
+            "retries_scheduled": 2,
+            "run_id": "99b6078f-a959-47ab-b0a6-96bcefcdbbca",
+            "steps": 2,
+            "unknown_cost_attempts": 0,
+            "unknown_usage_attempts": 0
+          },
+          "end_ns": 1790877465338217000,
+          "event": "execution.span",
+          "name": "agent.execute",
+          "parent_span_id": null,
+          "service": "runveil-worker",
+          "span_id": "614ab0ec9640466f",
+          "start_ns": 1790877465172590000,
+          "trace_id": "ffd9292a2e76fe3ea342d5dfd72fa00c"
+        },
+        {
+          "attributes": {
+            "input_tokens": 10,
+            "invocation_id": "628c6e74-a52c-4cdb-89b0-c8f8cabac107",
+            "outcome": "returned",
+            "output_tokens": 5,
+            "request_sequence": 23,
+            "run_id": "99b6078f-a959-47ab-b0a6-96bcefcdbbca",
+            "usage_complete": true
+          },
+          "end_ns": 1790877468374782000,
+          "event": "execution.span",
+          "name": "model.attempt",
+          "parent_span_id": "bc43df6c9b7c273c",
+          "service": "runveil-worker",
+          "span_id": "029861a53ecbaf2c",
+          "start_ns": 1790877468374429000,
+          "trace_id": "327d544ddae807d9b5b488f7f673955a"
+        },
+        {
+          "attributes": {
+            "invocation_id": "b60f6d2e-4ae6-4048-a2ec-b8a0f4228efd",
+            "outcome": "returned",
+            "request_sequence": 27,
+            "run_id": "99b6078f-a959-47ab-b0a6-96bcefcdbbca"
+          },
+          "end_ns": 1790877468458832000,
+          "event": "execution.span",
+          "name": "tool.dispatch",
+          "parent_span_id": "bc43df6c9b7c273c",
+          "service": "runveil-worker",
+          "span_id": "6675f72f585721c2",
+          "start_ns": 1790877468457705000,
+          "trace_id": "327d544ddae807d9b5b488f7f673955a"
+        },
+        {
+          "attributes": {
+            "input_tokens": 10,
+            "invocation_id": "52a96c9b-976b-4056-8040-b97b6933c998",
+            "outcome": "returned",
+            "output_tokens": 5,
+            "request_sequence": 31,
+            "run_id": "99b6078f-a959-47ab-b0a6-96bcefcdbbca",
+            "usage_complete": true
+          },
+          "end_ns": 1790877468556983000,
+          "event": "execution.span",
+          "name": "model.attempt",
+          "parent_span_id": "bc43df6c9b7c273c",
+          "service": "runveil-worker",
+          "span_id": "84fcc7df7b7eb69e",
+          "start_ns": 1790877468556673000,
+          "trace_id": "327d544ddae807d9b5b488f7f673955a"
+        },
+        {
+          "attributes": {
+            "input_tokens": 20,
+            "known_nanousd": 50000,
+            "model_attempts": 4,
+            "outcome": "succeeded",
+            "output_tokens": 10,
+            "retries_scheduled": 2,
+            "run_id": "99b6078f-a959-47ab-b0a6-96bcefcdbbca",
+            "steps": 5,
+            "unknown_cost_attempts": 0,
+            "unknown_usage_attempts": 0
+          },
+          "end_ns": 1790877468616248000,
+          "event": "execution.span",
+          "name": "agent.execute",
+          "parent_span_id": null,
+          "service": "runveil-worker",
+          "span_id": "bc43df6c9b7c273c",
+          "start_ns": 1790877468237197000,
+          "trace_id": "327d544ddae807d9b5b488f7f673955a"
+        }
+      ],
+      "raw_database_reconciled": true
+    },
+    "approval_wait": {
+      "trace": {
+        "schema_version": 1,
+        "run_id": "3a02042a-5b94-40c7-8f4d-320e21a36fb3",
+        "agent_version_id": "eee2aa4f-4c8d-47f8-af8a-54883d9154db",
+        "status": "WAITING_FOR_APPROVAL",
+        "revision": 2,
+        "created_at": "2026-10-01T17:57:49.319228Z",
+        "started_at": "2026-10-01T17:57:50.096142Z",
+        "finished_at": null,
+        "observed_at": "2026-10-01T17:57:50.652572Z",
+        "elapsed_ms": 556.43,
+        "event_sequence": 22,
+        "history_complete": true,
+        "model_calls": 2,
+        "tool_calls": 2,
+        "checkpoint": {
+          "event_sequence": 20,
+          "schema_version": 11,
+          "tokens": {
+            "attempts": 2,
+            "input_tokens": 20,
+            "output_tokens": 10,
+            "unknown_attempts": 0,
+            "last_usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          },
+          "cost": {
+            "known_nanousd": 50000,
+            "unknown_attempts": 0
+          },
+          "retries_scheduled": 0,
+          "error_code": null,
+          "final_summary": null,
+          "final_summary_truncated": false
+        },
+        "approval": {
+          "id": "c74dc9ee-930a-4b87-b2f0-942ba143a57b",
+          "status": "PENDING",
+          "requested_at": "2026-10-01T17:57:50.488519Z",
+          "decided_at": null
+        },
+        "events": [
+          {
+            "sequence": 1,
+            "kind": "run.created",
+            "run_revision": 0,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:49.343717Z",
+            "retry_of": null,
+            "to_status": "QUEUED",
+            "invocation": null
+          },
+          {
+            "sequence": 2,
+            "kind": "run.transitioned",
+            "run_revision": 1,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:50.098747Z",
+            "retry_of": null,
+            "to_status": "RUNNING",
+            "invocation": null
+          },
+          {
+            "sequence": 3,
+            "kind": "step.recorded",
+            "run_revision": 1,
+            "step_number": 1,
+            "created_at": "2026-10-01T17:57:50.109201Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 4,
+            "kind": "checkpoint.created",
+            "run_revision": 1,
+            "step_number": 1,
+            "created_at": "2026-10-01T17:57:50.111034Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 5,
+            "kind": "model.requested",
+            "run_revision": 1,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:50.159352Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": {
+              "id": "e9dd9306-97e3-44e1-9304-7d900df68c3a",
+              "kind": "model",
+              "name": "fixture-v1",
+              "provider": "scripted-repository-patch-v1",
+              "model_invocation_id": null,
+              "status": "SUCCEEDED",
+              "requested_sequence": 5,
+              "completed_sequence": 6,
+              "requested_at": "2026-10-01T17:57:50.159352Z",
+              "completed_at": "2026-10-01T17:57:50.200355Z",
+              "duration_ms": 41.003,
+              "error_code": null
+            }
+          },
+          {
+            "sequence": 6,
+            "kind": "model.completed",
+            "run_revision": 1,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:50.200355Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": {
+              "id": "e9dd9306-97e3-44e1-9304-7d900df68c3a",
+              "kind": "model",
+              "name": "fixture-v1",
+              "provider": "scripted-repository-patch-v1",
+              "model_invocation_id": null,
+              "status": "SUCCEEDED",
+              "requested_sequence": 5,
+              "completed_sequence": 6,
+              "requested_at": "2026-10-01T17:57:50.159352Z",
+              "completed_at": "2026-10-01T17:57:50.200355Z",
+              "duration_ms": 41.003,
+              "error_code": null
+            }
+          },
+          {
+            "sequence": 7,
+            "kind": "step.recorded",
+            "run_revision": 1,
+            "step_number": 2,
+            "created_at": "2026-10-01T17:57:50.209328Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 8,
+            "kind": "checkpoint.created",
+            "run_revision": 1,
+            "step_number": 2,
+            "created_at": "2026-10-01T17:57:50.211407Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 9,
+            "kind": "tool.requested",
+            "run_revision": 1,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:50.256126Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": {
+              "id": "4bb96b33-063c-496c-ab80-d7e532b0e7b9",
+              "kind": "tool",
+              "name": "repository.read_file",
+              "provider": null,
+              "model_invocation_id": "e9dd9306-97e3-44e1-9304-7d900df68c3a",
+              "status": "SUCCEEDED",
+              "requested_sequence": 9,
+              "completed_sequence": 10,
+              "requested_at": "2026-10-01T17:57:50.256126Z",
+              "completed_at": "2026-10-01T17:57:50.303810Z",
+              "duration_ms": 47.684,
+              "error_code": null
+            }
+          },
+          {
+            "sequence": 10,
+            "kind": "tool.completed",
+            "run_revision": 1,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:50.303810Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": {
+              "id": "4bb96b33-063c-496c-ab80-d7e532b0e7b9",
+              "kind": "tool",
+              "name": "repository.read_file",
+              "provider": null,
+              "model_invocation_id": "e9dd9306-97e3-44e1-9304-7d900df68c3a",
+              "status": "SUCCEEDED",
+              "requested_sequence": 9,
+              "completed_sequence": 10,
+              "requested_at": "2026-10-01T17:57:50.256126Z",
+              "completed_at": "2026-10-01T17:57:50.303810Z",
+              "duration_ms": 47.684,
+              "error_code": null
+            }
+          },
+          {
+            "sequence": 11,
+            "kind": "step.recorded",
+            "run_revision": 1,
+            "step_number": 3,
+            "created_at": "2026-10-01T17:57:50.309670Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 12,
+            "kind": "checkpoint.created",
+            "run_revision": 1,
+            "step_number": 3,
+            "created_at": "2026-10-01T17:57:50.312094Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 13,
+            "kind": "model.requested",
+            "run_revision": 1,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:50.355220Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": {
+              "id": "08f73aca-8828-4fb4-8561-0e9663fa6a6d",
+              "kind": "model",
+              "name": "fixture-v1",
+              "provider": "scripted-repository-patch-v1",
+              "model_invocation_id": null,
+              "status": "SUCCEEDED",
+              "requested_sequence": 13,
+              "completed_sequence": 14,
+              "requested_at": "2026-10-01T17:57:50.355220Z",
+              "completed_at": "2026-10-01T17:57:50.387092Z",
+              "duration_ms": 31.871999999999996,
+              "error_code": null
+            }
+          },
+          {
+            "sequence": 14,
+            "kind": "model.completed",
+            "run_revision": 1,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:50.387092Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": {
+              "id": "08f73aca-8828-4fb4-8561-0e9663fa6a6d",
+              "kind": "model",
+              "name": "fixture-v1",
+              "provider": "scripted-repository-patch-v1",
+              "model_invocation_id": null,
+              "status": "SUCCEEDED",
+              "requested_sequence": 13,
+              "completed_sequence": 14,
+              "requested_at": "2026-10-01T17:57:50.355220Z",
+              "completed_at": "2026-10-01T17:57:50.387092Z",
+              "duration_ms": 31.871999999999996,
+              "error_code": null
+            }
+          },
+          {
+            "sequence": 15,
+            "kind": "step.recorded",
+            "run_revision": 1,
+            "step_number": 4,
+            "created_at": "2026-10-01T17:57:50.392909Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 16,
+            "kind": "checkpoint.created",
+            "run_revision": 1,
+            "step_number": 4,
+            "created_at": "2026-10-01T17:57:50.394094Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 17,
+            "kind": "tool.requested",
+            "run_revision": 1,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:50.433536Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": {
+              "id": "4e551a51-1d05-48b2-8d62-be7cce987b96",
+              "kind": "tool",
+              "name": "repository.propose_patch",
+              "provider": null,
+              "model_invocation_id": "08f73aca-8828-4fb4-8561-0e9663fa6a6d",
+              "status": "SUCCEEDED",
+              "requested_sequence": 17,
+              "completed_sequence": 18,
+              "requested_at": "2026-10-01T17:57:50.433536Z",
+              "completed_at": "2026-10-01T17:57:50.494442Z",
+              "duration_ms": 60.906,
+              "error_code": null
+            }
+          },
+          {
+            "sequence": 18,
+            "kind": "tool.completed",
+            "run_revision": 1,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:50.494442Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": {
+              "id": "4e551a51-1d05-48b2-8d62-be7cce987b96",
+              "kind": "tool",
+              "name": "repository.propose_patch",
+              "provider": null,
+              "model_invocation_id": "08f73aca-8828-4fb4-8561-0e9663fa6a6d",
+              "status": "SUCCEEDED",
+              "requested_sequence": 17,
+              "completed_sequence": 18,
+              "requested_at": "2026-10-01T17:57:50.433536Z",
+              "completed_at": "2026-10-01T17:57:50.494442Z",
+              "duration_ms": 60.906,
+              "error_code": null
+            }
+          },
+          {
+            "sequence": 19,
+            "kind": "step.recorded",
+            "run_revision": 1,
+            "step_number": 5,
+            "created_at": "2026-10-01T17:57:50.500905Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 20,
+            "kind": "checkpoint.created",
+            "run_revision": 1,
+            "step_number": 5,
+            "created_at": "2026-10-01T17:57:50.502169Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 21,
+            "kind": "approval.requested",
+            "run_revision": 1,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:50.521749Z",
+            "retry_of": null,
+            "to_status": null,
+            "invocation": null
+          },
+          {
+            "sequence": 22,
+            "kind": "run.transitioned",
+            "run_revision": 2,
+            "step_number": null,
+            "created_at": "2026-10-01T17:57:50.528574Z",
+            "retry_of": null,
+            "to_status": "WAITING_FOR_APPROVAL",
+            "invocation": null
+          }
+        ],
+        "next_after_sequence": null
+      },
+      "spans": [
+        {
+          "attributes": {
+            "input_tokens": 10,
+            "invocation_id": "e9dd9306-97e3-44e1-9304-7d900df68c3a",
+            "outcome": "returned",
+            "output_tokens": 5,
+            "request_sequence": 5,
+            "run_id": "3a02042a-5b94-40c7-8f4d-320e21a36fb3",
+            "usage_complete": true
+          },
+          "end_ns": 1790877470174549000,
+          "event": "execution.span",
+          "name": "model.attempt",
+          "parent_span_id": "a5aebf66eb33bcb4",
+          "service": "runveil-worker",
+          "span_id": "ae027fc7630c796b",
+          "start_ns": 1790877470174250000,
+          "trace_id": "f26d45ff8e8a62c575bca56a872bc6c6"
+        },
+        {
+          "attributes": {
+            "invocation_id": "4bb96b33-063c-496c-ab80-d7e532b0e7b9",
+            "outcome": "returned",
+            "request_sequence": 9,
+            "run_id": "3a02042a-5b94-40c7-8f4d-320e21a36fb3"
+          },
+          "end_ns": 1790877470273103000,
+          "event": "execution.span",
+          "name": "tool.dispatch",
+          "parent_span_id": "a5aebf66eb33bcb4",
+          "service": "runveil-worker",
+          "span_id": "a023b0529c62aa59",
+          "start_ns": 1790877470271623000,
+          "trace_id": "f26d45ff8e8a62c575bca56a872bc6c6"
+        },
+        {
+          "attributes": {
+            "input_tokens": 10,
+            "invocation_id": "08f73aca-8828-4fb4-8561-0e9663fa6a6d",
+            "outcome": "returned",
+            "output_tokens": 5,
+            "request_sequence": 13,
+            "run_id": "3a02042a-5b94-40c7-8f4d-320e21a36fb3",
+            "usage_complete": true
+          },
+          "end_ns": 1790877470370257000,
+          "event": "execution.span",
+          "name": "model.attempt",
+          "parent_span_id": "a5aebf66eb33bcb4",
+          "service": "runveil-worker",
+          "span_id": "834081c2252065e9",
+          "start_ns": 1790877470369941000,
+          "trace_id": "f26d45ff8e8a62c575bca56a872bc6c6"
+        },
+        {
+          "attributes": {
+            "invocation_id": "4e551a51-1d05-48b2-8d62-be7cce987b96",
+            "outcome": "returned",
+            "request_sequence": 17,
+            "run_id": "3a02042a-5b94-40c7-8f4d-320e21a36fb3"
+          },
+          "end_ns": 1790877470452477000,
+          "event": "execution.span",
+          "name": "tool.dispatch",
+          "parent_span_id": "a5aebf66eb33bcb4",
+          "service": "runveil-worker",
+          "span_id": "48bc772113dc5d5d",
+          "start_ns": 1790877470450723000,
+          "trace_id": "f26d45ff8e8a62c575bca56a872bc6c6"
+        },
+        {
+          "attributes": {
+            "input_tokens": 20,
+            "known_nanousd": 50000,
+            "model_attempts": 2,
+            "outcome": "approval_wait",
+            "output_tokens": 10,
+            "retries_scheduled": 0,
+            "run_id": "3a02042a-5b94-40c7-8f4d-320e21a36fb3",
+            "steps": 4,
+            "unknown_cost_attempts": 0,
+            "unknown_usage_attempts": 0
+          },
+          "end_ns": 1790877470533406000,
+          "event": "execution.span",
+          "name": "agent.execute",
+          "parent_span_id": null,
+          "service": "runveil-worker",
+          "span_id": "a5aebf66eb33bcb4",
+          "start_ns": 1790877470075107000,
+          "trace_id": "f26d45ff8e8a62c575bca56a872bc6c6"
+        }
+      ],
+      "raw_database_reconciled": true
+    }
+  },
+  "boundaries": {
+    "missing": 401,
+    "wrong": 401,
+    "approval_token_cannot_read_trace": 401,
+    "trace_token_cannot_inspect_approval": 401,
+    "trace_token_cannot_decide": 401,
+    "auth_before_parse": 401,
+    "unknown_query": 422,
+    "stale_watermark": 409,
+    "proxy_mutation_refused": 405,
+    "proxy_wrong_token": 401,
+    "approval_capability_valid": 200,
+    "read_and_denied_decision_preserved_revision_events_approval_file": true,
+    "write_grant_did_not_select_waiting_run": true,
+    "proxy_paginated_events_match_database": 35
+  },
+  "browser": {
+    "production_build": true,
+    "api_responses_mocked": false,
+    "viewed_runs": ["completed", "failed", "retried", "approval_wait"],
+    "wrong_token_refused_without_trace": true,
+    "corrected_token_restored_inspection": true,
+    "call_correlation_expanded": true,
+    "forget_cleared_fields_and_trace": true,
+    "reload_cleared_fields_and_trace": true,
+    "approval_navigation_required_separate_token": true,
+    "browser_back_returned_blank_trace_form": true,
+    "post_browser_database_revision_events_status_unchanged": true,
+    "pending_approval_unchanged_no_apply_intent_file_unchanged": true
+  }
+}

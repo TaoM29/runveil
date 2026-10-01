@@ -84,8 +84,9 @@ Responses above 512 KiB are refused as 503 `trace_too_large`; request a smaller 
 No automatic retries or mutations occur. These are application bounds, not a public
 service denial-of-service defense.
 
-OpenTelemetry/export and structured logging remain subsequent Phase 7 work. See [ADR 0026](../adr/0026-durable-run-trace.md) and
-[handoff](PHASE_7A.md).
+Opt-in [OpenTelemetry and structured JSON output](TELEMETRY.md) now correlate
+with these durable records. See [ADR 0026](../adr/0026-durable-run-trace.md),
+[initial handoff](PHASE_7A.md) and [integrated Phase 7 acceptance](PHASE_7.md).
 
 ## Browser console (Phase 7B)
 
@@ -128,4 +129,5 @@ Errors expose only fixed messages. Existing framing/referrer protections apply.
 
 See [ADR 0027](../adr/0027-local-trace-console.md) and
 [Phase 7B verification/handoff](PHASE_7B.md). This completes the focused local UI
-slice, not all Phase 7 instrumentation or public-demo acceptance.
+slice. [Phase 7 closure evidence](PHASE_7.md) covers integrated local acceptance;
+public-demo deployment is not claimed.

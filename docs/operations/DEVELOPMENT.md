@@ -105,3 +105,4 @@ For the separate, explicitly opt-in hosted check, see
 - [Phase 6 browser acceptance and closure](PHASE_6.md)
 - [Authenticated read-only run traces and browser console](TRACES.md)
 - [Opt-in execution telemetry and JSON output](TELEMETRY.md)
+- [Phase 7 integrated acceptance and closure](PHASE_7.md)
