@@ -17,7 +17,7 @@ The existing `RUNVEIL_APPROVAL_TOKEN` and approval endpoints are unchanged.
 
 This is a shared local operator capability for all run IDs, not per-run access
 control or named identity. Remote/public access requires a separate security review.
-No web proxy/UI is provided by this slice. OpenAPI describes the response schema;
+Phase 7B adds the local browser console described below. OpenAPI describes the response schema;
 pagination parameters are documented here because authentication runs before parsing.
 
 ## Pagination and consistency
@@ -68,7 +68,7 @@ migration baseline or missing initial creation evidence, not a reconstructed pas
 Raw event payloads, conversations, model content, tool arguments/results, proposals,
 workspace paths, credentials and provider response bodies are not returned.
 Selected labels and final summary are still operator data, not automatically
-redacted text. Treat them as untrusted text in any future UI; never render as HTML.
+redacted text. The console renders them as untrusted text, never HTML.
 Per-attempt tokens/provider latency and pricing details are not projected yet.
 
 ## Errors and bounds
@@ -84,6 +84,48 @@ Responses above 512 KiB are refused as 503 `trace_too_large`; request a smaller 
 No automatic retries or mutations occur. These are application bounds, not a public
 service denial-of-service defense.
 
-OpenTelemetry/export, structured logging and browser trace inspection remain
-subsequent Phase 7 work. See [ADR 0026](../adr/0026-durable-run-trace.md) and
+OpenTelemetry/export and structured logging remain subsequent Phase 7 work. See [ADR 0026](../adr/0026-durable-run-trace.md) and
 [handoff](PHASE_7A.md).
+
+## Browser console (Phase 7B)
+
+Set `RUNVEIL_API_ORIGIN=http://127.0.0.1:8000` in the web server environment,
+using the actual loopback API port, then start the production build or development
+server as described in [development](DEVELOPMENT.md). Configure the API's
+`RUNVEIL_TRACE_TOKEN` separately; do not set a trace token on the web server.
+Open `/traces`, or follow **Open read-only run traces** from the approval console.
+
+1. Enter an existing run ID and its installation's read-only trace token.
+2. Select **Inspect / refresh**. Read the snapshot status, counts, known usage,
+   estimated cost, approval metadata, final summary and ordered execution events.
+3. Open **Call correlation** for invocation IDs, source model provenance and
+   request/outcome event positions. Request events show the call's current
+   snapshot outcome, rather than pretending it already succeeded at request time.
+4. Select **Next events** for the next 50 events. Only one page is retained and
+   displayed. Refresh returns to the first page. A conflict or malformed response
+   clears the view; manually refresh to restart. There is no automatic polling.
+5. Use **Forget token and trace** when finished. It clears the credential, run ID
+   and evidence; reload and navigation away also clear them. Navigating to approvals
+   requires its separate token and a fresh inspection.
+
+Known zero remains zero; missing accounting is **Not recorded**. Unknown usage and
+cost retain explicit counts, and cost with unknown attempts is labelled a known
+subtotal. Costs display nine decimal places of USD to retain the API's integer
+nano-USD precision. Unsafe JavaScript integers are refused rather than rounded.
+The original API's incomplete-history, unavailable historical accounting and
+summary-truncation limitations remain visible. Unresolved calls have no recorded
+duration; approved status does not imply a mutation succeeded. There are no
+approval, cancellation, submission or execution controls on this page.
+
+The browser holds credentials/results only in memory: no URLs, cookies, local or
+session storage. Extensions, password managers and malicious same-origin scripts
+remain outside that guarantee. Use only a trusted local machine. The same-origin
+`GET /api/traces/{runId}` proxy forwards only validated pagination and the caller's
+bearer to the fixed API origin, with no redirects, cookies or upstream headers.
+Next's automatic HEAD is read-only; mutation methods return 405. JSON is bounded
+to 512 KiB under an eight-second proxy timeout; the browser aborts after ten seconds.
+Errors expose only fixed messages. Existing framing/referrer protections apply.
+
+See [ADR 0027](../adr/0027-local-trace-console.md) and
+[Phase 7B verification/handoff](PHASE_7B.md). This completes the focused local UI
+slice, not all Phase 7 instrumentation or public-demo acceptance.
