@@ -329,3 +329,27 @@ class AdmissionEventRow(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.clock_timestamp()
     )
+
+
+class ApprovalRow(Base):
+    __tablename__ = "approval_requests"
+    __table_args__ = (
+        UniqueConstraint("run_id", name="uq_approval_requests_run"),
+        CheckConstraint("jsonb_typeof(proposal) = 'object'", name="proposal_object"),
+        CheckConstraint("digest ~ '^[0-9a-f]{64}$'", name="proposal_digest"),
+        CheckConstraint(
+            "(status = 'PENDING' AND decided_at IS NULL) OR "
+            "(status IN ('APPROVED', 'REJECTED') AND decided_at IS NOT NULL "
+            "AND decided_at >= requested_at)",
+            name="approval_outcome",
+        ),
+    )
+    id: Mapped[UUID] = mapped_column(primary_key=True)
+    run_id: Mapped[UUID] = mapped_column(ForeignKey("runs.id", ondelete="RESTRICT"))
+    proposal: Mapped[dict[str, JsonValue]] = mapped_column(JSONB)
+    digest: Mapped[str] = mapped_column(String(64))
+    status: Mapped[str] = mapped_column(String(16), server_default="PENDING")
+    requested_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.clock_timestamp()
+    )
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
