@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Runveil | Project foundation",
+  title: "Runveil | Local approvals",
   description: "A production-style AI agent runtime, under development.",
 };
 
