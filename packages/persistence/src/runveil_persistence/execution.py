@@ -30,6 +30,7 @@ from runveil_persistence.invocations import InvocationRepository
 from runveil_persistence.jobs import Claim, database_now, fence
 from runveil_persistence.models import EventRow, JobRow, ModelInvocationRow, ToolCallRow
 from runveil_persistence.repositories import AgentRepository, RunRepository
+from runveil_persistence.worker_approvals import pause_review, prepare_pause, validate_review_state
 
 
 class ConfigurationRejected(ValueError):
@@ -248,6 +249,12 @@ class PostgresExecutionStore:
             or (state.next_tool is None) != (state.source_model_id is None)
         ):
             raise ValueError("Checkpoint is not resumable")
+        if state.approval_id is not None:
+            if not state.approval_resolved:
+                raise ValueError("Pending approval cannot resume execution")
+            await validate_review_state(session, run_id, state, config)
+        elif state.approval_resolved:
+            raise ValueError("Missing approval identity")
         if state.next_tool is not None:
             source = await session.get(ModelInvocationRow, state.source_model_id)
             if (
@@ -567,6 +574,9 @@ class PostgresExecutionStore:
                     response = ModelResponse.model_validate_json(json.dumps(result))
                     if response.usage != state.tokens.last_usage:
                         raise ValueError("Outcome usage differs from accounting")
+            approval = None
+            if state.schema_version == 10:
+                approval = await prepare_pause(session, pending, previous, state, config, result)
             invocations = InvocationRepository(session)
             complete = (
                 invocations.complete_model if pending.kind == "model" else invocations.complete_tool
@@ -608,6 +618,9 @@ class PostgresExecutionStore:
                 session.add(event)
                 await session.flush()
                 cursor = Cursor(cursor.run_id, cursor.revision, event.sequence)
+            if approval is not None:
+                await validate_review_state(session, cursor.run_id, state, config)
+                await pause_review(session, approval, cursor.revision)
             if state.final_result is not None or state.error_code is not None:
                 await RunRepository(session).transition(
                     cursor.run_id,
