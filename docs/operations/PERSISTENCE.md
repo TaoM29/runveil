@@ -309,3 +309,12 @@ revision/digest checks. No tool intent or filesystem write is generated. See
 
 Downgrading below 0009 removes approval records while retaining run history; a
 waiting review then cannot be resolved. Do not use downgrade as a recovery action.
+
+Phase 6B reuses migration 0009 for worker reviews through separate
+`worker_approvals` boundaries. The execution store atomically completes the validated
+proposal and pauses with its approval ID/checkpoint while releasing the lease.
+Operator approval checkpoints a resumable decision; rejection terminates.
+Run-row locks serialize decisions with cancellation, and execution resume rechecks
+approval/model/tool provenance after workspace binding. The Phase 6A repository
+continues to refuse enrolled runs. No migration or existing worker deadline changes
+are needed; see [ADR 0022](../adr/0022-worker-patch-review.md).

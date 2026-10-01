@@ -377,3 +377,13 @@ step limits and cooperative per-call deadlines remain active across recovery.
 General repository agents and hosted-provider recovery remain deferred; hosted
 retries need an explicit attempt/idempotency policy. The repository profile above
 is a bounded offline demonstration, not general autonomous repository work.
+
+## Repository approval review
+
+Phase 6B adds a separate `runveil_worker.review_worker` CLI for the offline
+`repository-review-v1` profile. It uses normal claims, budgets and snapshot identity
+with one durable human review pause. Waiting releases ownership and excludes the
+job from selection. Approving checkpoints a RUNNING continuation; a fresh worker
+must match the workspace before any further dispatch. Rejection is terminal.
+No file is written. This profile is not supported by the fixture worker CLI or
+SQS consumer. See [approval operations](APPROVALS.md#workspace-bound-worker-review-phase-6b).
