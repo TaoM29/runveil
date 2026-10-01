@@ -15,6 +15,7 @@ from sqlalchemy import (
     String,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -247,6 +248,12 @@ class ToolCallRow(InvocationColumns, Base):
     __tablename__ = "tool_calls"
     __table_args__ = (
         *invocation_constraints("tool_calls"),
+        Index(
+            "uq_tool_calls_single_patch",
+            "run_id",
+            unique=True,
+            postgresql_where=text("tool_name = 'repository.apply_patch'"),
+        ),
         ForeignKeyConstraint(
             ["run_id", "model_invocation_id"],
             ["model_invocations.run_id", "model_invocations.id"],
