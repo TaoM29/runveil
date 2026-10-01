@@ -15,7 +15,7 @@ commit or push is authorized.
 | 6     | Human approval and controlled mutations                   | Complete; Phase 7 continuation authorized |
 | 7     | Telemetry and trace UI                                    | Complete; Phase 8 continuation authorized |
 | 8     | Deterministic evaluation harness                          | Complete; Phase 9 continuation authorized |
-| 9     | Statistical comparison                                    | Phase 9A implemented; review pending      |
+| 9     | Statistical comparison                                    | Complete (scripted scope); closure review |
 | 10    | Sandboxed software engineering application                | Planned                                   |
 | 11    | MCP adapter through existing policy                       | Planned                                   |
 | 12    | AWS infrastructure with Terraform                         | Planned                                   |
@@ -320,7 +320,7 @@ Phase 9 continuation was authorized on 2026-10-01.
 
 ## Phase 9 review gates
 
-- **9A — Implemented; review pending:** opt-in statistical wrapper over the existing
+- **9A — Implemented; acceptance/scope audit authorized:** opt-in statistical wrapper over the existing
   guarded comparison, exact paired percentile bootstrap for binary success deltas,
   elapsed/cost summaries and failure categories. Synthetic exhaustive-resampling
   oracles and durable evaluation acceptance verify method and boundaries. Scripted
@@ -328,8 +328,23 @@ Phase 9 continuation was authorized on 2026-10-01.
   See [ADR 0031](docs/adr/0031-exact-paired-statistics.md),
   [methodology](docs/operations/STATISTICS.md) and [handoff](docs/operations/PHASE_9A.md).
 
+- **9B — Acceptance complete; ready for closure review:** independent multinomial
+  oracle for all 5,455 bounded outcome histograms, retained report arithmetic and
+  identity audit, fresh repeated reports across all three suites, 114 direct database
+  reconciliations, comparison/CLI refusals and existing evaluation tests. No
+  implementation, benchmark or test change. See [closure audit](docs/operations/PHASE_9.md),
+  [evidence](docs/operations/evidence/phase9b/audit.json) and [handoff](docs/operations/PHASE_9B.md).
+
+## Phase 9 closure
+
+The paired statistical-method gate is complete within ADR 0031's bounded scripted
+scope. Exact empirical percentile intervals, success deltas, descriptive elapsed/cost
+summaries, failure categories and reproducible reports are verified. This does not
+establish model quality, population coverage, significance or an automatic regression
+gate. Real stochastic evaluation design and broader provider selection remain future work.
+
 ## Recommended next slice
 
-Review Phase 9A, then separately authorize a Phase 9 acceptance/scope audit before
-closure or Phase 10 sandbox work. Review report interpretation and reconcile fresh
-statistical artifacts with case-level evidence. No automatic continuation is authorized.
+Review Phase 9 closure, then separately authorize a focused Phase 10 sandbox boundary
+slice under the charter and existing security/durability requirements. No automatic
+continuation is authorized.

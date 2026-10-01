@@ -110,3 +110,4 @@ For the separate, explicitly opt-in hosted check, see
 - [Controlled code-reading benchmark and split discipline](BENCHMARK.md)
 - [Phase 8 evaluation acceptance and scope audit](PHASE_8.md)
 - [Paired statistical calibration and methodology](STATISTICS.md)
+- [Phase 9 statistical acceptance and scope audit](PHASE_9.md)

@@ -1,0 +1,1226 @@
+{
+  "schema_version": 1,
+  "kind": "paired-statistical-calibration",
+  "interpretation": "descriptive-scripted-evidence-not-model-inference",
+  "comparison": {
+    "schema_version": 1,
+    "scope": "scripted-calibration-not-model-quality",
+    "accounting": "synthetic-usage-and-tariff",
+    "suite": {
+      "schema_version": 1,
+      "name": "controlled-code-reading",
+      "version": "1",
+      "split": "development",
+      "scorer": "exact-summary-and-tools-v1",
+      "cases": [
+        {
+          "id": "defaults-retries",
+          "task": "Read example.py. What is the default value of retries? Return only the answer, without quotes or explanation.",
+          "file_content": "def fetch(url, retries=3):\n    return retries\n",
+          "responses": [
+            "{\"action\":\"tool_call\",\"tool_name\":\"repository.read_file\",\"arguments\":{\"path\":\"example.py\"},\"decision_summary\":\"Read the allowlisted public source.\"}",
+            "{\"action\":\"finish\",\"result\":{\"summary\":\"3\",\"artifacts\":[]}}"
+          ],
+          "expected_summary": "3",
+          "expected_tools": ["repository.read_file"]
+        },
+        {
+          "id": "defaults-keyword-only",
+          "task": "Search example.py for `def render`, then read the file. What is the default value of compact? Return only the answer, without quotes or explanation.",
+          "file_content": "def render(title, *, compact=False):\n    return title if compact else title + '\\n'\n",
+          "responses": [
+            "{\"action\":\"tool_call\",\"tool_name\":\"repository.search\",\"arguments\":{\"query\":\"def render\"},\"decision_summary\":\"Locate the requested public source definition.\"}",
+            "{\"action\":\"tool_call\",\"tool_name\":\"repository.read_file\",\"arguments\":{\"path\":\"example.py\"},\"decision_summary\":\"Read the allowlisted public source.\"}",
+            "{\"action\":\"finish\",\"result\":{\"summary\":\"False\",\"artifacts\":[]}}"
+          ],
+          "expected_summary": "False",
+          "expected_tools": ["repository.search", "repository.read_file"]
+        },
+        {
+          "id": "branches-inclusive",
+          "task": "Read example.py. What does band(5) return? Return only the answer, without quotes or explanation.",
+          "file_content": "def band(value):\n    if value <= 5:\n        return 'low'\n    return 'high'\n",
+          "responses": [
+            "{\"action\":\"tool_call\",\"tool_name\":\"repository.read_file\",\"arguments\":{\"path\":\"example.py\"},\"decision_summary\":\"Read the allowlisted public source.\"}",
+            "{\"action\":\"finish\",\"result\":{\"summary\":\"low\",\"artifacts\":[]}}"
+          ],
+          "expected_summary": "low",
+          "expected_tools": ["repository.read_file"]
+        },
+        {
+          "id": "branches-first-match",
+          "task": "Search example.py for `def classify`, then read the file. What does classify(-2) return? Return only the answer, without quotes or explanation.",
+          "file_content": "def classify(value):\n    if value < 0:\n        return 'negative'\n    if value % 2 == 0:\n        return 'even'\n    return 'odd'\n",
+          "responses": [
+            "{\"action\":\"tool_call\",\"tool_name\":\"repository.search\",\"arguments\":{\"query\":\"def classify\"},\"decision_summary\":\"Locate the requested public source definition.\"}",
+            "{\"action\":\"tool_call\",\"tool_name\":\"repository.read_file\",\"arguments\":{\"path\":\"example.py\"},\"decision_summary\":\"Read the allowlisted public source.\"}",
+            "{\"action\":\"finish\",\"result\":{\"summary\":\"negative\",\"artifacts\":[]}}"
+          ],
+          "expected_summary": "negative",
+          "expected_tools": ["repository.search", "repository.read_file"]
+        },
+        {
+          "id": "collections-copy",
+          "task": "Read example.py. What does size() return? Return only the answer, without quotes or explanation.",
+          "file_content": "def size():\n    original = [1, 2]\n    copied = original[:]\n    copied.append(3)\n    return len(original)\n",
+          "responses": [
+            "{\"action\":\"tool_call\",\"tool_name\":\"repository.read_file\",\"arguments\":{\"path\":\"example.py\"},\"decision_summary\":\"Read the allowlisted public source.\"}",
+            "{\"action\":\"finish\",\"result\":{\"summary\":\"2\",\"artifacts\":[]}}"
+          ],
+          "expected_summary": "2",
+          "expected_tools": ["repository.read_file"]
+        },
+        {
+          "id": "collections-fallback",
+          "task": "Search example.py for `def timeout`, then read the file. What does timeout() return? Return only the answer, without quotes or explanation.",
+          "file_content": "def timeout():\n    settings = {'timeout': 4}\n    return settings.get('missing', 9)\n",
+          "responses": [
+            "{\"action\":\"tool_call\",\"tool_name\":\"repository.search\",\"arguments\":{\"query\":\"def timeout\"},\"decision_summary\":\"Locate the requested public source definition.\"}",
+            "{\"action\":\"tool_call\",\"tool_name\":\"repository.read_file\",\"arguments\":{\"path\":\"example.py\"},\"decision_summary\":\"Read the allowlisted public source.\"}",
+            "{\"action\":\"finish\",\"result\":{\"summary\":\"9\",\"artifacts\":[]}}"
+          ],
+          "expected_summary": "9",
+          "expected_tools": ["repository.search", "repository.read_file"]
+        },
+        {
+          "id": "strings-normalize",
+          "task": "Read example.py. What does normalize(' A ') return? Return only the answer, without quotes or explanation.",
+          "file_content": "def normalize(value):\n    return value.strip().lower()\n",
+          "responses": [
+            "{\"action\":\"tool_call\",\"tool_name\":\"repository.read_file\",\"arguments\":{\"path\":\"example.py\"},\"decision_summary\":\"Read the allowlisted public source.\"}",
+            "{\"action\":\"finish\",\"result\":{\"summary\":\"a\",\"artifacts\":[]}}"
+          ],
+          "expected_summary": "a",
+          "expected_tools": ["repository.read_file"]
+        },
+        {
+          "id": "strings-split-limit",
+          "task": "Search example.py for `def tail`, then read the file. What does tail('a:b:c') return? Return only the answer, without quotes or explanation.",
+          "file_content": "def tail(value):\n    return value.split(':', 1)[1]\n",
+          "responses": [
+            "{\"action\":\"tool_call\",\"tool_name\":\"repository.search\",\"arguments\":{\"query\":\"def tail\"},\"decision_summary\":\"Locate the requested public source definition.\"}",
+            "{\"action\":\"tool_call\",\"tool_name\":\"repository.read_file\",\"arguments\":{\"path\":\"example.py\"},\"decision_summary\":\"Read the allowlisted public source.\"}",
+            "{\"action\":\"finish\",\"result\":{\"summary\":\"b:c\",\"artifacts\":[]}}"
+          ],
+          "expected_summary": "b:c",
+          "expected_tools": ["repository.search", "repository.read_file"]
+        },
+        {
+          "id": "iteration-range",
+          "task": "Read example.py. What does total() return? Return only the answer, without quotes or explanation.",
+          "file_content": "def total():\n    return sum(range(1, 6, 2))\n",
+          "responses": [
+            "{\"action\":\"tool_call\",\"tool_name\":\"repository.read_file\",\"arguments\":{\"path\":\"example.py\"},\"decision_summary\":\"Read the allowlisted public source.\"}",
+            "{\"action\":\"finish\",\"result\":{\"summary\":\"9\",\"artifacts\":[]}}"
+          ],
+          "expected_summary": "9",
+          "expected_tools": ["repository.read_file"]
+        },
+        {
+          "id": "iteration-filter",
+          "task": "Search example.py for `def count`, then read the file. What does count() return? Return only the answer, without quotes or explanation.",
+          "file_content": "def count():\n    return len([n for n in range(6) if n % 2 == 0])\n",
+          "responses": [
+            "{\"action\":\"tool_call\",\"tool_name\":\"repository.search\",\"arguments\":{\"query\":\"def count\"},\"decision_summary\":\"Locate the requested public source definition.\"}",
+            "{\"action\":\"tool_call\",\"tool_name\":\"repository.read_file\",\"arguments\":{\"path\":\"example.py\"},\"decision_summary\":\"Read the allowlisted public source.\"}",
+            "{\"action\":\"finish\",\"result\":{\"summary\":\"3\",\"artifacts\":[]}}"
+          ],
+          "expected_summary": "3",
+          "expected_tools": ["repository.search", "repository.read_file"]
+        },
+        {
+          "id": "exceptions-fallback",
+          "task": "Read example.py. What does number('oops') return? Return only the answer, without quotes or explanation.",
+          "file_content": "def number(value):\n    try:\n        return int(value)\n    except ValueError:\n        return -1\n",
+          "responses": [
+            "{\"action\":\"tool_call\",\"tool_name\":\"repository.read_file\",\"arguments\":{\"path\":\"example.py\"},\"decision_summary\":\"Read the allowlisted public source.\"}",
+            "{\"action\":\"finish\",\"result\":{\"summary\":\"-1\",\"artifacts\":[]}}"
+          ],
+          "expected_summary": "-1",
+          "expected_tools": ["repository.read_file"]
+        },
+        {
+          "id": "exceptions-finally",
+          "task": "Search example.py for `def events`, then read the file. What does events() return? Return only the answer, without quotes or explanation.",
+          "file_content": "def events():\n    log = []\n    try:\n        log.append('try')\n    finally:\n        log.append('finally')\n    return ','.join(log)\n",
+          "responses": [
+            "{\"action\":\"tool_call\",\"tool_name\":\"repository.search\",\"arguments\":{\"query\":\"def events\"},\"decision_summary\":\"Locate the requested public source definition.\"}",
+            "{\"action\":\"tool_call\",\"tool_name\":\"repository.read_file\",\"arguments\":{\"path\":\"example.py\"},\"decision_summary\":\"Read the allowlisted public source.\"}",
+            "{\"action\":\"finish\",\"result\":{\"summary\":\"try,finally\",\"artifacts\":[]}}"
+          ],
+          "expected_summary": "try,finally",
+          "expected_tools": ["repository.search", "repository.read_file"]
+        },
+        {
+          "id": "scope-shadowing",
+          "task": "Read example.py. What does local() return? Return only the answer, without quotes or explanation.",
+          "file_content": "LIMIT = 8\ndef local():\n    LIMIT = 2\n    return LIMIT\n",
+          "responses": [
+            "{\"action\":\"tool_call\",\"tool_name\":\"repository.read_file\",\"arguments\":{\"path\":\"example.py\"},\"decision_summary\":\"Read the allowlisted public source.\"}",
+            "{\"action\":\"finish\",\"result\":{\"summary\":\"2\",\"artifacts\":[]}}"
+          ],
+          "expected_summary": "2",
+          "expected_tools": ["repository.read_file"]
+        },
+        {
+          "id": "scope-closure",
+          "task": "Search example.py for `def build`, then read the file. What does build('pre-')('x') return? Return only the answer, without quotes or explanation.",
+          "file_content": "def build(prefix):\n    def label(value):\n        return prefix + value\n    return label\n",
+          "responses": [
+            "{\"action\":\"tool_call\",\"tool_name\":\"repository.search\",\"arguments\":{\"query\":\"def build\"},\"decision_summary\":\"Locate the requested public source definition.\"}",
+            "{\"action\":\"tool_call\",\"tool_name\":\"repository.read_file\",\"arguments\":{\"path\":\"example.py\"},\"decision_summary\":\"Read the allowlisted public source.\"}",
+            "{\"action\":\"finish\",\"result\":{\"summary\":\"pre-x\",\"artifacts\":[]}}"
+          ],
+          "expected_summary": "pre-x",
+          "expected_tools": ["repository.search", "repository.read_file"]
+        },
+        {
+          "id": "inspection-async",
+          "task": "Read example.py. Which reader method is awaited? Return its name only. Return only the answer, without quotes or explanation.",
+          "file_content": "async def load(reader):\n    return await reader.read()\n",
+          "responses": [
+            "{\"action\":\"tool_call\",\"tool_name\":\"repository.read_file\",\"arguments\":{\"path\":\"example.py\"},\"decision_summary\":\"Read the allowlisted public source.\"}",
+            "{\"action\":\"finish\",\"result\":{\"summary\":\"read\",\"artifacts\":[]}}"
+          ],
+          "expected_summary": "read",
+          "expected_tools": ["repository.read_file"]
+        },
+        {
+          "id": "inspection-resource-mode",
+          "task": "Search example.py for `def first_line`, then read the file. What mode is passed to open? Return only the answer, without quotes or explanation.",
+          "file_content": "def first_line(path):\n    with open(path, 'r', encoding='utf-8') as stream:\n        return stream.readline()\n",
+          "responses": [
+            "{\"action\":\"tool_call\",\"tool_name\":\"repository.search\",\"arguments\":{\"query\":\"def first_line\"},\"decision_summary\":\"Locate the requested public source definition.\"}",
+            "{\"action\":\"tool_call\",\"tool_name\":\"repository.read_file\",\"arguments\":{\"path\":\"example.py\"},\"decision_summary\":\"Read the allowlisted public source.\"}",
+            "{\"action\":\"finish\",\"result\":{\"summary\":\"r\",\"artifacts\":[]}}"
+          ],
+          "expected_summary": "r",
+          "expected_tools": ["repository.search", "repository.read_file"]
+        }
+      ]
+    },
+    "baseline": {
+      "id": "37edc863-dcf9-4c8d-9d69-6dac63f9c440",
+      "suite_digest": "b1992916d46a1f5d7b5748069f5de387166a4a4a3aa184fae23e7d0fe997de49",
+      "implementation_digest": "ab352eae08eb780e6f62e39b236e3d0919713b66220f4b77a0a9fa4336cb04e2",
+      "agent_version_id": "0dd6693b-86b9-45f3-94d5-b6bc8e8e839c",
+      "agent_version_number": 1,
+      "configuration": {
+        "schema_version": 8,
+        "workspace": null,
+        "max_model_calls": 3,
+        "max_tool_calls": 2,
+        "max_identical_tool_calls": 2,
+        "pricing": {
+          "price_id": "synthetic-eval-v1",
+          "provider": "scripted",
+          "model": "eval-fixture-v1",
+          "currency": "USD",
+          "input_nanousd_per_token": 1000,
+          "output_nanousd_per_token": 2000
+        },
+        "max_cost_nanousd": 1000000,
+        "max_input_tokens": 1000,
+        "max_total_output_tokens": 1000,
+        "max_elapsed_seconds": 60,
+        "model_retry": {
+          "max_retries": 0,
+          "base_delay_seconds": 1
+        },
+        "tool_policy": {
+          "allowed_tools": ["repository.read_file", "repository.search"],
+          "permissions": ["read"]
+        },
+        "provider": "scripted",
+        "model": "eval-fixture-v1",
+        "system_prompt": "Inspect the public code fixture using only granted read tools.",
+        "max_steps": 3,
+        "temperature": 0.0,
+        "max_output_tokens": 1024,
+        "timeout_seconds": 5.0
+      },
+      "started_at": "2026-10-01T19:43:25.594057Z",
+      "finished_at": "2026-10-01T19:43:31.652231Z",
+      "cases": [
+        {
+          "case_id": "defaults-retries",
+          "run_id": "a37fa4aa-8166-4974-a36f-b0485f1096f0",
+          "status": "SUCCEEDED",
+          "grade": "pass",
+          "error_code": null,
+          "event_sequence": 17,
+          "steps": 3,
+          "model_calls": 2,
+          "tool_calls": 1,
+          "retries": 0,
+          "elapsed_ms": 307.88599999999997,
+          "tokens": {
+            "attempts": 2,
+            "input_tokens": 20,
+            "output_tokens": 10,
+            "unknown_attempts": 0,
+            "last_usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          },
+          "cost": {
+            "known_nanousd": 40000,
+            "unknown_attempts": 0
+          }
+        },
+        {
+          "case_id": "defaults-keyword-only",
+          "run_id": "654ca99f-8722-42b4-96f5-1e887fc04bbb",
+          "status": "FAILED",
+          "grade": "runtime_failure",
+          "error_code": "step_limit_exceeded",
+          "event_sequence": 19,
+          "steps": 3,
+          "model_calls": 2,
+          "tool_calls": 1,
+          "retries": 0,
+          "elapsed_ms": 279.144,
+          "tokens": {
+            "attempts": 2,
+            "input_tokens": 20,
+            "output_tokens": 10,
+            "unknown_attempts": 0,
+            "last_usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          },
+          "cost": {
+            "known_nanousd": 40000,
+            "unknown_attempts": 0
+          }
+        },
+        {
+          "case_id": "branches-inclusive",
+          "run_id": "e456ee33-4ca6-47c7-a864-771c0e4d3e48",
+          "status": "SUCCEEDED",
+          "grade": "pass",
+          "error_code": null,
+          "event_sequence": 17,
+          "steps": 3,
+          "model_calls": 2,
+          "tool_calls": 1,
+          "retries": 0,
+          "elapsed_ms": 260.524,
+          "tokens": {
+            "attempts": 2,
+            "input_tokens": 20,
+            "output_tokens": 10,
+            "unknown_attempts": 0,
+            "last_usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          },
+          "cost": {
+            "known_nanousd": 40000,
+            "unknown_attempts": 0
+          }
+        },
+        {
+          "case_id": "branches-first-match",
+          "run_id": "5f5ac109-0cbe-4aa1-8824-05834d5d9f38",
+          "status": "FAILED",
+          "grade": "runtime_failure",
+          "error_code": "step_limit_exceeded",
+          "event_sequence": 19,
+          "steps": 3,
+          "model_calls": 2,
+          "tool_calls": 1,
+          "retries": 0,
+          "elapsed_ms": 281.39599999999996,
+          "tokens": {
+            "attempts": 2,
+            "input_tokens": 20,
+            "output_tokens": 10,
+            "unknown_attempts": 0,
+            "last_usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          },
+          "cost": {
+            "known_nanousd": 40000,
+            "unknown_attempts": 0
+          }
+        },
+        {
+          "case_id": "collections-copy",
+          "run_id": "9dd9a823-e500-4d2f-856f-bb06e6c6bc7b",
+          "status": "SUCCEEDED",
+          "grade": "pass",
+          "error_code": null,
+          "event_sequence": 17,
+          "steps": 3,
+          "model_calls": 2,
+          "tool_calls": 1,
+          "retries": 0,
+          "elapsed_ms": 272.647,
+          "tokens": {
+            "attempts": 2,
+            "input_tokens": 20,
+            "output_tokens": 10,
+            "unknown_attempts": 0,
+            "last_usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          },
+          "cost": {
+            "known_nanousd": 40000,
+            "unknown_attempts": 0
+          }
+        },
+        {
+          "case_id": "collections-fallback",
+          "run_id": "94261a5f-a1f5-471e-b099-2f78011422af",
+          "status": "FAILED",
+          "grade": "runtime_failure",
+          "error_code": "step_limit_exceeded",
+          "event_sequence": 19,
+          "steps": 3,
+          "model_calls": 2,
+          "tool_calls": 1,
+          "retries": 0,
+          "elapsed_ms": 309.417,
+          "tokens": {
+            "attempts": 2,
+            "input_tokens": 20,
+            "output_tokens": 10,
+            "unknown_attempts": 0,
+            "last_usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          },
+          "cost": {
+            "known_nanousd": 40000,
+            "unknown_attempts": 0
+          }
+        },
+        {
+          "case_id": "strings-normalize",
+          "run_id": "d50d2670-a76a-4032-b42d-a2571b2612a0",
+          "status": "SUCCEEDED",
+          "grade": "pass",
+          "error_code": null,
+          "event_sequence": 17,
+          "steps": 3,
+          "model_calls": 2,
+          "tool_calls": 1,
+          "retries": 0,
+          "elapsed_ms": 215.82299999999998,
+          "tokens": {
+            "attempts": 2,
+            "input_tokens": 20,
+            "output_tokens": 10,
+            "unknown_attempts": 0,
+            "last_usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          },
+          "cost": {
+            "known_nanousd": 40000,
+            "unknown_attempts": 0
+          }
+        },
+        {
+          "case_id": "strings-split-limit",
+          "run_id": "4598b336-ad4b-4b63-8fd7-e8ed034f55e5",
+          "status": "FAILED",
+          "grade": "runtime_failure",
+          "error_code": "step_limit_exceeded",
+          "event_sequence": 19,
+          "steps": 3,
+          "model_calls": 2,
+          "tool_calls": 1,
+          "retries": 0,
+          "elapsed_ms": 327.415,
+          "tokens": {
+            "attempts": 2,
+            "input_tokens": 20,
+            "output_tokens": 10,
+            "unknown_attempts": 0,
+            "last_usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          },
+          "cost": {
+            "known_nanousd": 40000,
+            "unknown_attempts": 0
+          }
+        },
+        {
+          "case_id": "iteration-range",
+          "run_id": "3eb88f51-f41b-4523-806d-90e76e2c479e",
+          "status": "SUCCEEDED",
+          "grade": "pass",
+          "error_code": null,
+          "event_sequence": 17,
+          "steps": 3,
+          "model_calls": 2,
+          "tool_calls": 1,
+          "retries": 0,
+          "elapsed_ms": 227.765,
+          "tokens": {
+            "attempts": 2,
+            "input_tokens": 20,
+            "output_tokens": 10,
+            "unknown_attempts": 0,
+            "last_usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          },
+          "cost": {
+            "known_nanousd": 40000,
+            "unknown_attempts": 0
+          }
+        },
+        {
+          "case_id": "iteration-filter",
+          "run_id": "ff485d29-6a61-4def-a9d8-f083d4456292",
+          "status": "FAILED",
+          "grade": "runtime_failure",
+          "error_code": "step_limit_exceeded",
+          "event_sequence": 19,
+          "steps": 3,
+          "model_calls": 2,
+          "tool_calls": 1,
+          "retries": 0,
+          "elapsed_ms": 318.364,
+          "tokens": {
+            "attempts": 2,
+            "input_tokens": 20,
+            "output_tokens": 10,
+            "unknown_attempts": 0,
+            "last_usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          },
+          "cost": {
+            "known_nanousd": 40000,
+            "unknown_attempts": 0
+          }
+        },
+        {
+          "case_id": "exceptions-fallback",
+          "run_id": "9f926a7c-9b60-4e2d-ad1e-2115ad4cd795",
+          "status": "SUCCEEDED",
+          "grade": "pass",
+          "error_code": null,
+          "event_sequence": 17,
+          "steps": 3,
+          "model_calls": 2,
+          "tool_calls": 1,
+          "retries": 0,
+          "elapsed_ms": 516.455,
+          "tokens": {
+            "attempts": 2,
+            "input_tokens": 20,
+            "output_tokens": 10,
+            "unknown_attempts": 0,
+            "last_usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          },
+          "cost": {
+            "known_nanousd": 40000,
+            "unknown_attempts": 0
+          }
+        },
+        {
+          "case_id": "exceptions-finally",
+          "run_id": "7256c950-c5e2-4998-862b-84d34fdc1867",
+          "status": "FAILED",
+          "grade": "runtime_failure",
+          "error_code": "step_limit_exceeded",
+          "event_sequence": 19,
+          "steps": 3,
+          "model_calls": 2,
+          "tool_calls": 1,
+          "retries": 0,
+          "elapsed_ms": 331.412,
+          "tokens": {
+            "attempts": 2,
+            "input_tokens": 20,
+            "output_tokens": 10,
+            "unknown_attempts": 0,
+            "last_usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          },
+          "cost": {
+            "known_nanousd": 40000,
+            "unknown_attempts": 0
+          }
+        },
+        {
+          "case_id": "scope-shadowing",
+          "run_id": "4ba546bc-928e-460f-b2eb-43bf02af2387",
+          "status": "SUCCEEDED",
+          "grade": "pass",
+          "error_code": null,
+          "event_sequence": 17,
+          "steps": 3,
+          "model_calls": 2,
+          "tool_calls": 1,
+          "retries": 0,
+          "elapsed_ms": 466.189,
+          "tokens": {
+            "attempts": 2,
+            "input_tokens": 20,
+            "output_tokens": 10,
+            "unknown_attempts": 0,
+            "last_usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          },
+          "cost": {
+            "known_nanousd": 40000,
+            "unknown_attempts": 0
+          }
+        },
+        {
+          "case_id": "scope-closure",
+          "run_id": "0905735b-97f3-42d4-9ccd-471abeeb6dae",
+          "status": "FAILED",
+          "grade": "runtime_failure",
+          "error_code": "step_limit_exceeded",
+          "event_sequence": 19,
+          "steps": 3,
+          "model_calls": 2,
+          "tool_calls": 1,
+          "retries": 0,
+          "elapsed_ms": 323.049,
+          "tokens": {
+            "attempts": 2,
+            "input_tokens": 20,
+            "output_tokens": 10,
+            "unknown_attempts": 0,
+            "last_usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          },
+          "cost": {
+            "known_nanousd": 40000,
+            "unknown_attempts": 0
+          }
+        },
+        {
+          "case_id": "inspection-async",
+          "run_id": "281e055b-55de-45b2-a904-637e60c0d240",
+          "status": "SUCCEEDED",
+          "grade": "pass",
+          "error_code": null,
+          "event_sequence": 17,
+          "steps": 3,
+          "model_calls": 2,
+          "tool_calls": 1,
+          "retries": 0,
+          "elapsed_ms": 239.126,
+          "tokens": {
+            "attempts": 2,
+            "input_tokens": 20,
+            "output_tokens": 10,
+            "unknown_attempts": 0,
+            "last_usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          },
+          "cost": {
+            "known_nanousd": 40000,
+            "unknown_attempts": 0
+          }
+        },
+        {
+          "case_id": "inspection-resource-mode",
+          "run_id": "504d9138-8775-4110-81d9-4f09c5dff259",
+          "status": "FAILED",
+          "grade": "runtime_failure",
+          "error_code": "step_limit_exceeded",
+          "event_sequence": 19,
+          "steps": 3,
+          "model_calls": 2,
+          "tool_calls": 1,
+          "retries": 0,
+          "elapsed_ms": 297.683,
+          "tokens": {
+            "attempts": 2,
+            "input_tokens": 20,
+            "output_tokens": 10,
+            "unknown_attempts": 0,
+            "last_usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          },
+          "cost": {
+            "known_nanousd": 40000,
+            "unknown_attempts": 0
+          }
+        }
+      ]
+    },
+    "candidate": {
+      "id": "1b58f5d8-05f3-466a-b8b7-7d262896daec",
+      "suite_digest": "b1992916d46a1f5d7b5748069f5de387166a4a4a3aa184fae23e7d0fe997de49",
+      "implementation_digest": "ab352eae08eb780e6f62e39b236e3d0919713b66220f4b77a0a9fa4336cb04e2",
+      "agent_version_id": "6e0bb350-2234-404c-ac26-7bd92493a73a",
+      "agent_version_number": 2,
+      "configuration": {
+        "schema_version": 8,
+        "workspace": null,
+        "max_model_calls": 3,
+        "max_tool_calls": 2,
+        "max_identical_tool_calls": 2,
+        "pricing": {
+          "price_id": "synthetic-eval-v1",
+          "provider": "scripted",
+          "model": "eval-fixture-v1",
+          "currency": "USD",
+          "input_nanousd_per_token": 1000,
+          "output_nanousd_per_token": 2000
+        },
+        "max_cost_nanousd": 1000000,
+        "max_input_tokens": 1000,
+        "max_total_output_tokens": 1000,
+        "max_elapsed_seconds": 60,
+        "model_retry": {
+          "max_retries": 0,
+          "base_delay_seconds": 1
+        },
+        "tool_policy": {
+          "allowed_tools": ["repository.read_file", "repository.search"],
+          "permissions": ["read"]
+        },
+        "provider": "scripted",
+        "model": "eval-fixture-v1",
+        "system_prompt": "Inspect the public code fixture using only granted read tools.",
+        "max_steps": 5,
+        "temperature": 0.0,
+        "max_output_tokens": 1024,
+        "timeout_seconds": 5.0
+      },
+      "started_at": "2026-10-01T19:43:31.652478Z",
+      "finished_at": "2026-10-01T19:43:37.418295Z",
+      "cases": [
+        {
+          "case_id": "defaults-retries",
+          "run_id": "c7977f72-8a56-4afa-8fec-494fe0a071e1",
+          "status": "SUCCEEDED",
+          "grade": "pass",
+          "error_code": null,
+          "event_sequence": 17,
+          "steps": 3,
+          "model_calls": 2,
+          "tool_calls": 1,
+          "retries": 0,
+          "elapsed_ms": 327.85999999999996,
+          "tokens": {
+            "attempts": 2,
+            "input_tokens": 20,
+            "output_tokens": 10,
+            "unknown_attempts": 0,
+            "last_usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          },
+          "cost": {
+            "known_nanousd": 40000,
+            "unknown_attempts": 0
+          }
+        },
+        {
+          "case_id": "defaults-keyword-only",
+          "run_id": "bc5b9e1f-40c0-4c05-aeaa-73ecfde439dc",
+          "status": "SUCCEEDED",
+          "grade": "pass",
+          "error_code": null,
+          "event_sequence": 25,
+          "steps": 5,
+          "model_calls": 3,
+          "tool_calls": 2,
+          "retries": 0,
+          "elapsed_ms": 405.466,
+          "tokens": {
+            "attempts": 3,
+            "input_tokens": 30,
+            "output_tokens": 15,
+            "unknown_attempts": 0,
+            "last_usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          },
+          "cost": {
+            "known_nanousd": 60000,
+            "unknown_attempts": 0
+          }
+        },
+        {
+          "case_id": "branches-inclusive",
+          "run_id": "6433cdcd-8684-4b7e-b41b-15c193624855",
+          "status": "SUCCEEDED",
+          "grade": "pass",
+          "error_code": null,
+          "event_sequence": 17,
+          "steps": 3,
+          "model_calls": 2,
+          "tool_calls": 1,
+          "retries": 0,
+          "elapsed_ms": 252.74099999999999,
+          "tokens": {
+            "attempts": 2,
+            "input_tokens": 20,
+            "output_tokens": 10,
+            "unknown_attempts": 0,
+            "last_usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          },
+          "cost": {
+            "known_nanousd": 40000,
+            "unknown_attempts": 0
+          }
+        },
+        {
+          "case_id": "branches-first-match",
+          "run_id": "4480579d-b8fe-4f14-9a38-7a54d9ff7ecc",
+          "status": "SUCCEEDED",
+          "grade": "pass",
+          "error_code": null,
+          "event_sequence": 25,
+          "steps": 5,
+          "model_calls": 3,
+          "tool_calls": 2,
+          "retries": 0,
+          "elapsed_ms": 452.0,
+          "tokens": {
+            "attempts": 3,
+            "input_tokens": 30,
+            "output_tokens": 15,
+            "unknown_attempts": 0,
+            "last_usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          },
+          "cost": {
+            "known_nanousd": 60000,
+            "unknown_attempts": 0
+          }
+        },
+        {
+          "case_id": "collections-copy",
+          "run_id": "d8dee07b-44c3-4e52-a31b-560ddb1c6482",
+          "status": "SUCCEEDED",
+          "grade": "pass",
+          "error_code": null,
+          "event_sequence": 17,
+          "steps": 3,
+          "model_calls": 2,
+          "tool_calls": 1,
+          "retries": 0,
+          "elapsed_ms": 214.22,
+          "tokens": {
+            "attempts": 2,
+            "input_tokens": 20,
+            "output_tokens": 10,
+            "unknown_attempts": 0,
+            "last_usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          },
+          "cost": {
+            "known_nanousd": 40000,
+            "unknown_attempts": 0
+          }
+        },
+        {
+          "case_id": "collections-fallback",
+          "run_id": "e0f7501a-e2a3-477f-ae56-2dd0303b1ae6",
+          "status": "SUCCEEDED",
+          "grade": "pass",
+          "error_code": null,
+          "event_sequence": 25,
+          "steps": 5,
+          "model_calls": 3,
+          "tool_calls": 2,
+          "retries": 0,
+          "elapsed_ms": 328.16499999999996,
+          "tokens": {
+            "attempts": 3,
+            "input_tokens": 30,
+            "output_tokens": 15,
+            "unknown_attempts": 0,
+            "last_usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          },
+          "cost": {
+            "known_nanousd": 60000,
+            "unknown_attempts": 0
+          }
+        },
+        {
+          "case_id": "strings-normalize",
+          "run_id": "2bb2f829-6931-4d08-a9ea-b016e40e7501",
+          "status": "SUCCEEDED",
+          "grade": "pass",
+          "error_code": null,
+          "event_sequence": 17,
+          "steps": 3,
+          "model_calls": 2,
+          "tool_calls": 1,
+          "retries": 0,
+          "elapsed_ms": 212.037,
+          "tokens": {
+            "attempts": 2,
+            "input_tokens": 20,
+            "output_tokens": 10,
+            "unknown_attempts": 0,
+            "last_usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          },
+          "cost": {
+            "known_nanousd": 40000,
+            "unknown_attempts": 0
+          }
+        },
+        {
+          "case_id": "strings-split-limit",
+          "run_id": "adf380e0-1ce2-42a0-a112-92f457fd6e45",
+          "status": "SUCCEEDED",
+          "grade": "pass",
+          "error_code": null,
+          "event_sequence": 25,
+          "steps": 5,
+          "model_calls": 3,
+          "tool_calls": 2,
+          "retries": 0,
+          "elapsed_ms": 327.89099999999996,
+          "tokens": {
+            "attempts": 3,
+            "input_tokens": 30,
+            "output_tokens": 15,
+            "unknown_attempts": 0,
+            "last_usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          },
+          "cost": {
+            "known_nanousd": 60000,
+            "unknown_attempts": 0
+          }
+        },
+        {
+          "case_id": "iteration-range",
+          "run_id": "812d392b-d8d6-470b-a0fa-f30ec29c3c3c",
+          "status": "SUCCEEDED",
+          "grade": "pass",
+          "error_code": null,
+          "event_sequence": 17,
+          "steps": 3,
+          "model_calls": 2,
+          "tool_calls": 1,
+          "retries": 0,
+          "elapsed_ms": 201.757,
+          "tokens": {
+            "attempts": 2,
+            "input_tokens": 20,
+            "output_tokens": 10,
+            "unknown_attempts": 0,
+            "last_usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          },
+          "cost": {
+            "known_nanousd": 40000,
+            "unknown_attempts": 0
+          }
+        },
+        {
+          "case_id": "iteration-filter",
+          "run_id": "d80b1ce5-0c94-4a13-a1fe-9ec3fbf32353",
+          "status": "SUCCEEDED",
+          "grade": "pass",
+          "error_code": null,
+          "event_sequence": 25,
+          "steps": 5,
+          "model_calls": 3,
+          "tool_calls": 2,
+          "retries": 0,
+          "elapsed_ms": 358.69,
+          "tokens": {
+            "attempts": 3,
+            "input_tokens": 30,
+            "output_tokens": 15,
+            "unknown_attempts": 0,
+            "last_usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          },
+          "cost": {
+            "known_nanousd": 60000,
+            "unknown_attempts": 0
+          }
+        },
+        {
+          "case_id": "exceptions-fallback",
+          "run_id": "2649522d-9180-4d66-9708-62b05baad907",
+          "status": "SUCCEEDED",
+          "grade": "pass",
+          "error_code": null,
+          "event_sequence": 17,
+          "steps": 3,
+          "model_calls": 2,
+          "tool_calls": 1,
+          "retries": 0,
+          "elapsed_ms": 204.16799999999998,
+          "tokens": {
+            "attempts": 2,
+            "input_tokens": 20,
+            "output_tokens": 10,
+            "unknown_attempts": 0,
+            "last_usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          },
+          "cost": {
+            "known_nanousd": 40000,
+            "unknown_attempts": 0
+          }
+        },
+        {
+          "case_id": "exceptions-finally",
+          "run_id": "a3f89ac3-90cb-4a2b-8fed-617317401de8",
+          "status": "SUCCEEDED",
+          "grade": "pass",
+          "error_code": null,
+          "event_sequence": 25,
+          "steps": 5,
+          "model_calls": 3,
+          "tool_calls": 2,
+          "retries": 0,
+          "elapsed_ms": 337.717,
+          "tokens": {
+            "attempts": 3,
+            "input_tokens": 30,
+            "output_tokens": 15,
+            "unknown_attempts": 0,
+            "last_usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          },
+          "cost": {
+            "known_nanousd": 60000,
+            "unknown_attempts": 0
+          }
+        },
+        {
+          "case_id": "scope-shadowing",
+          "run_id": "c9059ef6-4b87-4f69-b089-53dfb1313b87",
+          "status": "SUCCEEDED",
+          "grade": "pass",
+          "error_code": null,
+          "event_sequence": 17,
+          "steps": 3,
+          "model_calls": 2,
+          "tool_calls": 1,
+          "retries": 0,
+          "elapsed_ms": 258.516,
+          "tokens": {
+            "attempts": 2,
+            "input_tokens": 20,
+            "output_tokens": 10,
+            "unknown_attempts": 0,
+            "last_usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          },
+          "cost": {
+            "known_nanousd": 40000,
+            "unknown_attempts": 0
+          }
+        },
+        {
+          "case_id": "scope-closure",
+          "run_id": "107083a1-9e5c-4c7d-a72c-61bd9d258e51",
+          "status": "SUCCEEDED",
+          "grade": "pass",
+          "error_code": null,
+          "event_sequence": 25,
+          "steps": 5,
+          "model_calls": 3,
+          "tool_calls": 2,
+          "retries": 0,
+          "elapsed_ms": 341.81,
+          "tokens": {
+            "attempts": 3,
+            "input_tokens": 30,
+            "output_tokens": 15,
+            "unknown_attempts": 0,
+            "last_usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          },
+          "cost": {
+            "known_nanousd": 60000,
+            "unknown_attempts": 0
+          }
+        },
+        {
+          "case_id": "inspection-async",
+          "run_id": "d259926c-dea8-4cb8-845c-ed2897362344",
+          "status": "SUCCEEDED",
+          "grade": "pass",
+          "error_code": null,
+          "event_sequence": 17,
+          "steps": 3,
+          "model_calls": 2,
+          "tool_calls": 1,
+          "retries": 0,
+          "elapsed_ms": 223.776,
+          "tokens": {
+            "attempts": 2,
+            "input_tokens": 20,
+            "output_tokens": 10,
+            "unknown_attempts": 0,
+            "last_usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          },
+          "cost": {
+            "known_nanousd": 40000,
+            "unknown_attempts": 0
+          }
+        },
+        {
+          "case_id": "inspection-resource-mode",
+          "run_id": "bcfb9da1-306c-45c9-afc8-10b81873cba5",
+          "status": "SUCCEEDED",
+          "grade": "pass",
+          "error_code": null,
+          "event_sequence": 25,
+          "steps": 5,
+          "model_calls": 3,
+          "tool_calls": 2,
+          "retries": 0,
+          "elapsed_ms": 407.92699999999996,
+          "tokens": {
+            "attempts": 3,
+            "input_tokens": 30,
+            "output_tokens": 15,
+            "unknown_attempts": 0,
+            "last_usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          },
+          "cost": {
+            "known_nanousd": 60000,
+            "unknown_attempts": 0
+          }
+        }
+      ]
+    },
+    "baseline_metrics": {
+      "cases": 16,
+      "passed": 8,
+      "success_rate": 0.5,
+      "runtime_failures": 8,
+      "oracle_failures": 0,
+      "steps": 48,
+      "model_calls": 32,
+      "tool_calls": 16,
+      "retries": 0,
+      "elapsed_ms": 4974.295,
+      "input_tokens": 320,
+      "output_tokens": 160,
+      "unknown_token_attempts": 0,
+      "known_nanousd": 640000,
+      "unknown_cost_attempts": 0
+    },
+    "candidate_metrics": {
+      "cases": 16,
+      "passed": 16,
+      "success_rate": 1.0,
+      "runtime_failures": 0,
+      "oracle_failures": 0,
+      "steps": 64,
+      "model_calls": 40,
+      "tool_calls": 24,
+      "retries": 0,
+      "elapsed_ms": 4854.741,
+      "input_tokens": 400,
+      "output_tokens": 200,
+      "unknown_token_attempts": 0,
+      "known_nanousd": 800000,
+      "unknown_cost_attempts": 0
+    },
+    "success_rate_delta": 0.5
+  },
+  "success": {
+    "method": "exact-paired-percentile-v1",
+    "confidence_percent": 95,
+    "cases": 16,
+    "improved": 8,
+    "regressed": 0,
+    "unchanged": 8,
+    "delta": 0.5,
+    "lower": 0.25,
+    "upper": 0.75,
+    "degenerate": false
+  },
+  "baseline_summary": {
+    "cases": 16,
+    "mean_elapsed_ms": 310.8934375,
+    "median_elapsed_ms": 302.7845,
+    "mean_known_nanousd": 40000.0,
+    "mean_total_nanousd": 40000.0,
+    "unknown_cost_attempts": 0,
+    "runtime_failures": 8,
+    "summary_mismatches": 0,
+    "tool_mismatches": 0
+  },
+  "candidate_summary": {
+    "cases": 16,
+    "mean_elapsed_ms": 303.4213125,
+    "median_elapsed_ms": 327.8755,
+    "mean_known_nanousd": 50000.0,
+    "mean_total_nanousd": 50000.0,
+    "unknown_cost_attempts": 0,
+    "runtime_failures": 0,
+    "summary_mismatches": 0,
+    "tool_mismatches": 0
+  }
+}

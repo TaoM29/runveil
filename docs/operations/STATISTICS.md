@@ -55,7 +55,8 @@ from excluding zero. Review practical effect sizes, failure patterns and the stu
 design before any future model comparison.
 
 Elapsed summaries are arithmetic mean and median over all cases, including failed
-runs. Persisted elapsed time includes storage overhead and is not provider latency;
+runs. Persisted elapsed time is run start-to-finish wall duration, including storage and
+any waiting, and is not provider latency;
 sequential baseline/candidate batches are not a controlled performance experiment.
 Short failures can misleadingly reduce elapsed time and cost.
 
@@ -72,3 +73,11 @@ of a JSON report or a replacement for database reconciliation. Historical report
 remain untouched; no statistical conclusions are retroactively added to them.
 
 See [ADR 0031](../adr/0031-exact-paired-statistics.md) and [handoff](PHASE_9A.md).
+
+## Acceptance and scope
+
+[Phase 9 acceptance](PHASE_9.md) independently verifies every bounded outcome-count
+combination, retained arithmetic, fresh repeated CLI reports and direct database
+reconciliation. It closes the scripted statistical-method gate, not a model-quality
+or population-coverage claim. [Phase 9B](PHASE_9B.md) records commands, evidence and
+verification limits. The prior Phase 9A handoff remains historical evidence.

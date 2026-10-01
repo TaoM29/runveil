@@ -1,6 +1,6 @@
 # Architecture
 
-## Implemented through Phase 9A; statistical-method review pending
+## Implemented through Phase 9; statistical-method closure review pending
 
 ```mermaid
 flowchart LR
@@ -504,3 +504,16 @@ model inference or an automatic regression gate. No runtime, persistence, securi
 authorization or observability boundary changes. See
 [ADR 0031](docs/adr/0031-exact-paired-statistics.md) and
 [methodology](docs/operations/STATISTICS.md).
+
+## Phase 9 closure evidence
+
+Phase 9B validates the paired convolution with an independent multinomial oracle
+for every outcome histogram from 1–30 pairs, audits retained report arithmetic and
+reproduces all three suites in separate CLI processes. Direct database reconciliation
+covers 114 fresh runs, including a default-format compatibility batch. Unknown-cost
+and failure denominators, identity guards and safe CLI refusal behavior are preserved.
+
+No implementation or security boundary changed. Closure covers a scripted method
+demonstration, not model inference, guaranteed interval coverage or a production
+regression gate. See the [closure audit](docs/operations/PHASE_9.md) and
+[handoff](docs/operations/PHASE_9B.md).
