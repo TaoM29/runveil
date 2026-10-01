@@ -15,6 +15,7 @@ from runveil_persistence.database import create_engine, database_url
 from runveil_persistence.outbox import TERMINAL, claim_publication, delivery_status, published
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from runveil_worker.telemetry import telemetry
 from runveil_worker.worker import CALLS_PROFILE, submit, work_once
 
 if TYPE_CHECKING:
@@ -147,7 +148,8 @@ async def main() -> int:
 
 def entrypoint() -> int:
     try:
-        return asyncio.run(main())
+        with telemetry():
+            return asyncio.run(main())
     except (KeyboardInterrupt, asyncio.CancelledError):
         return 130
     except Exception:

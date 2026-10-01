@@ -28,6 +28,7 @@ from runveil_tools.review import proposal_binding, review_identity
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from runveil_worker.repository_worker import repository_configuration
+from runveil_worker.telemetry import telemetry
 
 POLICY = ToolPolicy(
     allowed_tools=("repository.read_file", PROPOSAL_TOOL), permissions=(Permission.READ,)
@@ -224,7 +225,8 @@ async def main() -> int:
 
 if __name__ == "__main__":
     try:
-        raise SystemExit(asyncio.run(main()))
+        with telemetry():
+            raise SystemExit(asyncio.run(main()))
     except KeyboardInterrupt:
         raise SystemExit(130) from None
     except Exception:

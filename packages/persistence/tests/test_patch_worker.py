@@ -1,17 +1,22 @@
 """Real mutation evidence: approval, one intent, fencing and no replay after I/O."""
 
 import asyncio
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Literal
 from uuid import UUID
 
 import pytest
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 from runveil_core.agents import JsonValue
 from runveil_core.approvals import PatchProposal
 from runveil_core.errors import RevisionConflict
 from runveil_core.mutations import APPLY_TOOL, PATCH_PROFILE
 from runveil_core.runs import RunStatus
 from runveil_core.runtime import Cursor, Pending, RuntimeConfig
+from runveil_core.telemetry import using_tracer
 from runveil_core.tools import ToolError
 from runveil_persistence.approvals import ApprovalRepository
 from runveil_persistence.execution import PostgresExecutionStore
@@ -31,6 +36,18 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from test_worker import expire
 
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
+
+
+@pytest.fixture
+def telemetry_spans() -> Iterator[InMemorySpanExporter]:
+    output = InMemorySpanExporter()
+    sdk = TracerProvider(shutdown_on_exit=False)
+    sdk.add_span_processor(SimpleSpanProcessor(output))
+    try:
+        with using_tracer(sdk.get_tracer("runveil.runtime")):
+            yield output
+    finally:
+        sdk.shutdown()
 
 
 async def approved(sessions: async_sessionmaker[AsyncSession], root: Path) -> UUID:
@@ -59,7 +76,7 @@ async def approved(sessions: async_sessionmaker[AsyncSession], root: Path) -> UU
 
 
 async def test_apply_once_requires_operator_grant_and_new_profile(
-    database: AsyncEngine, tmp_path: Path
+    database: AsyncEngine, tmp_path: Path, telemetry_spans: InMemorySpanExporter
 ) -> None:
     target = tmp_path / "a.txt"
     target.write_text("public fixture")
@@ -88,6 +105,16 @@ async def test_apply_once_requires_operator_grant_and_new_profile(
     assert (
         await work_patch_once(sessions, tmp_path, "a.txt", run_id=review, allow_write=True) is None
     )
+
+    spans = telemetry_spans.get_finished_spans()
+    assert sum(s.name == "tool.apply_patch" for s in spans) == 1
+    roots = [s for s in spans if s.name == "agent.execute"]
+    assert [s.attributes["runveil.outcome"] for s in roots if s.attributes] == [
+        "approval_wait",
+        "exception",
+        "succeeded",
+    ]
+    assert all(not s.events for s in spans)
 
 
 @pytest.mark.parametrize("cut", ["intent", "after_replace"])
