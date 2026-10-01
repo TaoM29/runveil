@@ -4,25 +4,25 @@ The [original charter](docs/PROJECT_PLAN.md) is the source of truth. Each phase 
 be independently reviewed before the next begins. No automatic continuation,
 commit or push is authorized.
 
-| Phase | Scope                                                     | Status                                    |
-| ----- | --------------------------------------------------------- | ----------------------------------------- |
-| 0     | Charter, workspaces, health, quality tooling, Compose, CI | Implemented; see verification record      |
-| 1     | Domain model, immutable versions, persistence, migrations | Implemented through Phase 1C              |
-| 2     | Provider protocol, scripted and hosted providers          | Implemented; hosted acceptance complete   |
-| 3     | Minimal persisted execution loop                          | Implemented; continued by Phase 4 request |
-| 4     | Typed tools and authorization                             | Implemented through Phase 4B              |
-| 5     | Durable worker, retries, idempotency and budgets          | Complete; Phase 6 continuation authorized |
-| 6     | Human approval and controlled mutations                   | Phase 6E implemented; review pending      |
-| 7     | Telemetry and trace UI                                    | Planned                                   |
-| 8     | Deterministic evaluation harness                          | Planned                                   |
-| 9     | Statistical comparison                                    | Planned                                   |
-| 10    | Sandboxed software engineering application                | Planned                                   |
-| 11    | MCP adapter through existing policy                       | Planned                                   |
-| 12    | AWS infrastructure with Terraform                         | Planned                                   |
-| 13    | Production CI/CD                                          | Planned                                   |
-| 14    | Temporary self-hosted inference and benchmarks            | Planned                                   |
-| 15    | Security hardening                                        | Planned                                   |
-| 16    | Public demo and portfolio release                         | Planned                                   |
+| Phase | Scope                                                     | Status                                      |
+| ----- | --------------------------------------------------------- | ------------------------------------------- |
+| 0     | Charter, workspaces, health, quality tooling, Compose, CI | Implemented; see verification record        |
+| 1     | Domain model, immutable versions, persistence, migrations | Implemented through Phase 1C                |
+| 2     | Provider protocol, scripted and hosted providers          | Implemented; hosted acceptance complete     |
+| 3     | Minimal persisted execution loop                          | Implemented; continued by Phase 4 request   |
+| 4     | Typed tools and authorization                             | Implemented through Phase 4B                |
+| 5     | Durable worker, retries, idempotency and budgets          | Complete; Phase 6 continuation authorized   |
+| 6     | Human approval and controlled mutations                   | Acceptance complete; closure review pending |
+| 7     | Telemetry and trace UI                                    | Planned                                     |
+| 8     | Deterministic evaluation harness                          | Planned                                     |
+| 9     | Statistical comparison                                    | Planned                                     |
+| 10    | Sandboxed software engineering application                | Planned                                     |
+| 11    | MCP adapter through existing policy                       | Planned                                     |
+| 12    | AWS infrastructure with Terraform                         | Planned                                     |
+| 13    | Production CI/CD                                          | Planned                                     |
+| 14    | Temporary self-hosted inference and benchmarks            | Planned                                     |
+| 15    | Security hardening                                        | Planned                                     |
+| 16    | Public demo and portfolio release                         | Planned                                     |
 
 ## Phase 1 review gates
 
@@ -212,7 +212,7 @@ acceptance a separate opt-in activity. Phase 6 continuation was authorized on
   See [ADR 0024](docs/adr/0024-local-operator-approval-api.md),
   [operations](docs/operations/APPROVAL_API.md) and [handoff](docs/operations/PHASE_6D.md).
 
-- **6E — Implemented; review pending:** small single-run approval console with
+- **6E — Implemented; browser acceptance continuation authorized:** small single-run approval console with
   memory-only credentials, exact proposal/workspace/mutation inspection, explicit
   profile consequences and inspection-bound decisions. A bounded local proxy
   forwards caller authentication without acquiring write or worker-start authority.
@@ -220,10 +220,23 @@ acceptance a separate opt-in activity. Phase 6 continuation was authorized on
   See [ADR 0025](docs/adr/0025-local-approval-console.md),
   [operations](docs/operations/APPROVAL_CONSOLE.md) and [handoff](docs/operations/PHASE_6E.md).
 
+- **6F — Acceptance complete; ready for closure review:** real-browser approval
+  and rejection through the production console, API, PostgreSQL and fresh worker
+  processes. Verified preapproval write prevention, explicit later execution,
+  exact approved replacement, rejection/no mutation and persisted browser outcomes.
+  No application changes or additional tests were needed. See
+  [closure audit](docs/operations/PHASE_6.md) and [handoff](docs/operations/PHASE_6F.md).
+
+## Phase 6 closure
+
+Implementation and acceptance are complete within ADRs 0021–0025's documented
+local operator and controlled single-file boundaries. The browser/worker evidence
+closes the remaining Phase 6E gap; no required charter gate remains open in that
+scope. Shared credentials, trusted checkout assumptions, uncertain side-effect
+recovery and deferred hosted/remote/sandbox guarantees remain explicit.
+
 ## Recommended next slice
 
-After review, consolidate Phase 6 acceptance and closure evidence, including a
-full-browser approval/rejection demonstration against the real local worker.
-Keep the current operational UI scope and all existing execution boundaries.
-Do not begin Phase 7 telemetry or broaden deployment/authentication scope until
-Phase 6 closure is reviewed.
+Review Phase 6 closure, then separately authorize a focused Phase 7 observability
+slice. Phase 7 has not started. Do not broaden product or deployment scope or begin
+implementation before that authorization.

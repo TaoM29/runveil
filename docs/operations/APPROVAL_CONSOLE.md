@@ -61,5 +61,7 @@ React DOM tests cover escaped content, exact decision bindings, acknowledgement,
 uncertain outcome, stale responses, input changes, pagehide and forget. Proxy tests
 cover destination/origin/authentication checks, credential-only forwarding, request
 and response limits, timeout, safe errors and no-store behavior. Production-server
-smoke checks verify framing/referrer headers. See [Phase 6E handoff](PHASE_6E.md) for
-real web/API/database/worker acceptance evidence and remaining browser coverage.
+smoke checks verify framing/referrer headers. The [Phase 6 closure audit](PHASE_6.md) records the completed real-browser
+approval/rejection demonstration through the production API and worker, with
+screenshots and database/file evidence. The [Phase 6E handoff](PHASE_6E.md) retains
+the earlier implementation and component/proxy verification history.

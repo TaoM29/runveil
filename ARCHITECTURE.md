@@ -1,6 +1,6 @@
 # Architecture
 
-## Implemented through Phase 6E; local approval console awaiting review
+## Implemented through Phase 6; acceptance complete, closure review pending
 
 ```mermaid
 flowchart LR
@@ -371,3 +371,14 @@ and invalidates stale responses and decision controls after failures/input chang
 No submission, worker dispatch, execution grant or filesystem access is added.
 See [ADR 0025](docs/adr/0025-local-approval-console.md) and
 [console operations](docs/operations/APPROVAL_CONSOLE.md).
+
+## Phase 6 closure evidence
+
+Phase 6F verifies the existing production console through real browser decisions,
+authenticated API transactions and fresh patch-worker processes. Paused runs do
+not write even with an execution grant; browser approval permits a separately
+authorized exact replacement; rejection prevents worker selection and mutation.
+No runtime or UI changes were required. See the [closure audit](docs/operations/PHASE_6.md)
+and [handoff](docs/operations/PHASE_6F.md). The established local/shared-token,
+trusted-checkout and uncertain-side-effect boundaries are unchanged. Phase 7
+requires separate authorization after closure review.

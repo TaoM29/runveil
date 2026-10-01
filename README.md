@@ -20,6 +20,6 @@ checks. This is a development project, not a production service.
 [Architecture](ARCHITECTURE.md) · [Roadmap](ROADMAP.md) ·
 [Development guide](docs/operations/DEVELOPMENT.md) ·
 [Phase 5 verification](docs/operations/PHASE_5.md) ·
-[Phase 6E review](docs/operations/PHASE_6E.md) · [Contributing](CONTRIBUTING.md)
+[Phase 6 acceptance](docs/operations/PHASE_6.md) · [Contributing](CONTRIBUTING.md)
 
 [MIT License](LICENSE)

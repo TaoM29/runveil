@@ -130,3 +130,12 @@ verified separately. The UI slice is ready for review, but final Phase 6 closure
 is not claimed. Recommended next slice: consolidate the Phase 6 acceptance mapping
 and run that full-browser demonstration without expanding the UI, then stop for
 closure review before Phase 7.
+
+## Subsequent browser acceptance — complete
+
+Phase 6F on 2026-10-01 closed the browser gap recorded above without changing
+application behavior. Both approve/apply and reject/no-mutation paths passed
+through the real browser, production web/API, database and fresh CLI workers.
+See [closure assessment](PHASE_6.md), [screenshots and snapshots](evidence/phase6/)
+and [Phase 6F handoff](PHASE_6F.md). The original slice's verification scope above
+is retained as historical evidence.

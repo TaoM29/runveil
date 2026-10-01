@@ -102,3 +102,4 @@ For the separate, explicitly opt-in hosted check, see
 - [Authenticated local approval API](APPROVAL_API.md)
 - [Local operator console](APPROVAL_CONSOLE.md)
 - [Phase 5 acceptance evidence](PHASE_5.md)
+- [Phase 6 browser acceptance and closure](PHASE_6.md)
