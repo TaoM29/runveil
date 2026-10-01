@@ -10,6 +10,7 @@ from runveil_persistence.history import HistoryRepository
 from runveil_persistence.jobs import claim_next, enroll
 from runveil_persistence.models import ModelInvocationRow, ToolCallRow
 from runveil_persistence.repositories import AgentRepository, RunRepository
+from runveil_persistence.traces import read_trace
 from runveil_worker.worker import COST_PROFILE, POLICY, FixtureProvider, configuration
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
@@ -65,6 +66,11 @@ async def test_cost_threshold_and_unknown_usage(
     assert state.cost.known_nanousd == (12_500 if partial else 25_000 * attempts)
     assert state.cost.unknown_attempts == int(partial)
     async with sessions.begin() as session:
+        trace = await read_trace(session, run_id)
+        assert trace.checkpoint is not None
+        assert trace.checkpoint.tokens == state.tokens
+        assert trace.checkpoint.cost == state.cost
+        assert trace.checkpoint.error_code == state.error_code
         assert await load_runtime_state(session, run_id) == state
         assert (await RunRepository(session).get(run_id)).status == RunStatus.FAILED
         assert (

@@ -1,6 +1,6 @@
 # Architecture
 
-## Implemented through Phase 6; acceptance complete, closure review pending
+## Implemented through Phase 7A; trace API review pending
 
 ```mermaid
 flowchart LR
@@ -8,7 +8,7 @@ flowchart LR
     Web -->|caller bearer / fixed local approval routes| API
     Client[HTTP client] --> API[FastAPI :8000]
     Compose[Docker Compose] --> PG[(PostgreSQL :5432)]
-    API -->|readiness and authenticated approval transactions| PG
+    API -->|readiness, approvals and read-only traces| PG
     Persistence[Async repositories and Alembic] --> PG
     Persistence --> Domain[Immutable versions, run lifecycle and history snapshots]
     Scripted[Offline scripted provider] --> Contracts[Model contracts and action validation]
@@ -382,3 +382,16 @@ No runtime or UI changes were required. See the [closure audit](docs/operations/
 and [handoff](docs/operations/PHASE_6F.md). The established local/shared-token,
 trusted-checkout and uncertain-side-effect boundaries are unchanged. Phase 7
 requires separate authorization after closure review.
+
+## Phase 7A durable trace inspection
+
+The API now exposes a separate local read-only trace capability over existing
+history. Repeatable-read, read-only PostgreSQL transactions keep lifecycle,
+checkpoint accounting, approval metadata and bounded event/invocation projections
+consistent without run locks. Continuation pages bind an event watermark and
+refuse changed history. Content-bearing payloads are omitted; a bounded final
+summary is explicitly operator-visible. No runtime, mutation, migration or
+dependency changes are required. This source of durable evidence precedes the
+trace UI and best-effort OpenTelemetry/log export, which remain unimplemented.
+See [ADR 0026](docs/adr/0026-durable-run-trace.md) and
+[trace operations](docs/operations/TRACES.md).

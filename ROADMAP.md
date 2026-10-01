@@ -4,25 +4,25 @@ The [original charter](docs/PROJECT_PLAN.md) is the source of truth. Each phase 
 be independently reviewed before the next begins. No automatic continuation,
 commit or push is authorized.
 
-| Phase | Scope                                                     | Status                                      |
-| ----- | --------------------------------------------------------- | ------------------------------------------- |
-| 0     | Charter, workspaces, health, quality tooling, Compose, CI | Implemented; see verification record        |
-| 1     | Domain model, immutable versions, persistence, migrations | Implemented through Phase 1C                |
-| 2     | Provider protocol, scripted and hosted providers          | Implemented; hosted acceptance complete     |
-| 3     | Minimal persisted execution loop                          | Implemented; continued by Phase 4 request   |
-| 4     | Typed tools and authorization                             | Implemented through Phase 4B                |
-| 5     | Durable worker, retries, idempotency and budgets          | Complete; Phase 6 continuation authorized   |
-| 6     | Human approval and controlled mutations                   | Acceptance complete; closure review pending |
-| 7     | Telemetry and trace UI                                    | Planned                                     |
-| 8     | Deterministic evaluation harness                          | Planned                                     |
-| 9     | Statistical comparison                                    | Planned                                     |
-| 10    | Sandboxed software engineering application                | Planned                                     |
-| 11    | MCP adapter through existing policy                       | Planned                                     |
-| 12    | AWS infrastructure with Terraform                         | Planned                                     |
-| 13    | Production CI/CD                                          | Planned                                     |
-| 14    | Temporary self-hosted inference and benchmarks            | Planned                                     |
-| 15    | Security hardening                                        | Planned                                     |
-| 16    | Public demo and portfolio release                         | Planned                                     |
+| Phase | Scope                                                     | Status                                       |
+| ----- | --------------------------------------------------------- | -------------------------------------------- |
+| 0     | Charter, workspaces, health, quality tooling, Compose, CI | Implemented; see verification record         |
+| 1     | Domain model, immutable versions, persistence, migrations | Implemented through Phase 1C                 |
+| 2     | Provider protocol, scripted and hosted providers          | Implemented; hosted acceptance complete      |
+| 3     | Minimal persisted execution loop                          | Implemented; continued by Phase 4 request    |
+| 4     | Typed tools and authorization                             | Implemented through Phase 4B                 |
+| 5     | Durable worker, retries, idempotency and budgets          | Complete; Phase 6 continuation authorized    |
+| 6     | Human approval and controlled mutations                   | Complete; Phase 7 continuation authorized    |
+| 7     | Telemetry and trace UI                                    | Implemented through Phase 7A; review pending |
+| 8     | Deterministic evaluation harness                          | Planned                                      |
+| 9     | Statistical comparison                                    | Planned                                      |
+| 10    | Sandboxed software engineering application                | Planned                                      |
+| 11    | MCP adapter through existing policy                       | Planned                                      |
+| 12    | AWS infrastructure with Terraform                         | Planned                                      |
+| 13    | Production CI/CD                                          | Planned                                      |
+| 14    | Temporary self-hosted inference and benchmarks            | Planned                                      |
+| 15    | Security hardening                                        | Planned                                      |
+| 16    | Public demo and portfolio release                         | Planned                                      |
 
 ## Phase 1 review gates
 
@@ -235,8 +235,20 @@ closes the remaining Phase 6E gap; no required charter gate remains open in that
 scope. Shared credentials, trusted checkout assumptions, uncertain side-effect
 recovery and deferred hosted/remote/sandbox guarantees remain explicit.
 
+Phase 7 continuation was authorized on 2026-10-01.
+
+## Phase 7 review gates
+
+- **7A — Implemented; review pending:** separate read-only trace capability,
+  consistent database snapshots, bounded ordered event pagination, invocation
+  correlation/outcomes/durations, retry links, checkpoint token/cost accounting,
+  approval metadata and bounded final summary. No execution/authorization changes.
+  See [ADR 0026](docs/adr/0026-durable-run-trace.md),
+  [operations](docs/operations/TRACES.md) and [handoff](docs/operations/PHASE_7A.md).
+  OpenTelemetry, structured logs, per-attempt usage/latency projection, trace UI
+  and full Phase 7 acceptance remain open.
+
 ## Recommended next slice
 
-Review Phase 6 closure, then separately authorize a focused Phase 7 observability
-slice. Phase 7 has not started. Do not broaden product or deployment scope or begin
-implementation before that authorization.
+Review Phase 7A, then add a focused trace UI over this authenticated durable API.
+Keep telemetry/export a separate reviewable slice; Phase 7 is not complete.
