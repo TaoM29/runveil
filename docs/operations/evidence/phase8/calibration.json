@@ -1,0 +1,334 @@
+{
+  "schema_version": 1,
+  "scope": "scripted-calibration-not-model-quality",
+  "accounting": "synthetic-usage-and-tariff",
+  "suite": {
+    "schema_version": 1,
+    "name": "code-reading-calibration",
+    "version": "1",
+    "split": "development",
+    "scorer": "exact-summary-and-tools-v1",
+    "cases": [
+      {
+        "id": "literal",
+        "task": "What does `return 7` return? Answer with the integer only.",
+        "file_content": "def constant():\n    return 7\n",
+        "responses": [
+          "{\"action\":\"finish\",\"result\":{\"summary\":\"7\",\"artifacts\":[]}}"
+        ],
+        "expected_summary": "7",
+        "expected_tools": []
+      },
+      {
+        "id": "read-default",
+        "task": "Read example.py. What is the default separator?",
+        "file_content": "def join(parts, sep=\"-\"):\n    return sep.join(parts)\n",
+        "responses": [
+          "{\"action\":\"tool_call\",\"tool_name\":\"repository.read_file\",\"arguments\":{\"path\":\"example.py\"},\"decision_summary\":\"Read the allowlisted public source.\"}",
+          "{\"action\":\"finish\",\"result\":{\"summary\":\"-\",\"artifacts\":[]}}"
+        ],
+        "expected_summary": "-",
+        "expected_tools": ["repository.read_file"]
+      },
+      {
+        "id": "search-and-read",
+        "task": "Locate then read clamp. What is its upper bound?",
+        "file_content": "def clamp(value):\n    return min(10, max(0, value))\n",
+        "responses": [
+          "{\"action\":\"tool_call\",\"tool_name\":\"repository.search\",\"arguments\":{\"query\":\"def clamp\"},\"decision_summary\":\"Locate the public function.\"}",
+          "{\"action\":\"tool_call\",\"tool_name\":\"repository.read_file\",\"arguments\":{\"path\":\"example.py\"},\"decision_summary\":\"Read the allowlisted public source.\"}",
+          "{\"action\":\"finish\",\"result\":{\"summary\":\"10\",\"artifacts\":[]}}"
+        ],
+        "expected_summary": "10",
+        "expected_tools": ["repository.search", "repository.read_file"]
+      }
+    ]
+  },
+  "baseline": {
+    "id": "b796e5b3-e9b7-4205-9278-e94a35389ffa",
+    "suite_digest": "f035436a7fe09c020f4d24de1d1ab5f7ece9725e7b1e429b94f144b388c17ef2",
+    "implementation_digest": "c064fac8b6897e7788b923c8043e0fabcc1c9985a7d4d1fce39aff16614acf9a",
+    "agent_version_id": "303e0354-f723-4a96-9ce1-9b222fdf5fb7",
+    "agent_version_number": 1,
+    "configuration": {
+      "schema_version": 8,
+      "workspace": null,
+      "max_model_calls": 3,
+      "max_tool_calls": 2,
+      "max_identical_tool_calls": 2,
+      "pricing": {
+        "price_id": "synthetic-eval-v1",
+        "provider": "scripted",
+        "model": "eval-fixture-v1",
+        "currency": "USD",
+        "input_nanousd_per_token": 1000,
+        "output_nanousd_per_token": 2000
+      },
+      "max_cost_nanousd": 1000000,
+      "max_input_tokens": 1000,
+      "max_total_output_tokens": 1000,
+      "max_elapsed_seconds": 60,
+      "model_retry": {
+        "max_retries": 0,
+        "base_delay_seconds": 1
+      },
+      "tool_policy": {
+        "allowed_tools": ["repository.read_file", "repository.search"],
+        "permissions": ["read"]
+      },
+      "provider": "scripted",
+      "model": "eval-fixture-v1",
+      "system_prompt": "Inspect the public code fixture using only granted read tools.",
+      "max_steps": 3,
+      "temperature": 0.0,
+      "max_output_tokens": 1024,
+      "timeout_seconds": 5.0
+    },
+    "started_at": "2026-10-01T18:54:00.172661Z",
+    "finished_at": "2026-10-01T18:54:01.402912Z",
+    "cases": [
+      {
+        "case_id": "literal",
+        "run_id": "5b7251c7-b9f1-4664-888d-ed6810fd5b67",
+        "status": "SUCCEEDED",
+        "grade": "pass",
+        "error_code": null,
+        "event_sequence": 9,
+        "steps": 1,
+        "model_calls": 1,
+        "tool_calls": 0,
+        "retries": 0,
+        "elapsed_ms": 182.564,
+        "tokens": {
+          "attempts": 1,
+          "input_tokens": 10,
+          "output_tokens": 5,
+          "unknown_attempts": 0,
+          "last_usage": {
+            "input_tokens": 10,
+            "output_tokens": 5
+          }
+        },
+        "cost": {
+          "known_nanousd": 20000,
+          "unknown_attempts": 0
+        }
+      },
+      {
+        "case_id": "read-default",
+        "run_id": "1ed71d2d-7caf-47bc-993a-c81ef8e38897",
+        "status": "SUCCEEDED",
+        "grade": "pass",
+        "error_code": null,
+        "event_sequence": 17,
+        "steps": 3,
+        "model_calls": 2,
+        "tool_calls": 1,
+        "retries": 0,
+        "elapsed_ms": 335.734,
+        "tokens": {
+          "attempts": 2,
+          "input_tokens": 20,
+          "output_tokens": 10,
+          "unknown_attempts": 0,
+          "last_usage": {
+            "input_tokens": 10,
+            "output_tokens": 5
+          }
+        },
+        "cost": {
+          "known_nanousd": 40000,
+          "unknown_attempts": 0
+        }
+      },
+      {
+        "case_id": "search-and-read",
+        "run_id": "1360f778-bff2-43f8-8719-cfd9bde3b9dd",
+        "status": "FAILED",
+        "grade": "runtime_failure",
+        "error_code": "step_limit_exceeded",
+        "event_sequence": 19,
+        "steps": 3,
+        "model_calls": 2,
+        "tool_calls": 1,
+        "retries": 0,
+        "elapsed_ms": 415.757,
+        "tokens": {
+          "attempts": 2,
+          "input_tokens": 20,
+          "output_tokens": 10,
+          "unknown_attempts": 0,
+          "last_usage": {
+            "input_tokens": 10,
+            "output_tokens": 5
+          }
+        },
+        "cost": {
+          "known_nanousd": 40000,
+          "unknown_attempts": 0
+        }
+      }
+    ]
+  },
+  "candidate": {
+    "id": "f8d36d1c-d822-4ef6-9d30-064f349d3ab4",
+    "suite_digest": "f035436a7fe09c020f4d24de1d1ab5f7ece9725e7b1e429b94f144b388c17ef2",
+    "implementation_digest": "c064fac8b6897e7788b923c8043e0fabcc1c9985a7d4d1fce39aff16614acf9a",
+    "agent_version_id": "2181b507-1faf-4712-bac0-997a4bc2080c",
+    "agent_version_number": 2,
+    "configuration": {
+      "schema_version": 8,
+      "workspace": null,
+      "max_model_calls": 3,
+      "max_tool_calls": 2,
+      "max_identical_tool_calls": 2,
+      "pricing": {
+        "price_id": "synthetic-eval-v1",
+        "provider": "scripted",
+        "model": "eval-fixture-v1",
+        "currency": "USD",
+        "input_nanousd_per_token": 1000,
+        "output_nanousd_per_token": 2000
+      },
+      "max_cost_nanousd": 1000000,
+      "max_input_tokens": 1000,
+      "max_total_output_tokens": 1000,
+      "max_elapsed_seconds": 60,
+      "model_retry": {
+        "max_retries": 0,
+        "base_delay_seconds": 1
+      },
+      "tool_policy": {
+        "allowed_tools": ["repository.read_file", "repository.search"],
+        "permissions": ["read"]
+      },
+      "provider": "scripted",
+      "model": "eval-fixture-v1",
+      "system_prompt": "Inspect the public code fixture using only granted read tools.",
+      "max_steps": 5,
+      "temperature": 0.0,
+      "max_output_tokens": 1024,
+      "timeout_seconds": 5.0
+    },
+    "started_at": "2026-10-01T18:54:01.403068Z",
+    "finished_at": "2026-10-01T18:54:02.469075Z",
+    "cases": [
+      {
+        "case_id": "literal",
+        "run_id": "3db3f1fa-d3e0-4ee6-aca7-f0d51a215f03",
+        "status": "SUCCEEDED",
+        "grade": "pass",
+        "error_code": null,
+        "event_sequence": 9,
+        "steps": 1,
+        "model_calls": 1,
+        "tool_calls": 0,
+        "retries": 0,
+        "elapsed_ms": 102.316,
+        "tokens": {
+          "attempts": 1,
+          "input_tokens": 10,
+          "output_tokens": 5,
+          "unknown_attempts": 0,
+          "last_usage": {
+            "input_tokens": 10,
+            "output_tokens": 5
+          }
+        },
+        "cost": {
+          "known_nanousd": 20000,
+          "unknown_attempts": 0
+        }
+      },
+      {
+        "case_id": "read-default",
+        "run_id": "134094cc-67eb-44c0-8285-961b4041673e",
+        "status": "SUCCEEDED",
+        "grade": "pass",
+        "error_code": null,
+        "event_sequence": 17,
+        "steps": 3,
+        "model_calls": 2,
+        "tool_calls": 1,
+        "retries": 0,
+        "elapsed_ms": 277.843,
+        "tokens": {
+          "attempts": 2,
+          "input_tokens": 20,
+          "output_tokens": 10,
+          "unknown_attempts": 0,
+          "last_usage": {
+            "input_tokens": 10,
+            "output_tokens": 5
+          }
+        },
+        "cost": {
+          "known_nanousd": 40000,
+          "unknown_attempts": 0
+        }
+      },
+      {
+        "case_id": "search-and-read",
+        "run_id": "fdaf26c0-bdfb-4b60-af78-91598e2362e4",
+        "status": "SUCCEEDED",
+        "grade": "pass",
+        "error_code": null,
+        "event_sequence": 25,
+        "steps": 5,
+        "model_calls": 3,
+        "tool_calls": 2,
+        "retries": 0,
+        "elapsed_ms": 489.949,
+        "tokens": {
+          "attempts": 3,
+          "input_tokens": 30,
+          "output_tokens": 15,
+          "unknown_attempts": 0,
+          "last_usage": {
+            "input_tokens": 10,
+            "output_tokens": 5
+          }
+        },
+        "cost": {
+          "known_nanousd": 60000,
+          "unknown_attempts": 0
+        }
+      }
+    ]
+  },
+  "baseline_metrics": {
+    "cases": 3,
+    "passed": 2,
+    "success_rate": 0.6666666666666666,
+    "runtime_failures": 1,
+    "oracle_failures": 0,
+    "steps": 7,
+    "model_calls": 5,
+    "tool_calls": 2,
+    "retries": 0,
+    "elapsed_ms": 934.055,
+    "input_tokens": 50,
+    "output_tokens": 25,
+    "unknown_token_attempts": 0,
+    "known_nanousd": 100000,
+    "unknown_cost_attempts": 0
+  },
+  "candidate_metrics": {
+    "cases": 3,
+    "passed": 3,
+    "success_rate": 1.0,
+    "runtime_failures": 0,
+    "oracle_failures": 0,
+    "steps": 9,
+    "model_calls": 6,
+    "tool_calls": 3,
+    "retries": 0,
+    "elapsed_ms": 870.1080000000001,
+    "input_tokens": 60,
+    "output_tokens": 30,
+    "unknown_token_attempts": 0,
+    "known_nanousd": 120000,
+    "unknown_cost_attempts": 0
+  },
+  "success_rate_delta": 0.33333333333333337
+}

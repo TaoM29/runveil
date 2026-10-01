@@ -8,7 +8,7 @@ dependencies = []
 package = false
 
 [tool.uv.workspace]
-members = ["apps/api", "apps/worker", "packages/agent_core", "packages/persistence", "packages/model_providers", "packages/tool_runtime"]
+members = ["apps/api", "apps/worker", "packages/agent_core", "packages/persistence", "packages/model_providers", "packages/tool_runtime", "packages/evaluations"]
 
 [dependency-groups]
 dev = [
@@ -33,7 +33,7 @@ strict = true
 files = ["apps/api/src", "apps/worker/src", "apps/api/tests", "packages", "scripts"]
 
 [tool.pytest.ini_options]
-testpaths = ["apps/api/tests", "packages/agent_core/tests", "packages/persistence/tests", "packages/model_providers/tests", "packages/tool_runtime/tests"]
+testpaths = ["apps/api/tests", "packages/agent_core/tests", "packages/persistence/tests", "packages/model_providers/tests", "packages/tool_runtime/tests", "packages/evaluations/tests"]
 markers = ["integration: requires RUNVEIL_TEST_DATABASE_URL and a PostgreSQL role with CREATEDB"]
 asyncio_mode = "strict"
 asyncio_default_fixture_loop_scope = "function"

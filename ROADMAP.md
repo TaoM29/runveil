@@ -13,8 +13,8 @@ commit or push is authorized.
 | 4     | Typed tools and authorization                             | Implemented through Phase 4B              |
 | 5     | Durable worker, retries, idempotency and budgets          | Complete; Phase 6 continuation authorized |
 | 6     | Human approval and controlled mutations                   | Complete; Phase 7 continuation authorized |
-| 7     | Telemetry and trace UI                                    | Complete; ready for closure review        |
-| 8     | Deterministic evaluation harness                          | Planned                                   |
+| 7     | Telemetry and trace UI                                    | Complete; Phase 8 continuation authorized |
+| 8     | Deterministic evaluation harness                          | 8A implemented; review pending            |
 | 9     | Statistical comparison                                    | Planned                                   |
 | 10    | Sandboxed software engineering application                | Planned                                   |
 | 11    | MCP adapter through existing policy                       | Planned                                   |
@@ -279,8 +279,22 @@ local capabilities, content-minimized projections, persisted timing semantics,
 unknown accounting and best-effort telemetry limits remain explicit. Per-attempt
 UI usage/provider latency, collectors and public deployment remain deferred.
 
+Phase 8 continuation was authorized on 2026-10-01.
+
+## Phase 8 review gates
+
+- **8A — Implemented; review pending:** immutable versioned suite/case contracts,
+  PostgreSQL-backed scripted execution, deterministic scoring from persisted evidence,
+  EvalRun/case-result JSON snapshots, full provenance and paired aggregate comparison.
+  Three public code-reading calibration cases compare two immutable step budgets;
+  this validates the harness, not model quality. No schema, runtime, authorization,
+  telemetry or UI change. See [ADR 0029](docs/adr/0029-offline-evaluation-harness.md),
+  [operations](docs/operations/EVALUATIONS.md) and [handoff](docs/operations/PHASE_8A.md).
+
 ## Recommended next slice
 
-Review Phase 7 closure, then separately authorize the first focused Phase 8
-evaluation slice over existing execution contracts using deterministic offline
-fixtures. Phase 8 has not started; no automatic continuation is authorized.
+Review 8A, then expand the versioned controlled coding benchmark toward the charter's
+20–30 cases with deterministic oracles and explicit development/held-out discipline,
+within the existing read-only boundary. Plan sandbox-dependent coding/test execution
+separately. Full Phase 8 acceptance and Phase 9 statistics remain open; no automatic
+continuation is authorized.

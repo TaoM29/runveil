@@ -1,6 +1,6 @@
 # Architecture
 
-## Implemented through Phase 7B; trace console review pending
+## Implemented through Phase 8A; evaluation foundation review pending
 
 ```mermaid
 flowchart LR
@@ -438,5 +438,23 @@ accounting agree; trace access adds no approval or mutation authority. Credentia
 clearing and separate capabilities were verified in the browser and over HTTP.
 No application or architecture change was needed for acceptance. See the
 [closure audit](docs/operations/PHASE_7.md) and [handoff](docs/operations/PHASE_7D.md).
-Retained local/security/telemetry-loss limits remain in force. Phase 8 requires
-separate authorization after closure review.
+Retained local/security/telemetry-loss limits remain in force. Phase 8 continuation
+was separately authorized on 2026-10-01.
+
+## Phase 8A offline evaluation foundation
+
+`runveil_evaluations` composes the existing runtime, PostgreSQL store and native
+read tools. Frozen suite/case contracts bind task, public fixture, script and oracle
+through a canonical content digest. A bounded sequential calibration compares two
+immutable agent configurations over the same three cases, with fresh per-case
+providers and temporary one-file repositories. It adds no execution authority.
+
+Scoring uses reconstructed terminal state and ordered tool evidence from a consistent
+read-only database snapshot. Local EvalRun/case-result JSON snapshots retain version,
+configuration, implementation fingerprint, timestamps and durable run IDs; aggregates
+preserve failure denominators and unknown-accounting counters. Comparisons require
+identical content, implementation and complete ordered coverage. Source timing and
+identities vary; the scripted grades/counts reproduce. No database evaluation schema,
+resumable batch, arbitrary code/test runner, hosted provider or statistical inference
+is introduced. See [ADR 0029](docs/adr/0029-offline-evaluation-harness.md) and
+[evaluation operations](docs/operations/EVALUATIONS.md).

@@ -6,6 +6,7 @@ requires-python = "==3.12.*"
 members = [
     "runveil-agent-core",
     "runveil-api",
+    "runveil-evaluations",
     "runveil-model-providers",
     "runveil-persistence",
     "runveil-tool-runtime",
@@ -590,6 +591,23 @@ requires-dist = [
     { name = "runveil-persistence", editable = "packages/persistence" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.40,<2.1" },
     { name = "uvicorn", specifier = ">=0.34,<1" },
+]
+
+[[package]]
+name = "runveil-evaluations"
+version = "0.1.0"
+source = { editable = "packages/evaluations" }
+dependencies = [
+    { name = "runveil-agent-core" },
+    { name = "runveil-persistence" },
+    { name = "runveil-tool-runtime" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "runveil-agent-core", editable = "packages/agent_core" },
+    { name = "runveil-persistence", editable = "packages/persistence" },
+    { name = "runveil-tool-runtime", editable = "packages/tool_runtime" },
 ]
 
 [[package]]
