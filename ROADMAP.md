@@ -13,7 +13,7 @@ commit or push is authorized.
 | 4     | Typed tools and authorization                             | Implemented through Phase 4B                 |
 | 5     | Durable worker, retries, idempotency and budgets          | Complete; Phase 6 continuation authorized    |
 | 6     | Human approval and controlled mutations                   | Complete; Phase 7 continuation authorized    |
-| 7     | Telemetry and trace UI                                    | Implemented through Phase 7B; review pending |
+| 7     | Telemetry and trace UI                                    | Implemented through Phase 7C; review pending |
 | 8     | Deterministic evaluation harness                          | Planned                                      |
 | 9     | Statistical comparison                                    | Planned                                      |
 | 10    | Sandboxed software engineering application                | Planned                                      |
@@ -247,17 +247,25 @@ Phase 7 continuation was authorized on 2026-10-01.
   [operations](docs/operations/TRACES.md) and [handoff](docs/operations/PHASE_7A.md).
   Per-attempt usage/latency projection remains deferred.
 
-- **7B — Implemented; review pending:** operational single-run trace console,
+- **7B — Implemented; Phase 7C continuation authorized:** operational single-run trace console,
   separate memory-only read credential, bounded GET proxy and watermark-bound
   event pages. Unknown accounting, persisted timing and approval limitations remain
   explicit. Browser verification covers completed/paused runs and 113-event
   pagination, with no mutation authority. See
   [ADR 0027](docs/adr/0027-local-trace-console.md), [operations](docs/operations/TRACES.md)
   and [handoff](docs/operations/PHASE_7B.md).
-  OpenTelemetry, structured logs and full Phase 7 acceptance remain open.
+  Full Phase 7 acceptance remains open.
+
+- **7C — Implemented; review pending:** opt-in core execution/model/tool OTel spans,
+  worker-owned bounded JSON stderr export and durable invocation/accounting
+  correlation. Export failures preserve execution, retries and approval/WRITE
+  boundaries. No persistence/API/UI changes or network collector. See
+  [ADR 0028](docs/adr/0028-execution-telemetry.md),
+  [operations](docs/operations/TELEMETRY.md) and [handoff](docs/operations/PHASE_7C.md).
 
 ## Recommended next slice
 
-Review Phase 7B, then implement focused OpenTelemetry instrumentation and safe
-structured logging/correlation for the existing execution boundaries. Preserve
-persisted history as authority; Phase 7 is not complete.
+Review Phase 7C, then audit Phase 7 acceptance end to end across completed, failed,
+retried and approval-wait runs, reconciling UI evidence, durable events and optional
+telemetry. Close only demonstrated gaps; per-attempt UI usage/latency projection
+remains deferred. Phase 7 is not complete and Phase 8 is not authorized.

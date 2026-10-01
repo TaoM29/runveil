@@ -392,7 +392,7 @@ consistent without run locks. Continuation pages bind an event watermark and
 refuse changed history. Content-bearing payloads are omitted; a bounded final
 summary is explicitly operator-visible. No runtime, mutation, migration or
 dependency changes are required. This source of durable evidence precedes the
-trace UI and best-effort OpenTelemetry/log export, which remain unimplemented.
+trace UI and best-effort OpenTelemetry/log export added in the following slices.
 See [ADR 0026](docs/adr/0026-durable-run-trace.md) and
 [trace operations](docs/operations/TRACES.md).
 
@@ -408,6 +408,23 @@ persisted wall-time semantics are explicit. All payload-derived text is escaped.
 
 The only shared extraction is the existing bounded response stream reader used
 by both concrete proxies. The API, runtime, persistence and worker remain unchanged.
-OpenTelemetry and structured logs remain future work. See
+See
 [ADR 0027](docs/adr/0027-local-trace-console.md) and
 [handoff](docs/operations/PHASE_7B.md).
+
+## Phase 7C execution telemetry
+
+The core emits opt-in OTel API observations for each execute call and committed
+model/tool dispatch intent. Scoped application-owned tracers isolate concurrent
+roots; retry/resume calls correlate through durable IDs without ambient propagation.
+The worker owns the SDK and a bounded batch JSON stderr exporter, disabled by
+default. It exports only fixed classifications, identifiers, timing and available
+usage/cost totals, with an independent output allowlist and no payload/exception
+serialization. Span failures preserve execution outcomes and cancellation; telemetry
+has no authority over storage, retries or approved mutation.
+
+Telemetry is lossy local evidence. Worker finalization can follow root span end,
+and abrupt death can omit spans entirely. The trace API/UI continues to read durable
+history with unchanged authentication. No collector, metrics or distributed
+propagation is introduced. See [ADR 0028](docs/adr/0028-execution-telemetry.md),
+[operations](docs/operations/TELEMETRY.md) and [handoff](docs/operations/PHASE_7C.md).

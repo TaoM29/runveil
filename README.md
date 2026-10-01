@@ -13,7 +13,9 @@ repository tools, durable patch reviews and approved single-file replacement in 
 controlled local checkout. A local authenticated API and small operator console
 expose approval inspection and decisions. A separate read-only trace API and
 [trace console](docs/operations/TRACES.md) expose ordered execution evidence and
-persisted accounting. Hosted approval flows, sandbox isolation and evaluation remain
+persisted accounting. Opt-in [execution telemetry](docs/operations/TELEMETRY.md)
+adds correlated OpenTelemetry spans and safe JSON output. Hosted approval flows,
+sandbox isolation and evaluation remain
 future work.
 
 Reliability is verified with deterministic tests and worker-process crash/recovery
