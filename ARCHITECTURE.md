@@ -1,6 +1,6 @@
 # Architecture
 
-## Implemented through Phase 6B; worker approval integration awaiting review
+## Implemented through Phase 6C; controlled writer awaiting review
 
 ```mermaid
 flowchart LR
@@ -320,3 +320,28 @@ file or creates mutation authorization. Controlled writing, authenticated HTTP/U
 and live hosted approval acceptance remain unimplemented. See
 [ADR 0022](docs/adr/0022-worker-patch-review.md) and
 [Phase 6B handoff](docs/operations/PHASE_6B.md).
+
+## Phase 6C controlled replacement
+
+The new `repository-patch-v1` profile pins configuration/checkpoint version 11 and
+WRITE permission. A distinct operator grant enables only the core's approved-patch
+branch; ordinary ToolRegistry dispatch remains read-only. Proposal pause and
+provenance checks are shared with Phase 6B under explicit profile separation.
+Prior review-only approvals are never adopted as mutation authorization.
+
+Migration 0010 adds a partial unique tool-call index: one apply intent per run.
+The exact approved proposal is committed as intent before any write. For the local
+bounded replacement only, final live claim/history/deadline and approval/policy
+checks hold row locks through synchronous filesystem I/O and outcome commit. The
+writer revalidates one top-level file, uses descriptor-relative nofollow operations,
+a private staged file, fsync and atomic replacement. The root advisory lock assumes
+an exclusively assigned operator-controlled checkout; this is not hostile-process
+isolation or atomic preimage compare-and-swap. Extended metadata is not copied.
+
+An unresolved mutation can already have changed the workspace. Terminal-only
+recovery therefore validates database provenance and records `patch_outcome_unknown`
+without filesystem access or replay. It cannot dispatch or rebind a writer.
+Post-I/O expiry is conservatively uncertain. Success commits the applied result
+and terminal state; duplicate selection cannot repeat it. See
+[ADR 0023](docs/adr/0023-controlled-single-file-mutation.md),
+[operations](docs/operations/PATCHES.md) and [handoff](docs/operations/PHASE_6C.md).

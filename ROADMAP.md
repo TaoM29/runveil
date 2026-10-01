@@ -12,7 +12,7 @@ commit or push is authorized.
 | 3     | Minimal persisted execution loop                          | Implemented; continued by Phase 4 request |
 | 4     | Typed tools and authorization                             | Implemented through Phase 4B              |
 | 5     | Durable worker, retries, idempotency and budgets          | Complete; Phase 6 continuation authorized |
-| 6     | Human approval and controlled mutations                   | Phase 6B implemented; review pending      |
+| 6     | Human approval and controlled mutations                   | Phase 6C implemented; review pending      |
 | 7     | Telemetry and trace UI                                    | Planned                                   |
 | 8     | Deterministic evaluation harness                          | Planned                                   |
 | 9     | Statistical comparison                                    | Planned                                   |
@@ -185,7 +185,7 @@ acceptance a separate opt-in activity. Phase 6 continuation was authorized on
   This is an isolated review workflow, not model-driven worker recovery or full
   Phase 6 acceptance. HTTP/UI and controlled patch writing remain outstanding.
 
-- **6B — Implemented; review pending:** offline model-driven repository proposal,
+- **6B — Implemented; Phase 6C continuation authorized:** offline model-driven repository proposal,
   exact snapshot preimage validation, fenced atomic worker suspension/lease release,
   one-time decisions and checkpoint continuation under a fresh workspace binding.
   Approval wait preserves the original elapsed deadline and accounting; uncertain
@@ -195,10 +195,18 @@ acceptance a separate opt-in activity. Phase 6 continuation was authorized on
   [operations](docs/operations/APPROVALS.md#workspace-bound-worker-review-phase-6b)
   and [handoff](docs/operations/PHASE_6B.md).
 
+- **6C — Implemented; review pending:** new write-capable profile and version 11,
+  exact approved single-file replacement, separate operator WRITE grant, committed
+  single-use intent, final claim/approval/preimage checks and atomic filesystem
+  replacement. Uncertain intent terminates without filesystem access or replay;
+  existing review-only approvals cannot authorize writes. Scope is one ordinary
+  top-level file in an exclusively assigned trusted checkout, not a sandbox.
+  See [ADR 0023](docs/adr/0023-controlled-single-file-mutation.md),
+  [operations](docs/operations/PATCHES.md) and [handoff](docs/operations/PHASE_6C.md).
+
 ## Recommended next slice
 
-After review, implement one controlled single-file writer in an explicitly new
-profile, with single-use mutation intent, exact approved proposal/workspace/policy
-binding, fresh preimage validation and conservative uncertain-effect recovery.
-Existing review-only approvals must not become write permission. API/UI and
-reviewer authentication remain further Phase 6 work.
+After review, add an appropriately authenticated operator approval API and a small
+UI for exact proposal inspection and approve/reject decisions. Preserve profile
+separation, revision/digest checks and explicit write authorization. Phase 6's
+HTTP/UI acceptance remains open; stronger sandbox isolation remains later work.

@@ -9,8 +9,8 @@ is built directly so its behavior can be inspected and tested.
 The goal is a software-engineering agent that investigates a repository and
 proposes changes in an isolated environment, with human approval before applying
 them. Today, the backend supports durable execution and controlled read-only
-repository tools, plus local and workspace-bound worker patch reviews. Patch
-application, hosted approval flows, sandboxed changes and evaluation remain future work; the API
+repository tools, durable patch reviews and approved single-file replacement in a
+controlled local checkout. Hosted approval flows, sandbox isolation and evaluation remain future work; the API
 and web console are still foundations.
 
 Reliability is verified with deterministic tests and worker-process crash/recovery
@@ -19,6 +19,6 @@ checks. This is a development project, not a production service.
 [Architecture](ARCHITECTURE.md) · [Roadmap](ROADMAP.md) ·
 [Development guide](docs/operations/DEVELOPMENT.md) ·
 [Phase 5 verification](docs/operations/PHASE_5.md) ·
-[Phase 6B review](docs/operations/PHASE_6B.md) · [Contributing](CONTRIBUTING.md)
+[Phase 6C review](docs/operations/PHASE_6C.md) · [Contributing](CONTRIBUTING.md)
 
 [MIT License](LICENSE)
