@@ -97,4 +97,5 @@ For the separate, explicitly opt-in hosted check, see
 - [Persistence and migrations](PERSISTENCE.md)
 - [SQS notification adapter](BROKER.md)
 - [Quarantine inspection and release](ADMISSION.md)
+- [Local durable patch review](APPROVALS.md)
 - [Phase 5 acceptance evidence](PHASE_5.md)

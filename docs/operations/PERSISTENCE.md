@@ -295,3 +295,17 @@ and elapsed checks. On expiry, the failed outcome (if pending), checkpoint,
 `ElapsedBudgetExceeded` carry the persisted state back to the core loop; it must
 not be raised inside the transaction and roll back the evidence. Database errors
 and task cancellation still roll back normally. See [worker operations](WORKER.md).
+
+## Durable patch reviews
+
+Migration 0009 adds `approval_requests`: one bounded proposal per dedicated review
+run, immutable identity/content/digest and a one-time decision. The
+`ApprovalRepository` is a trusted, caller-transaction-owned workflow and refuses
+worker-enrolled runs. Request commits its checkpoint and WAITING_FOR_APPROVAL
+transition together; approve/reject commits the decision and lifecycle result
+together. Run-row locks serialize decisions and cancellation, with required
+revision/digest checks. No tool intent or filesystem write is generated. See
+[approval operations](APPROVALS.md) for the review-only scope and local CLI.
+
+Downgrading below 0009 removes approval records while retaining run history; a
+waiting review then cannot be resolved. Do not use downgrade as a recovery action.
