@@ -1,6 +1,6 @@
 # Local approval console
 
-The home page is a single-run operator console for the
+The `/approvals` page is a single-run operator console for the
 [existing approval API](APPROVAL_API.md). It has no submit, start-worker or write-grant
 control. The local shared token authorizes all supported approvals in that API
 installation, not an individually identified reviewer.
@@ -24,7 +24,7 @@ The web process does not need `RUNVEIL_APPROVAL_TOKEN`; it forwards the token en
 by the caller. The API still performs authentication. A missing target disables
 proxy operations, and a missing API token disables the API independently.
 
-Open the console at `http://localhost:3000` (or its configured loopback port).
+Open the console at `http://localhost:3000/approvals` (or its configured loopback port).
 Enter the run ID from the [review](APPROVALS.md) or [patch](PATCHES.md) CLI and the
 operator token. The token is password-masked and stays in page memory; avoid saving
 it in your browser's password manager. No automatic run discovery is performed.
@@ -65,3 +65,7 @@ smoke checks verify framing/referrer headers. The [Phase 6 closure audit](PHASE_
 approval/rejection demonstration through the production API and worker, with
 screenshots and database/file evidence. The [Phase 6E handoff](PHASE_6E.md) retains
 the earlier implementation and component/proxy verification history.
+
+The home page and `/runs` now show read-only public fixture evidence. They do not
+extend this console’s supported profiles or authorize Phase 10 decisions. See the
+[product showcase](SHOWCASE.md).

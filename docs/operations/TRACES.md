@@ -94,7 +94,8 @@ Set `RUNVEIL_API_ORIGIN=http://127.0.0.1:8000` in the web server environment,
 using the actual loopback API port, then start the production build or development
 server as described in [development](DEVELOPMENT.md). Configure the API's
 `RUNVEIL_TRACE_TOKEN` separately; do not set a trace token on the web server.
-Open `/traces`, or follow **Open read-only run traces** from the approval console.
+Open `/traces`, or choose **Live trace** in the console navigation. The recorded
+showcase at `/runs` is separate from this authenticated live view.
 
 1. Enter an existing run ID and its installation's read-only trace token.
 2. Select **Inspect / refresh**. Read the snapshot status, counts, known usage,
@@ -106,7 +107,7 @@ Open `/traces`, or follow **Open read-only run traces** from the approval consol
    displayed. Refresh returns to the first page. A conflict or malformed response
    clears the view; manually refresh to restart. There is no automatic polling.
 5. Use **Forget token and trace** when finished. It clears the credential, run ID
-   and evidence; reload and navigation away also clear them. Navigating to approvals
+   and evidence; reload and navigation away also clear them. Navigating to `/approvals`
    requires its separate token and a fresh inspection.
 
 Known zero remains zero; missing accounting is **Not recorded**. Unknown usage and

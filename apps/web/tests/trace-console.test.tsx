@@ -225,7 +225,7 @@ it("rejects malformed, foreign, unsafe-number and mismatched-page responses with
   vi.stubGlobal("fetch", fetch);
   await inspect();
   expect(container.textContent).toContain("Not recorded");
-  expect(container.textContent).toContain("Unresolved — no outcome recorded");
+  expect(container.textContent).toContain("Unresolved: no outcome recorded");
   await act(async () => button("Next events").click());
   expect(container.querySelector("article")).toBeNull();
   expect(container.textContent).toContain("could not be loaded or validated");

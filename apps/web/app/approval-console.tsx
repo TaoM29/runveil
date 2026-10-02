@@ -3,8 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { consequences, inspection, type Inspection } from "../lib/approval";
 
-const button =
-  "rounded border border-slate-400 px-4 py-2 font-medium disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-4";
+const button = "button";
 
 export default function ApprovalConsole() {
   const [token, setToken] = useState("");
@@ -140,15 +139,16 @@ export default function ApprovalConsole() {
   }
 
   return (
-    <section className="mt-8 space-y-6" aria-label="Approval console">
+    <section className="operator-console" aria-label="Approval console">
       <form
-        className="space-y-4 rounded border border-slate-300 bg-white p-5"
+        className="operator-connection"
         onSubmit={(event) => {
           event.preventDefault();
           void load();
         }}
         autoComplete="off"
       >
+        <h2>Inspect a run</h2>
         <label className="block">
           Run ID
           <input
@@ -182,7 +182,10 @@ export default function ApprovalConsole() {
           finished. Use this console only on your trusted local machine.
         </p>
         <div className="flex flex-wrap gap-3">
-          <button className={button} disabled={busy || !token || !runId.trim()}>
+          <button
+            className={`${button}${view ? "" : " primary"}`}
+            disabled={busy || !token || !runId.trim()}
+          >
             {busy ? "Request in progress…" : "Inspect / refresh"}
           </button>
           <button
@@ -217,44 +220,53 @@ export default function ApprovalConsole() {
           <p className="rounded bg-slate-100 p-3">
             {consequences[view.profile]}
           </p>
-          <dl className="space-y-2 break-all text-sm">
-            <dt>Profile</dt>
-            <dd className="font-mono">{view.profile}</dd>
-            <dt>Approval ID</dt>
-            <dd className="font-mono">{view.request.id}</dd>
-            <dt>Proposal digest</dt>
-            <dd className="font-mono">{view.request.digest}</dd>
-            {view.workspace &&
-              Object.entries(view.workspace).map(([key, value]) => (
-                <div key={key}>
-                  <dt>{key}</dt>
-                  <dd className="font-mono">{value}</dd>
-                </div>
-              ))}
-          </dl>
-          {view.workspace && (
-            <p className="text-sm">
-              These fingerprints identify the pinned workspace. Inspection does
-              not check current files.
-            </p>
-          )}
           <div className="grid gap-4 md:grid-cols-2">
             {(["before", "after"] as const).map((part) => (
               <section key={part}>
                 <h3 className="mb-2 font-semibold">
                   {part === "before" ? "Before" : "After"}
                 </h3>
-                <pre className="max-h-96 overflow-auto whitespace-pre-wrap break-all rounded border bg-slate-50 p-3 text-sm [unicode-bidi:plaintext]">
+                <pre
+                  tabIndex={0}
+                  className="max-h-96 overflow-auto whitespace-pre-wrap break-all rounded border bg-slate-50 p-3 text-sm [unicode-bidi:plaintext]"
+                >
                   {view.request.proposal[part]}
                 </pre>
               </section>
             ))}
           </div>
           <details>
+            <summary>Approval identity and pinned workspace</summary>
+            <dl className="space-y-2 break-all text-sm">
+              <dt>Profile</dt>
+              <dd className="font-mono">{view.profile}</dd>
+              <dt>Approval ID</dt>
+              <dd className="font-mono">{view.request.id}</dd>
+              <dt>Proposal digest</dt>
+              <dd className="font-mono">{view.request.digest}</dd>
+              {view.workspace &&
+                Object.entries(view.workspace).map(([key, value]) => (
+                  <div key={key}>
+                    <dt>{key}</dt>
+                    <dd className="font-mono">{value}</dd>
+                  </div>
+                ))}
+            </dl>
+            {view.workspace && (
+              <p className="text-sm">
+                These fingerprints identify the pinned workspace. Inspection
+                does not check current files.
+              </p>
+            )}
+          </details>
+          <details>
             <summary className="cursor-pointer underline">
               Exact escaped text (including whitespace)
             </summary>
-            <pre className="mt-2 max-h-96 overflow-auto whitespace-pre-wrap break-all text-sm">
+            <pre
+              tabIndex={0}
+              className="mt-2 max-h-96 overflow-auto whitespace-pre-wrap break-all text-sm"
+            >
               {JSON.stringify(view.request.proposal, null, 2).replace(
                 /[\u007f-\uffff]/g,
                 (character) =>
@@ -294,14 +306,14 @@ export default function ApprovalConsole() {
                 </p>
                 <div className="flex gap-3">
                   <button
-                    className={button}
+                    className={`${button} primary`}
                     disabled={!reviewed || busy}
                     onClick={() => void load("APPROVED")}
                   >
                     Approve proposal
                   </button>
                   <button
-                    className={button}
+                    className={`${button} danger-button`}
                     disabled={!reviewed || busy}
                     onClick={() => void load("REJECTED")}
                   >

@@ -40,3 +40,7 @@ checks. This is a development project, not a production service.
 [Phase 9 acceptance](docs/operations/PHASE_9.md) · [Contributing](CONTRIBUTING.md)
 
 [MIT License](LICENSE)
+
+The [product showcase](docs/operations/SHOWCASE.md) presents the recorded Phase 10
+workflow at `/` and `/runs`, including exact proposals and test evidence. Live local
+trace inspection stays at `/traces`; the existing approval console is at `/approvals`.

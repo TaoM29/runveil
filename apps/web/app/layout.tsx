@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Runveil | Local approvals",
-  description: "A production-style AI agent runtime, under development.",
+  title: "Runveil | Execution console",
+  description:
+    "Inspect recorded coding-agent runs, exact proposals and validation evidence.",
 };
 
 export default function RootLayout({

@@ -96,6 +96,8 @@ For the separate, explicitly opt-in hosted check, see
 
 ## Runtime operations
 
+- [Recorded product showcase and console routes](SHOWCASE.md)
+
 - [In-process demonstration](RUNTIME.md)
 - [Durable worker and execution profiles](WORKER.md)
 - [Repository read/search tools](REPOSITORY_TOOLS.md)

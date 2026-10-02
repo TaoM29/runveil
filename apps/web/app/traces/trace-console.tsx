@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Status } from "../components/evidence";
 import { elapsed, trace, usd, type Trace } from "../../lib/trace";
 
-const button =
-  "rounded border border-slate-400 px-4 py-2 font-medium disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-4";
+const button = "button";
 const unknown = "Not recorded";
 
 export default function TraceConsole() {
@@ -111,15 +111,16 @@ export default function TraceConsole() {
   const tokens = checkpoint?.tokens;
   const cost = checkpoint?.cost;
   return (
-    <section className="mt-8 space-y-6" aria-label="Trace console">
+    <section className="operator-console" aria-label="Trace console">
       <form
         autoComplete="off"
-        className="space-y-4 rounded border border-slate-300 bg-white p-5"
+        className="operator-connection"
         onSubmit={(event) => {
           event.preventDefault();
           void load();
         }}
       >
+        <h2>Inspect a run</h2>
         <label className="block">
           Run ID
           <input
@@ -153,7 +154,10 @@ export default function TraceConsole() {
           in this page’s memory; forget them when finished.
         </p>
         <div className="flex flex-wrap gap-3">
-          <button className={button} disabled={busy || !token || !runId.trim()}>
+          <button
+            className={`${button} primary`}
+            disabled={busy || !token || !runId.trim()}
+          >
             {busy ? "Loading…" : "Inspect / refresh"}
           </button>
           <button
@@ -175,20 +179,39 @@ export default function TraceConsole() {
       {view && (
         <article className="space-y-6 rounded border border-slate-300 bg-white p-5">
           <div>
-            <h2 className="text-2xl font-semibold">Run: {view.status}</h2>
+            <div className="section-heading">
+              <h2>Execution snapshot</h2>
+              <Status value={view.status} />
+            </div>
             <p className="mt-2 break-all font-mono text-sm">{view.run_id}</p>
             <p className="mt-2 text-sm">
               Observed {view.observed_at} · Revision {view.revision} · Event
               watermark {view.event_sequence}
             </p>
           </div>
+          <section className="trace-outcome space-y-2">
+            <h3 className="font-semibold">Final summary</h3>
+            <p className="whitespace-pre-wrap break-all [unicode-bidi:plaintext]">
+              {checkpoint?.final_summary ?? "No final summary recorded"}
+            </p>
+            {checkpoint?.final_summary_truncated && (
+              <p className="font-semibold text-amber-900">
+                Summary truncated by the API at 4096 characters.
+              </p>
+            )}
+            {checkpoint?.error_code && (
+              <p className="break-all font-mono text-red-800">
+                Recorded error: {checkpoint.error_code}
+              </p>
+            )}
+          </section>
           {!view.history_complete && (
             <p className="rounded bg-amber-50 p-3 text-amber-900">
               Incomplete history: earlier execution was not recorded. This trace
               starts from the available baseline.
             </p>
           )}
-          <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <dl className="trace-accounting">
             {[
               ["Elapsed wall time", elapsed(view.elapsed_ms)],
               ["Model intents", view.model_calls],
@@ -208,7 +231,7 @@ export default function TraceConsole() {
                   : unknown,
               ],
             ].map(([label, value]) => (
-              <div key={label} className="rounded bg-slate-50 p-3">
+              <div key={label}>
                 <dt className="text-sm text-slate-600">{label}</dt>
                 <dd className="mt-1 break-words font-semibold">{value}</dd>
               </div>
@@ -247,22 +270,6 @@ export default function TraceConsole() {
               inspection.
             </p>
           </section>
-          <section className="space-y-2">
-            <h3 className="font-semibold">Final summary</h3>
-            <p className="whitespace-pre-wrap break-all [unicode-bidi:plaintext]">
-              {checkpoint?.final_summary ?? "No final summary recorded"}
-            </p>
-            {checkpoint?.final_summary_truncated && (
-              <p className="font-semibold text-amber-900">
-                Summary truncated by the API at 4096 characters.
-              </p>
-            )}
-            {checkpoint?.error_code && (
-              <p className="break-all font-mono text-red-800">
-                Recorded error: {checkpoint.error_code}
-              </p>
-            )}
-          </section>
           <details className="text-sm">
             <summary className="cursor-pointer underline">
               Run identity and timestamps
@@ -288,7 +295,7 @@ export default function TraceConsole() {
               including on request events; durations measure request to
               persisted outcome, not provider latency.
             </p>
-            <ol className="space-y-3">
+            <ol className="event-list">
               {view.events.map((event) => (
                 <li
                   key={event.sequence}
@@ -316,7 +323,7 @@ export default function TraceConsole() {
                       <p className="text-sm">
                         Recorded call duration:{" "}
                         {event.invocation.duration_ms === null
-                          ? "Unresolved — no outcome recorded"
+                          ? "Unresolved: no outcome recorded"
                           : elapsed(event.invocation.duration_ms)}
                       </p>
                       {event.invocation.error_code && (

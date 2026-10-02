@@ -684,3 +684,18 @@ module is covered by sandbox implementation identity. No runner, migration,
 dependency, API/UI or provider-service change. See
 [ADR 0038](docs/adr/0038-sandbox-evidence-search.md) and the
 [closure audit](docs/operations/PHASE_10.md) for bounded-scope evidence and limits.
+
+## Recorded product showcase before Phase 11
+
+The web overview and `/runs` archive present selected fields from two explicitly
+imported public fixture artifacts, without a database or live API request. Each
+record shows ordered tool calls, the approval decision, exact proposal/diff, test
+outcomes and provenance. The archive is visibly recorded and read-only; the
+failed-validation probe is labelled fault injection. No live private payloads or
+fictional metrics enter the archive.
+
+The local approval console moves to `/approvals`; `/traces` retains its authenticated
+metadata-only boundary. Both preserve memory-only credentials, full-document
+navigation, request invalidation and existing proxies. Phase 10 decisions remain
+CLI-only. See [ADR 0039](docs/adr/0039-recorded-product-showcase.md) and
+[operations](docs/operations/SHOWCASE.md). This adds no Phase 11 functionality.

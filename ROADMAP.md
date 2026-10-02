@@ -423,8 +423,16 @@ host filesystem access. This does not establish general coding/model quality.
 Phase 10 is **ready for bounded-scope closure review**, pending human acceptance.
 No original requirement is waived; see the audit for evidence and limitations.
 
+## Product showcase before Phase 11
+
+User-authorized frontend slice, implemented and awaiting review: a recorded
+overview, runs list and execution evidence views over the public Phase 10 artifacts;
+polished local approval and trace surfaces with their existing authority boundaries.
+No backend or runtime expansion. See [ADR 0039](docs/adr/0039-recorded-product-showcase.md)
+and [handoff](docs/operations/SHOWCASE_HANDOFF.md).
+
 ## Recommended next slice
 
-Review 10G and the original-criteria closure audit. If accepted, separately authorize
-Phase 11's first coherent MCP integration slice. Do not start Phase 11 automatically.
-No automatic continuation is authorized.
+Review the showcase and bounded Phase 10 closure evidence. After acceptance,
+separately authorize Phase 11's first coherent MCP integration slice. Do not start
+Phase 11 automatically. No automatic continuation is authorized.
