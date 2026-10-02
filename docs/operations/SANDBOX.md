@@ -249,3 +249,80 @@ Applying patches, testing repaired results and demonstrating several controlled
 tasks remain later Phase 10 work. This scripted repair proposal establishes no
 model-quality claim. See [ADR 0034](../adr/0034-sandbox-inspection-review.md) and
 [handoff](PHASE_10C.md).
+
+## Approved sandbox patch and validation — Phase 10D
+
+`sandbox-patch-v1` is a **new** fixed worker profile, configuration/checkpoint
+version 14. Create a new run for this workflow: Phase 10C review-only approvals
+cannot authorize mutation. The profile inspects the three clamp fixture files and
+pauses with the exact proposal. Its approval explicitly permits applying that
+replacement and running the fixed tests inside a fresh disposable sandbox.
+
+```sh
+docker build --network=none -t runveil-sandbox:phase10d sandbox
+SANDBOX_IMAGE=$(docker image inspect runveil-sandbox:phase10d --format '{{.Id}}')
+uv run python -m runveil_worker.sandbox_patch_worker submit --image "$SANDBOX_IMAGE"
+# Set RUN_ID to the returned UUID.
+uv run python -m runveil_worker.sandbox_patch_worker work --run-id "$RUN_ID" --image "$SANDBOX_IMAGE" --allow-execute
+uv run python -m runveil_worker.sandbox_patch_worker inspect --run-id "$RUN_ID"
+# Review the exact proposal, identity, revision, approval.digest and application consequence.
+uv run python -m runveil_worker.sandbox_patch_worker approve --run-id "$RUN_ID" --revision "$REVISION" --digest "$DIGEST"
+uv run python -m runveil_worker.sandbox_patch_worker work --run-id "$RUN_ID" --image "$SANDBOX_IMAGE" --allow-execute --allow-write
+uv run python -m runveil_worker.sandbox_patch_worker inspect --run-id "$RUN_ID"
+```
+
+`reject` uses the same revision/digest arguments and terminates without mutation.
+Approval alone dispatches nothing. Both explicit EXECUTE and WRITE grants are
+required for the approved continuation. The general registry and model offers do
+not expose apply_patch. Host patch, fixture/SQS, review-only and sandbox-test
+workers cannot adopt this profile. The trusted local database operator CLI is its
+interface; the existing approval HTTP API/browser console remains unchanged.
+
+Before mutation, the worker revalidates the pinned image, socket and implementation.
+Persistence rechecks the approved proposal and original inspection/model provenance,
+then commits one `repository.apply_patch` intent. Its existing unique index prevents
+a second mutation. Final database fences recheck exact intent, approval, grants,
+lease/history and deadline before create and start. Docker I/O occurs outside
+transactions; admission checks cannot revoke an already-sent request.
+
+Only bounded JSON goes through stdin. No host mounts, arbitrary commands, environment
+or model-selected paths are accepted. The container reconstructs the pinned fixture,
+requires the exact three-entry workspace and all recorded file bytes, and compares
+the clamp.py preimage before atomic replacement. The proposed after-text is limited
+to 4096 UTF-8 bytes; the complete input is limited to 32768 bytes, with an
+eight-second input watchdog if the host disappears. Fixed unittest
+arguments run in a separate process with an eight-second watchdog and 2048-byte
+combined output limit. Its process group is stopped before all fixture bytes and
+directory entries are checked again. Unexpected changes make the outcome uncertain.
+Container resources and verified removal remain as documented above.
+
+The mutation result retains `applied`, proposal/before/after workspace digests,
+`approved_diff`, bounded test output/status, and confirmed cleanup. Exact approved
+text is the patch artifact; no checkout or modified container is retained. A known
+application with failed tests, timeout or excess test output is a successful tool
+observation but a FAILED run (`sandbox_validation_failed`), so its evidence remains
+inspectable. A preimage refusal records `tool_resource_invalid` and no application.
+
+`inspect` reports `patch_applied: null` for an uncertain mutation. An unresolved
+mutation intent, invalid/missing result, infrastructure/cleanup failure, postimage
+drift or deadline crossing during a possible mutation cannot prove its outcome.
+Recovery records `sandbox_patch_outcome_unknown`, with no adapter construction,
+Docker access, rollback or replay. For expired-lease terminal recovery:
+
+```sh
+uv run python -m runveil_worker.sandbox_patch_worker work --run-id "$RUN_ID"
+```
+
+An owned container name is still derived from the mutation UUID. Use the existing
+operator cleanup procedure after crashes; no automatic reconciler or exactly-once
+claim is introduced. Completed terminal duplicates do not dispatch or rebind.
+Review waiting consumes the original one-hour deadline; this profile permits two
+model calls and three tool calls (five total steps), with existing token/cost limits.
+Tests execute proposed code only inside the container. Pass/fail and output are
+observations, not a proof against malicious code. Trusted-image/daemon and shared
+kernel limits remain; this is one scripted controlled repair, not multi-task coding
+acceptance or evidence of model quality.
+
+CI opts into the new fresh-process patch test and real preimage/validation boundary
+exercise with the same image used for the existing sandbox checks. See
+[ADR 0035](../adr/0035-approved-sandbox-patches.md) and [handoff](PHASE_10D.md).

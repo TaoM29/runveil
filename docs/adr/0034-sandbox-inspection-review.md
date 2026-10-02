@@ -43,3 +43,8 @@ The source fingerprint changes with this implementation; older unfinished sandbo
 runs may refuse fresh bindings, as designed. Review-only approvals must never be
 adopted by a future patch writer. Applying approved patches requires a separately
 reviewed profile and recovery contract.
+
+## Subsequent application profile
+
+[ADR 0035](0035-approved-sandbox-patches.md) adds the independent version-14
+application profile. It does not upgrade or adopt version-13 review-only approvals.

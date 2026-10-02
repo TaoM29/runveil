@@ -1,0 +1,202 @@
+{
+  "kind": "phase10d-local-cli-acceptance",
+  "image": "sha256:c9459831a18dc6324b4953f94db1ac77b2cb855c8414f3d699794859d2b4eef6",
+  "runs": [
+    {
+      "decision": "approve",
+      "final_inspection": {
+        "run_id": "dbebaf3b-34fb-4f10-a2e6-2391bca0dca6",
+        "revision": 4,
+        "status": "SUCCEEDED",
+        "profile": "sandbox-patch-v1",
+        "sandbox": {
+          "image": "sha256:c9459831a18dc6324b4953f94db1ac77b2cb855c8414f3d699794859d2b4eef6",
+          "fixture": "clamp-v1",
+          "policy": "docker-fixture-v1",
+          "endpoint_digest": "dceb10e11eb5fed367bfa493e3acabc87e531696d82e72cd6d0bf79f0baaee9c",
+          "implementation_digest": "0f1f12853f75bdc70b326fd122e64af45facacadaff15ae973311278594570d5"
+        },
+        "approval": {
+          "id": "2c752c94-a720-4367-8f30-37e36286a66b",
+          "run_id": "dbebaf3b-34fb-4f10-a2e6-2391bca0dca6",
+          "proposal": {
+            "schema_version": 1,
+            "path": "clamp.py",
+            "before": "def clamp(value: int, lower: int, upper: int) -> int:\n    \"\"\"Return value bounded by inclusive lower/upper limits.\"\"\"\n    return min(value, upper)\n",
+            "after": "def clamp(value: int, lower: int, upper: int) -> int:\n    \"\"\"Return value bounded by inclusive lower/upper limits.\"\"\"\n    return min(max(value, lower), upper)\n"
+          },
+          "digest": "e7675b6188996e487b2f5f405f002f7baa7b8789fa60b9258c06bee1131aa570",
+          "status": "APPROVED",
+          "requested_at": "2026-10-02T11:38:30.397502Z",
+          "decided_at": "2026-10-02T11:38:32.000459Z"
+        },
+        "inspection_digest": "112c3cb50add4efbf6ffd2574e083503c2ceec190fc04f33cdb112aa783fb636",
+        "before_sha256": "940722ea4077e63463373a273a3e7f02608142e7c4bfb3f9f523d6841d3da2e3",
+        "after_sha256": "f57dd1a09ad1423fbf4013418b85c3341de8c30f8c9a77b4433637b81a997b70",
+        "diff": "--- a/clamp.py\n+++ b/clamp.py\n@@ -1,3 +1,3 @@\n def clamp(value: int, lower: int, upper: int) -> int:\n     \"\"\"Return value bounded by inclusive lower/upper limits.\"\"\"\n-    return min(value, upper)\n+    return min(max(value, lower), upper)\n",
+        "approval_authorizes": "Apply the exact patch in a disposable sandbox and run tests.",
+        "patch_applied": true,
+        "mutation": {
+          "id": "f05a4cb6-a57e-4b1c-94f7-5139b6c48f68",
+          "status": "SUCCEEDED",
+          "error_code": null,
+          "result": {
+            "tests": {
+              "output": "test_bounds (test_clamp.ClampTests.test_bounds) ... ok\n\n----------------------------------------------------------------------\nRan 1 test in 0.000s\n\nOK\n",
+              "status": "passed",
+              "exit_code": 0,
+              "output_truncated": false,
+              "cleanup_confirmed": true
+            },
+            "applied": true,
+            "after_digest": "ea2f18a5f67c337aedb7914850368d89764c4fae745cc251a83d62985692d5cd",
+            "approved_diff": "--- a/clamp.py\n+++ b/clamp.py\n@@ -1,3 +1,3 @@\n def clamp(value: int, lower: int, upper: int) -> int:\n     \"\"\"Return value bounded by inclusive lower/upper limits.\"\"\"\n-    return min(value, upper)\n+    return min(max(value, lower), upper)\n",
+            "before_digest": "112c3cb50add4efbf6ffd2574e083503c2ceec190fc04f33cdb112aa783fb636",
+            "proposal_digest": "e7675b6188996e487b2f5f405f002f7baa7b8789fa60b9258c06bee1131aa570",
+            "cleanup_confirmed": true
+          }
+        }
+      },
+      "terminal_duplicate_selected": false,
+      "containers_absent": true,
+      "tool_calls": [
+        {
+          "id": "9ceb796a-3a7d-451b-bc45-3ed31e13ceee",
+          "tool": "repository.inspect",
+          "status": "SUCCEEDED"
+        },
+        {
+          "id": "201e4372-502b-43d1-b365-d0cc545839f8",
+          "tool": "repository.propose_patch",
+          "status": "SUCCEEDED"
+        },
+        {
+          "id": "f05a4cb6-a57e-4b1c-94f7-5139b6c48f68",
+          "tool": "repository.apply_patch",
+          "status": "SUCCEEDED"
+        }
+      ],
+      "trace": {
+        "status": "SUCCEEDED",
+        "checkpoint": {
+          "event_sequence": 30,
+          "schema_version": 14,
+          "tokens": {
+            "attempts": 2,
+            "input_tokens": 20,
+            "output_tokens": 10,
+            "unknown_attempts": 0,
+            "last_usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          },
+          "cost": {
+            "known_nanousd": 50000,
+            "unknown_attempts": 0
+          },
+          "retries_scheduled": 0,
+          "error_code": null,
+          "final_summary": "Applied the approved sandbox patch; tests passed.",
+          "final_summary_truncated": false
+        },
+        "approval": {
+          "id": "2c752c94-a720-4367-8f30-37e36286a66b",
+          "status": "APPROVED",
+          "requested_at": "2026-10-02T11:38:30.397502Z",
+          "decided_at": "2026-10-02T11:38:32.000459Z"
+        },
+        "tool_calls": 3,
+        "model_calls": 2
+      }
+    },
+    {
+      "decision": "reject",
+      "final_inspection": {
+        "run_id": "a5e682dc-b95c-417b-9914-4f1baf8d9131",
+        "revision": 3,
+        "status": "FAILED",
+        "profile": "sandbox-patch-v1",
+        "sandbox": {
+          "image": "sha256:c9459831a18dc6324b4953f94db1ac77b2cb855c8414f3d699794859d2b4eef6",
+          "fixture": "clamp-v1",
+          "policy": "docker-fixture-v1",
+          "endpoint_digest": "dceb10e11eb5fed367bfa493e3acabc87e531696d82e72cd6d0bf79f0baaee9c",
+          "implementation_digest": "0f1f12853f75bdc70b326fd122e64af45facacadaff15ae973311278594570d5"
+        },
+        "approval": {
+          "id": "945f236c-483d-4693-8103-e406f838ba42",
+          "run_id": "a5e682dc-b95c-417b-9914-4f1baf8d9131",
+          "proposal": {
+            "schema_version": 1,
+            "path": "clamp.py",
+            "before": "def clamp(value: int, lower: int, upper: int) -> int:\n    \"\"\"Return value bounded by inclusive lower/upper limits.\"\"\"\n    return min(value, upper)\n",
+            "after": "def clamp(value: int, lower: int, upper: int) -> int:\n    \"\"\"Return value bounded by inclusive lower/upper limits.\"\"\"\n    return min(max(value, lower), upper)\n"
+          },
+          "digest": "e7675b6188996e487b2f5f405f002f7baa7b8789fa60b9258c06bee1131aa570",
+          "status": "REJECTED",
+          "requested_at": "2026-10-02T11:38:40.573839Z",
+          "decided_at": "2026-10-02T11:38:42.223407Z"
+        },
+        "inspection_digest": "112c3cb50add4efbf6ffd2574e083503c2ceec190fc04f33cdb112aa783fb636",
+        "before_sha256": "940722ea4077e63463373a273a3e7f02608142e7c4bfb3f9f523d6841d3da2e3",
+        "after_sha256": "f57dd1a09ad1423fbf4013418b85c3341de8c30f8c9a77b4433637b81a997b70",
+        "diff": "--- a/clamp.py\n+++ b/clamp.py\n@@ -1,3 +1,3 @@\n def clamp(value: int, lower: int, upper: int) -> int:\n     \"\"\"Return value bounded by inclusive lower/upper limits.\"\"\"\n-    return min(value, upper)\n+    return min(max(value, lower), upper)\n",
+        "approval_authorizes": "Apply the exact patch in a disposable sandbox and run tests.",
+        "patch_applied": false,
+        "mutation": null
+      },
+      "terminal_duplicate_selected": false,
+      "containers_absent": true,
+      "tool_calls": [
+        {
+          "id": "41de67c7-e9f5-4f74-9d92-85b723c76ea8",
+          "tool": "repository.inspect",
+          "status": "SUCCEEDED"
+        },
+        {
+          "id": "282a332c-c4d1-439e-943d-f46d4100e61c",
+          "tool": "repository.propose_patch",
+          "status": "SUCCEEDED"
+        }
+      ],
+      "trace": {
+        "status": "FAILED",
+        "checkpoint": {
+          "event_sequence": 20,
+          "schema_version": 14,
+          "tokens": {
+            "attempts": 2,
+            "input_tokens": 20,
+            "output_tokens": 10,
+            "unknown_attempts": 0,
+            "last_usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          },
+          "cost": {
+            "known_nanousd": 50000,
+            "unknown_attempts": 0
+          },
+          "retries_scheduled": 0,
+          "error_code": null,
+          "final_summary": null,
+          "final_summary_truncated": false
+        },
+        "approval": {
+          "id": "945f236c-483d-4693-8103-e406f838ba42",
+          "status": "REJECTED",
+          "requested_at": "2026-10-02T11:38:40.573839Z",
+          "decided_at": "2026-10-02T11:38:42.223407Z"
+        },
+        "tool_calls": 2,
+        "model_calls": 2
+      }
+    }
+  ],
+  "telemetry": {
+    "mutation_spans": 1,
+    "raw_patch_content_absent": true
+  }
+}

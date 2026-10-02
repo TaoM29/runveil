@@ -10,7 +10,12 @@ from pathlib import Path
 from uuid import UUID
 
 from runveil_core.sandbox import SandboxIdentity, TestsResult
-from runveil_core.sandbox_review import InspectionResult
+from runveil_core.sandbox_patch import (
+    SandboxPatchInput,
+    SandboxPatchObservation,
+    SandboxPatchResult,
+)
+from runveil_core.sandbox_review import InspectionResult, proposal_diff
 from runveil_core.tools import ToolError, ToolErrorCode
 
 from runveil_tools.sandbox import FixtureSandbox, SandboxError
@@ -29,6 +34,7 @@ class BoundSandbox:
             "runveil_tools.sandbox_execution",
             "runveil_core.sandbox",
             "runveil_core.sandbox_review",
+            "runveil_core.sandbox_patch",
             "runveil_core.approvals",
             "runveil_core.runtime",
             "runveil_core.tools",
@@ -81,3 +87,34 @@ class BoundSandbox:
             return InspectionResult.model_validate_json(result.output)
         except ValueError:
             raise ToolError(ToolErrorCode.INVALID_OUTPUT) from None
+
+    async def apply(
+        self, invocation_id: UUID, payload: SandboxPatchInput, admit: Callable[[], Awaitable[None]]
+    ) -> SandboxPatchResult:
+        payload = SandboxPatchInput.model_validate_json(payload.model_dump_json())
+        try:
+            result = await self._runner.run(
+                self.identity.fixture,
+                patch_input=payload.model_dump_json().encode(),
+                invocation_id=invocation_id,
+                admit=admit,
+            )
+        except SandboxError:
+            raise ToolError(ToolErrorCode.PATCH_UNKNOWN) from None
+        if result.status != "passed" or result.exit_code != 0 or not result.cleanup_confirmed:
+            raise ToolError(ToolErrorCode.PATCH_UNKNOWN)
+        try:
+            if json.loads(result.output) == {"error": "sandbox_preimage_mismatch"}:
+                raise ToolError(ToolErrorCode.RESOURCE_INVALID)
+            observed = SandboxPatchObservation.model_validate_json(result.output)
+            if (
+                observed.proposal_digest != payload.proposal.digest
+                or observed.before_digest != payload.inspection.digest
+                or observed.after_digest != payload.postimage().digest
+            ):
+                raise ValueError("Sandbox postimage does not match")
+            return SandboxPatchResult(
+                **observed.model_dump(), approved_diff=proposal_diff(payload.proposal)
+            )
+        except ValueError:
+            raise ToolError(ToolErrorCode.PATCH_UNKNOWN) from None

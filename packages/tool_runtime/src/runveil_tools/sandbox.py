@@ -8,6 +8,7 @@ import re
 import shutil
 import sys
 from collections.abc import Awaitable, Callable
+from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -49,15 +50,29 @@ class _CommandResult:
     timeout: bool = False
 
 
-async def _command(args: tuple[str, ...], timeout: float) -> _CommandResult:
+async def _command(
+    args: tuple[str, ...], timeout: float, data: bytes | None = None
+) -> _CommandResult:
     # Do not inherit Docker context, remote endpoints, TLS settings or API overrides.
     process = await asyncio.create_subprocess_exec(
         *args,
-        stdin=asyncio.subprocess.DEVNULL,
+        stdin=asyncio.subprocess.PIPE if data is not None else asyncio.subprocess.DEVNULL,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.STDOUT,
         env={"PATH": os.defpath},
     )
+
+    async def send() -> None:
+        assert process.stdin is not None and data is not None
+        try:
+            process.stdin.write(data)
+            await process.stdin.drain()
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+        finally:
+            process.stdin.close()
+
+    sender = asyncio.create_task(send()) if data is not None else None
     output = bytearray()
     try:
         async with asyncio.timeout(timeout):
@@ -66,10 +81,16 @@ async def _command(args: tuple[str, ...], timeout: float) -> _CommandResult:
                 output.extend(chunk)
                 if len(output) > OUTPUT_LIMIT:
                     return _CommandResult(-1, bytes(output[:OUTPUT_LIMIT]), limit=True)
+            if sender is not None:
+                await sender
             return _CommandResult(await process.wait(), bytes(output))
     except TimeoutError:
         return _CommandResult(-1, bytes(output), timeout=True)
     finally:
+        if sender is not None:
+            sender.cancel()
+            with suppress(asyncio.CancelledError):
+                await sender
         if process.returncode is None:
             try:
                 process.kill()
@@ -94,11 +115,14 @@ class FixtureSandbox:
         self.image = image
         self._docker = (docker, "--host", "unix://" + str(socket))
 
-    def _create(self, name: str, fixture: str, inspection: bool = False) -> tuple[str, ...]:
+    def _create(
+        self, name: str, fixture: str, inspection: bool = False, patch: bool = False
+    ) -> tuple[str, ...]:
         return (
             *self._docker,
             "create",
             "--pull=never",
+            *(("--interactive",) if patch else ()),
             "--name",
             name,
             "--label",
@@ -126,7 +150,7 @@ class FixtureSandbox:
             "-B",
             "/opt/runner.py",
             fixture,
-            *(("inspect",) if inspection else ()),
+            *(("inspect",) if inspection else ("apply",) if patch else ()),
         )
 
     async def _cleanup(self, name: str) -> bool:
@@ -144,10 +168,16 @@ class FixtureSandbox:
         fixture: str,
         *,
         inspection: bool = False,
+        patch_input: bytes | None = None,
         invocation_id: UUID | None = None,
         admit: Callable[[], Awaitable[None]] | None = None,
     ) -> SandboxResult:
-        if fixture not in FIXTURES or (inspection and fixture != "clamp-v1"):
+        if (
+            fixture not in FIXTURES
+            or ((inspection or patch_input is not None) and fixture != "clamp-v1")
+            or (inspection and patch_input is not None)
+            or (patch_input is not None and len(patch_input) > 32768)
+        ):
             raise ValueError("Unknown project fixture")
         name = "runveil-sandbox-" + (invocation_id or uuid4()).hex
         result = SandboxResult(
@@ -162,7 +192,9 @@ class FixtureSandbox:
             await admit()
         uncertain_create = True
         try:
-            created = await _command(self._create(name, fixture, inspection), CONTROL_TIMEOUT)
+            created = await _command(
+                self._create(name, fixture, inspection, patch_input is not None), CONTROL_TIMEOUT
+            )
             uncertain_create = created.timeout or created.limit
             if created.code == 0:
                 if admit is not None:
@@ -171,15 +203,25 @@ class FixtureSandbox:
                     except Exception as exc:
                         # Keep storage/ownership failures out of Docker error normalization.
                         raise _AdmissionStopped(exc) from None
-                attached = await _command(
-                    (*self._docker, "start", "--attach", name), EXECUTION_TIMEOUT
-                )
+                if patch_input is None:
+                    attached = await _command(
+                        (*self._docker, "start", "--attach", name), EXECUTION_TIMEOUT
+                    )
+                else:
+                    attached = await _command(
+                        (*self._docker, "start", "--attach", "--interactive", name),
+                        EXECUTION_TIMEOUT,
+                        patch_input + b"\n",
+                    )
                 if attached.limit or attached.timeout:
                     result = result.model_copy(
                         update={
                             "status": "output_limit" if attached.limit else "timeout",
                             "output": attached.output.decode(
-                                "utf-8", errors="strict" if inspection else "replace"
+                                "utf-8",
+                                errors="strict"
+                                if inspection or patch_input is not None
+                                else "replace",
                             ),
                         }
                     )
@@ -206,7 +248,10 @@ class FixtureSandbox:
                                     ],
                                     "exit_code": code,
                                     "output": attached.output.decode(
-                                        "utf-8", errors="strict" if inspection else "replace"
+                                        "utf-8",
+                                        errors="strict"
+                                        if inspection or patch_input is not None
+                                        else "replace",
                                     ),
                                 }
                             )

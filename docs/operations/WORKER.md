@@ -410,3 +410,12 @@ proposal and durable human review. Approval only finishes review and never write
 files. See [sandbox operations](SANDBOX.md#sandbox-inspection-and-exact-review--phase-10c)
 for commands, exact evidence, operator grants and recovery limits. Existing
 fixture/SQS/host-patch profiles cannot adopt these approvals.
+
+## Approved sandbox patches (Phase 10D)
+
+`python -m runveil_worker.sandbox_patch_worker` owns `sandbox-patch-v1`. New runs
+require their own application approval; existing review-only approvals cannot be
+adopted. Approved continuation needs `--allow-execute --allow-write`. The single
+mutation revalidates a fresh workspace, applies/tests the exact patch and persists
+evidence after cleanup. Uncertain mutations terminate without replay. See
+[sandbox operations](SANDBOX.md#approved-sandbox-patch-and-validation--phase-10d).

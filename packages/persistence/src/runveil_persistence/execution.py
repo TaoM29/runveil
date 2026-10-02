@@ -32,7 +32,14 @@ from runveil_core.runtime import (
     Started,
 )
 from runveil_core.sandbox import SANDBOX_PROFILE
-from runveil_core.sandbox_review import SANDBOX_REVIEW_PROFILE
+from runveil_core.sandbox_patch import (
+    PATCH_UNKNOWN,
+    SANDBOX_PATCH_PROFILE,
+    SandboxPatchInput,
+    SandboxPatchResult,
+    authorize_sandbox_patch,
+)
+from runveil_core.sandbox_review import SANDBOX_REVIEW_PROFILE, proposal_diff
 from runveil_core.tools import ToolError, ToolPolicy
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -43,6 +50,7 @@ from runveil_persistence.jobs import Claim, database_now, fence
 from runveil_persistence.models import EventRow, JobRow, ModelInvocationRow, ToolCallRow
 from runveil_persistence.mutations import authorized_patch
 from runveil_persistence.repositories import AgentRepository, RunRepository
+from runveil_persistence.sandbox_mutations import authorized_sandbox_patch
 from runveil_persistence.worker_approvals import pause_review, prepare_pause, validate_review_state
 
 
@@ -107,9 +115,21 @@ class PostgresExecutionStore:
         previous = await load_runtime_state(session, cursor.run_id)
         if previous is None:
             raise ValueError("Elapsed expiry requires a runtime checkpoint")
+        mutation = (
+            await session.get(ToolCallRow, pending.id)
+            if pending is not None and pending.kind == "tool"
+            else None
+        )
+        error = (
+            PATCH_UNKNOWN
+            if previous.schema_version == 14
+            and mutation is not None
+            and mutation.tool_name == APPLY_TOOL
+            else "elapsed_time_exceeded"
+        )
         state = previous.model_copy(
             update={
-                "error_code": "elapsed_time_exceeded",
+                "error_code": error,
                 "final_result": None,
                 "steps_used": previous.steps_used + int(pending is not None),
             }
@@ -128,7 +148,7 @@ class PostgresExecutionStore:
                 cursor.run_id,
                 pending.id,
                 state=state.model_dump(mode="json"),
-                error_code="elapsed_time_exceeded",
+                error_code=error,
                 expected_revision=cursor.revision,
                 expected_sequence=cursor.sequence,
             )
@@ -145,7 +165,7 @@ class PostgresExecutionStore:
             run_id=cursor.run_id,
             kind="budget.exceeded",
             run_revision=cursor.revision,
-            payload={"budget": "elapsed_time", "error_code": "elapsed_time_exceeded"},
+            payload={"budget": "elapsed_time", "error_code": error},
         )
         session.add(event)
         await session.flush()
@@ -192,7 +212,9 @@ class PostgresExecutionStore:
             if config.sandbox is not None and (
                 self.claim is None
                 or self.claim.profile
-                != (SANDBOX_REVIEW_PROFILE if config.schema_version == 13 else SANDBOX_PROFILE)
+                != {12: SANDBOX_PROFILE, 13: SANDBOX_REVIEW_PROFILE, 14: SANDBOX_PATCH_PROFILE}[
+                    config.schema_version
+                ]
             ):
                 raise ConfigurationRejected("Sandbox execution requires the dedicated profile")
             if self.expected_config is not None and config != self.expected_config:
@@ -358,6 +380,16 @@ class PostgresExecutionStore:
                 or state.steps_used >= config.max_steps
             ):
                 raise ValueError("Ambiguous interrupted execution history")
+            if config.schema_version == 14 and state.approval_resolved:
+                _, payload = await authorized_sandbox_patch(session, run_id)
+                call = await session.get(ToolCallRow, outstanding[0].id)
+                if (
+                    outstanding[0].kind != "tool"
+                    or call is None
+                    or call.tool_name != APPLY_TOOL
+                    or call.request != payload.model_dump(mode="json")
+                ):
+                    raise ValueError("Sandbox recovery requires the exact mutation intent")
             return Started(cursor, config, state, outstanding[0])
         if retrying:
             job = await session.get(JobRow, run_id)
@@ -419,12 +451,13 @@ class PostgresExecutionStore:
         blocked: RuntimeState | None = None
         async with self._boundary(cursor) as (session, _):
             if tool_name == APPLY_TOOL:
-                pinned, _, proposal = await authorized_patch(session, cursor.run_id)
-                if (
-                    config != pinned
-                    or model_invocation_id is not None
-                    or payload != proposal.model_dump(mode="json")
-                ):
+                if config.schema_version == 14:
+                    pinned, sandbox_payload = await authorized_sandbox_patch(session, cursor.run_id)
+                    expected = sandbox_payload.model_dump(mode="json")
+                else:
+                    pinned, _, proposal = await authorized_patch(session, cursor.run_id)
+                    expected = proposal.model_dump(mode="json")
+                if config != pinned or model_invocation_id is not None or payload != expected:
                     raise ValueError("Mutation intent differs from exact approved proposal")
                 prior = await session.scalar(
                     select(ToolCallRow.id).where(
@@ -610,8 +643,34 @@ class PostgresExecutionStore:
                     response = ModelResponse.model_validate_json(json.dumps(result))
                     if response.usage != state.tokens.last_usage:
                         raise ValueError("Outcome usage differs from accounting")
+            if state.schema_version == 14 and previous is not None and previous.approval_resolved:
+                _, payload = await authorized_sandbox_patch(session, cursor.run_id)
+                call = await session.get(ToolCallRow, pending.id)
+                if (
+                    pending.kind != "tool"
+                    or call is None
+                    or call.tool_name != APPLY_TOOL
+                    or call.request != payload.model_dump(mode="json")
+                ):
+                    raise ValueError("Sandbox completion requires the exact mutation intent")
+                if result is not None:
+                    outcome = SandboxPatchResult.model_validate_json(json.dumps(result))
+                    if (
+                        outcome.proposal_digest != payload.proposal.digest
+                        or outcome.before_digest != payload.inspection.digest
+                        or outcome.after_digest != payload.postimage().digest
+                        or outcome.approved_diff != proposal_diff(payload.proposal)
+                        or state.error_code
+                        != (
+                            None
+                            if outcome.tests.status == "passed"
+                            else "sandbox_validation_failed"
+                        )
+                        or (state.final_result is not None) != (outcome.tests.status == "passed")
+                    ):
+                        raise ValueError("Sandbox outcome differs from approved mutation")
             approval = None
-            if state.schema_version in (10, 11, 13):
+            if state.schema_version in (10, 11, 13, 14):
                 approval = await prepare_pause(session, pending, previous, state, config, result)
             invocations = InvocationRepository(session)
             complete = (
@@ -665,6 +724,28 @@ class PostgresExecutionStore:
                     expected_sequence=cursor.sequence,
                 )
             return cursor
+
+    async def approved_sandbox_patch(self, cursor: Cursor) -> SandboxPatchInput:
+        async with self._boundary(cursor) as (session, _):
+            _, payload = await authorized_sandbox_patch(session, cursor.run_id)
+            return payload
+
+    async def admit_sandbox_patch(self, pending: Pending, operator: ToolPolicy) -> None:
+        async with self._boundary(pending.cursor, pending=pending) as (session, _):
+            config, payload = await authorized_sandbox_patch(session, pending.cursor.run_id)
+            authorize_sandbox_patch(config.tool_policy, operator)
+            call = await session.get(ToolCallRow, pending.id)
+            if (
+                config != self.expected_config
+                or pending.kind != "tool"
+                or call is None
+                or call.run_id != pending.cursor.run_id
+                or call.status != "REQUESTED"
+                or call.tool_name != APPLY_TOOL
+                or call.request != payload.model_dump(mode="json")
+                or call.requested_event_sequence != pending.cursor.sequence
+            ):
+                raise ValueError("Invalid sandbox mutation admission")
 
     async def approved_patch(self, cursor: Cursor) -> PatchProposal:
         async with self._boundary(cursor) as (session, _):

@@ -36,6 +36,14 @@ from runveil_core.sandbox import (
     authorize_sandbox,
     test_offer,
 )
+from runveil_core.sandbox_patch import (
+    PATCH_POLICY,
+    PATCH_UNKNOWN,
+    SandboxPatchExecutor,
+    SandboxPatchInput,
+    SandboxPatchResult,
+    authorize_sandbox_patch,
+)
 from runveil_core.sandbox_review import (
     INSPECT_TOOL,
     REVIEW_POLICY,
@@ -77,7 +85,7 @@ class ModelPricing(Contract):
 
 
 class RuntimeConfig(Contract):
-    schema_version: Literal[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13] = 2
+    schema_version: Literal[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14] = 2
     workspace: WorkspaceIdentity | None = None
     sandbox: SandboxIdentity | None = None
     max_model_calls: Annotated[int, Field(ge=0, le=64)] | None = None
@@ -140,8 +148,8 @@ class RuntimeConfig(Contract):
                 authorize_patch(self.tool_policy, self.tool_policy)
             except ToolError:
                 raise ValueError("Patch configuration requires an explicit WRITE grant") from None
-        if (self.schema_version in (12, 13)) != (self.sandbox is not None):
-            raise ValueError("Sandbox execution requires version 12 or 13 and a binding")
+        if (self.schema_version in (12, 13, 14)) != (self.sandbox is not None):
+            raise ValueError("Sandbox execution requires version 12, 13 or 14 and a binding")
         if self.schema_version == 12:
             try:
                 authorize_sandbox(self.tool_policy, self.tool_policy)
@@ -159,6 +167,10 @@ class RuntimeConfig(Contract):
             self.tool_policy != REVIEW_POLICY or self.model_retry != ModelRetryPolicy()
         ):
             raise ValueError("Sandbox review permits only inspection and proposals without retries")
+        if self.schema_version == 14 and (
+            self.tool_policy != PATCH_POLICY or self.model_retry != ModelRetryPolicy()
+        ):
+            raise ValueError("Sandbox patch requires exact grants without retries")
         return self
 
 
@@ -207,7 +219,7 @@ class CostAccounting(Contract):
 
 
 class RuntimeState(Contract):
-    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13] = 2
+    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14] = 2
     approval_id: UUID | None = None
     approval_resolved: bool = False
     cost: CostAccounting | None = None
@@ -223,7 +235,7 @@ class RuntimeState(Contract):
 
     @model_validator(mode="after")
     def approval_version(self) -> RuntimeState:
-        if self.schema_version not in (10, 11, 13) and (
+        if self.schema_version not in (10, 11, 13, 14) and (
             self.approval_id is not None or self.approval_resolved
         ):
             raise ValueError("Approval state requires version 10")
@@ -288,6 +300,10 @@ class Pending:
 
 
 class ExecutionStore(Protocol):
+    async def approved_sandbox_patch(self, cursor: Cursor) -> SandboxPatchInput: ...
+
+    async def admit_sandbox_patch(self, pending: Pending, operator: ToolPolicy) -> None: ...
+
     async def approved_patch(self, cursor: Cursor) -> PatchProposal: ...
 
     async def apply_patch(
@@ -340,6 +356,7 @@ async def execute(
     patch_writer: PatchWriter | None = None,
     sandbox: SandboxExecutor | None = None,
     inspection: SandboxInspector | None = None,
+    sandbox_patch: SandboxPatchExecutor | None = None,
 ) -> RuntimeState:
     """Execute from the store's validated start/resume boundary; never replay intent."""
     with observe("agent.execute", root=True, run_id=str(run_id)) as telemetry:
@@ -356,6 +373,7 @@ async def execute(
                 patch_writer=patch_writer,
                 sandbox=sandbox,
                 inspection=inspection,
+                sandbox_patch=sandbox_patch,
             )
         except BudgetExceeded as exc:
             state = exc.state
@@ -400,6 +418,7 @@ async def _execute(
     patch_writer: PatchWriter | None = None,
     sandbox: SandboxExecutor | None = None,
     inspection: SandboxInspector | None = None,
+    sandbox_patch: SandboxPatchExecutor | None = None,
 ) -> RuntimeState:
     """Execute from the store's validated start/resume boundary; never replay intent."""
     registry = tools if tools is not None else ToolRegistry()
@@ -417,20 +436,86 @@ async def _execute(
     await remaining(started.interrupted)
     if started.interrupted is not None:
         state = state.model_copy(
-            update={"steps_used": state.steps_used + 1, "error_code": "execution_interrupted"}
+            update={
+                "steps_used": state.steps_used + 1,
+                "error_code": PATCH_UNKNOWN
+                if config.schema_version == 14 and state.approval_resolved
+                else "execution_interrupted",
+            }
         )
         if config.schema_version >= 5 and started.interrupted.kind == "model":
             state = state.account_model_usage(TokenUsage(), config)
-        await store.complete(started.interrupted, state, error_code="execution_interrupted")
+        await store.complete(started.interrupted, state, error_code=state.error_code)
         return state
     if config.schema_version == 12:
         authorize_sandbox(config.tool_policy, operator_policy)
         if sandbox is None or sandbox.identity != config.sandbox:
             raise ValueError("Sandbox execution requires the verified binding")
-    if config.schema_version == 13:
+    if config.schema_version in (13, 14):
         authorize_review(config.tool_policy, operator_policy)
         if inspection is None or inspection.identity != config.sandbox:
             raise ValueError("Sandbox review requires the verified binding")
+    if config.schema_version == 14 and state.approval_resolved:
+        authorize_sandbox_patch(config.tool_policy, operator_policy)
+        if sandbox_patch is None or sandbox_patch.identity != config.sandbox:
+            raise ValueError("Sandbox patch requires the verified writer binding")
+        if state.steps_used >= config.max_steps:
+            state = state.model_copy(update={"error_code": "step_limit_exceeded"})
+            await store.exhaust(cursor, state)
+            return state
+        payload = await store.approved_sandbox_patch(cursor)
+        pending = await store.request(
+            cursor,
+            kind="tool",
+            tool_name=APPLY_TOOL,
+            payload=payload.model_dump(mode="json"),
+            config=config,
+        )
+        state = state.model_copy(update={"steps_used": state.steps_used + 1})
+        with observe(
+            "tool.apply_patch",
+            run_id=str(run_id),
+            invocation_id=str(pending.id),
+            request_sequence=pending.cursor.sequence,
+        ) as telemetry:
+            try:
+                seconds = await remaining(pending)
+
+                async def admit_patch() -> None:
+                    await store.admit_sandbox_patch(pending, operator_policy)
+
+                async with asyncio.timeout(seconds):
+                    outcome = await sandbox_patch.apply(pending.id, payload, admit_patch)
+                    outcome = SandboxPatchResult.model_validate_json(outcome.model_dump_json())
+            except (ToolError, TimeoutError) as exc:
+                await remaining(pending)
+                code = exc.code.value if isinstance(exc, ToolError) else PATCH_UNKNOWN
+                state = state.model_copy(update={"error_code": code})
+                await store.complete(pending, state, error_code=code)
+                telemetry.fields(outcome="failed")
+                return state
+            await remaining(pending)
+            passed = outcome.tests.status == "passed"
+            state = state.model_copy(
+                update={
+                    "final_result": FinalResult(
+                        summary="Applied the approved sandbox patch; tests passed.", artifacts=()
+                    )
+                    if passed
+                    else None,
+                    "error_code": None if passed else "sandbox_validation_failed",
+                    "messages": (
+                        *state.messages,
+                        Message(
+                            role="tool", tool_name=APPLY_TOOL, content=outcome.model_dump_json()
+                        ),
+                    ),
+                }
+            )
+            # A successful tool observation can carry a failed task validation result.
+            await store.complete(pending, state, result=outcome.model_dump(mode="json"))
+            telemetry.fields(outcome="returned")
+            return state
     if config.schema_version == 11 and state.approval_resolved:
         authorize_patch(config.tool_policy, operator_policy)
         if patch_writer is None or patch_writer.workspace != config.workspace:
@@ -502,7 +587,7 @@ async def _execute(
                                 ).model_dump(mode="json")
                             except (ValueError, AttributeError):
                                 raise ToolError(ToolErrorCode.INVALID_OUTPUT) from None
-                        elif config.schema_version == 13:
+                        elif config.schema_version in (13, 14):
                             authorize_review(config.tool_policy, operator_policy)
                             if inspection is None or inspection.identity != config.sandbox:
                                 raise ToolError(ToolErrorCode.DENIED)
@@ -540,6 +625,15 @@ async def _execute(
                                     snapshots[0].content
                                 )
                                 validate_proposal(proposal, snapshot)
+                                if config.schema_version == 14:
+                                    try:
+                                        SandboxPatchInput(
+                                            approval_id=uuid4(),
+                                            proposal=proposal,
+                                            inspection=snapshot,
+                                        )
+                                    except ValueError:
+                                        raise ToolError(ToolErrorCode.INVALID_ARGUMENTS) from None
                                 observation = proposal.model_dump(mode="json")
                             else:
                                 raise ToolError(ToolErrorCode.DENIED)
@@ -576,7 +670,9 @@ async def _execute(
                     "source_model_id": None,
                 }
             )
-            reviewing = config.schema_version in (10, 11, 13) and action.tool_name == PROPOSAL_TOOL
+            reviewing = (
+                config.schema_version in (10, 11, 13, 14) and action.tool_name == PROPOSAL_TOOL
+            )
             if reviewing:
                 state = state.model_copy(
                     update={"approval_id": uuid4(), "approval_resolved": False}
@@ -591,7 +687,7 @@ async def _execute(
             available_tools=(test_offer(),)
             if config.schema_version == 12
             else review_offers()
-            if config.schema_version == 13
+            if config.schema_version in (13, 14)
             else registry.offers(config.tool_policy, operator_policy),
             temperature=config.temperature,
             max_output_tokens=config.max_output_tokens,

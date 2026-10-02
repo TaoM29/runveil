@@ -1,6 +1,6 @@
 # Architecture
 
-## Implemented through Phase 10C; sandbox inspection/review pending
+## Implemented through Phase 10D; approved sandbox patch review pending
 
 ```mermaid
 flowchart LR
@@ -582,3 +582,28 @@ understand version 13 metadata/accounting. No migration, dependency, patch write
 new evaluation claim or Phase 10 closure is included. See
 [ADR 0034](docs/adr/0034-sandbox-inspection-review.md) and
 [operations](docs/operations/SANDBOX.md#sandbox-inspection-and-exact-review--phase-10c).
+
+## Phase 10D approved sandbox application
+
+Configuration/checkpoint version 14 and `sandbox-patch-v1` introduce an independent
+WRITE-capable approval profile. Version 13 remains review-only; version 11 retains
+its host-writer contract. Core never advertises mutation to the model. After human
+approval and explicit operator WRITE/EXECUTE, it obtains exact durable proposal and
+inspection evidence, commits one apply_patch intent and invokes a bound sandbox
+writer. Persistence rechecks provenance/grants/intent at create/start admission and
+validates outcome digests/diff under the completion fence. Docker I/O is outside
+transactions; the existing single-mutation index is reused without a migration.
+
+A bounded stdin payload enters a fresh pinned, isolated fixture. The trusted runner
+checks every disclosed file and directory entry, atomically replaces only clamp.py,
+runs fixed tests in a bounded subprocess and rechecks the resulting workspace.
+Confirmed cleanup precedes persisted approved diff, postimage digests and test
+observations. Failed tests remain successful observations in a FAILED run. Missing
+or invalid outcomes, uncertain intent and mid-mutation expiry fail conservatively
+without replay. No modified checkout survives container removal.
+
+Local inspection shows explicit application authority and durable mutation evidence;
+read-only traces understand version 14. No approval API/UI extension, new dependency,
+remote provider, multi-task or hostile multi-tenant claim. See
+[ADR 0035](docs/adr/0035-approved-sandbox-patches.md) and
+[operations](docs/operations/SANDBOX.md#approved-sandbox-patch-and-validation--phase-10d).

@@ -11,6 +11,7 @@ from runveil_core.models import Message, ModelRequest, ModelResponse, ToolAction
 from runveil_core.mutations import PATCH_PROFILE
 from runveil_core.runs import RunStatus
 from runveil_core.runtime import Pending, RuntimeConfig, RuntimeState
+from runveil_core.sandbox_patch import SANDBOX_PATCH_PROFILE, SandboxPatchInput
 from runveil_core.sandbox_review import (
     INSPECT_TOOL,
     SANDBOX_REVIEW_PROFILE,
@@ -35,9 +36,12 @@ from runveil_persistence.repositories import AgentRepository, RunRepository
 
 
 def review_profile(config: RuntimeConfig) -> str:
-    return {10: REVIEW_PROFILE, 11: PATCH_PROFILE, 13: SANDBOX_REVIEW_PROFILE}[
-        config.schema_version
-    ]
+    return {
+        10: REVIEW_PROFILE,
+        11: PATCH_PROFILE,
+        13: SANDBOX_REVIEW_PROFILE,
+        14: SANDBOX_PATCH_PROFILE,
+    }[config.schema_version]
 
 
 async def sandbox_preimage(
@@ -88,7 +92,7 @@ async def validate_review_state(
     row = await session.get(ApprovalRow, state.approval_id, populate_existing=True)
     job = await session.get(JobRow, run_id)
     if (
-        config.schema_version not in (10, 11, 13)
+        config.schema_version not in (10, 11, 13, 14)
         or job is None
         or job.profile != review_profile(config)
         or row is None
@@ -137,7 +141,7 @@ async def validate_review_state(
         or action.arguments != call.request
     ):
         raise ValueError("Approval differs from model action")
-    if config.schema_version == 13:
+    if config.schema_version in (13, 14):
         await sandbox_preimage(session, call, request.proposal)
     return row
 
@@ -154,7 +158,7 @@ async def prepare_pause(
         raise ValueError("Approval boundary requires prior state")
     call = await session.get(ToolCallRow, pending.id) if pending.kind == "tool" else None
     reviewing = (
-        config.schema_version in (10, 11, 13)
+        config.schema_version in (10, 11, 13, 14)
         and call is not None
         and call.tool_name == PROPOSAL_TOOL
         and result is not None
@@ -189,8 +193,12 @@ async def prepare_pause(
     proposal = PatchProposal.model_validate(result)
     if proposal != PatchProposal.model_validate(call.request):
         raise ValueError("Proposal output differs from request")
-    if config.schema_version == 13:
-        await sandbox_preimage(session, call, proposal)
+    if config.schema_version in (13, 14):
+        inspected = await sandbox_preimage(session, call, proposal)
+        if config.schema_version == 14:
+            SandboxPatchInput(
+                approval_id=state.approval_id, proposal=proposal, inspection=inspected
+            )
     row = ApprovalRow(
         id=state.approval_id,
         run_id=pending.cursor.run_id,
@@ -250,7 +258,8 @@ async def resolve_worker_review(
         raise InvalidTransition("Run is not waiting for approval")
     job = await session.get(JobRow, run_id, with_for_update=True, populate_existing=True)
     if (
-        profile not in (REVIEW_PROFILE, PATCH_PROFILE, SANDBOX_REVIEW_PROFILE)
+        profile
+        not in (REVIEW_PROFILE, PATCH_PROFILE, SANDBOX_REVIEW_PROFILE, SANDBOX_PATCH_PROFILE)
         or job is None
         or job.profile != profile
     ):

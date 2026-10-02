@@ -16,7 +16,7 @@ commit or push is authorized.
 | 7     | Telemetry and trace UI                                    | Complete; Phase 8 continuation authorized  |
 | 8     | Deterministic evaluation harness                          | Complete; Phase 9 continuation authorized  |
 | 9     | Statistical comparison                                    | Complete; Phase 10 continuation authorized |
-| 10    | Sandboxed software engineering application                | Implemented through 10C; review pending    |
+| 10    | Sandboxed software engineering application                | Implemented through 10D; review pending    |
 | 11    | MCP adapter through existing policy                       | Planned                                    |
 | 12    | AWS infrastructure with Terraform                         | Planned                                    |
 | 13    | Production CI/CD                                          | Planned                                    |
@@ -366,7 +366,7 @@ Phase 10 continuation was authorized on 2026-10-02.
   [operations](docs/operations/SANDBOX.md#durable-sandbox-tests--phase-10b) and
   [handoff](docs/operations/PHASE_10B.md). No repaired-task or full Phase 10 closure claim.
 
-- **10C — Implemented; review pending:** separate `sandbox-review-v1` worker,
+- **10C — Implemented; Phase 10D continuation authorized:** separate `sandbox-review-v1` worker,
   bounded in-container fixture inspection, exact recorded preimage validation,
   independent durable proposal provenance checks and existing human review pause.
   Local inspection exposes immutable identity, exact before/after, hashes and diff;
@@ -376,10 +376,20 @@ Phase 10 continuation was authorized on 2026-10-02.
   [operations](docs/operations/SANDBOX.md#sandbox-inspection-and-exact-review--phase-10c)
   and [handoff](docs/operations/PHASE_10C.md).
 
+- **10D — Implemented; review pending:** distinct `sandbox-patch-v1` profile with
+  explicit execution-time WRITE/EXECUTE grants, exact approved single-use mutation
+  intent, fresh full workspace/preimage checks and bounded in-container tests.
+  Durable outcomes retain approved diff, workspace digests and test observations;
+  failed validation stays inspectable. Unknown mutation outcomes terminate without
+  adapter construction or replay. Review-only approvals remain non-writing.
+  See [ADR 0035](docs/adr/0035-approved-sandbox-patches.md),
+  [operations](docs/operations/SANDBOX.md#approved-sandbox-patch-and-validation--phase-10d)
+  and [handoff](docs/operations/PHASE_10D.md).
+
 ## Recommended next slice
 
-Review 10C, then design a separately authorized sandbox patch-application profile
-binding exact approved proposals to a fresh pinned fixture preimage, durable intent
-and conservative uncertain-effect recovery. Existing review-only approvals must
-not acquire write authority. Repaired-task verification and several controlled
-tasks remain later Phase 10 acceptance work. No automatic continuation is authorized.
+Review 10D, then extend the controlled fixture/task selection deliberately to several
+small repairs with explicit pinned identities and independent end-to-end acceptance.
+Audit remaining Phase 10 search and failed-task inspection requirements before
+claiming closure. Preserve approval/WRITE separation and no-replay mutation recovery.
+No automatic continuation is authorized.
