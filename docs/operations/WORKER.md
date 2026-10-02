@@ -393,3 +393,11 @@ with an explicit execution-time WRITE grant. It claims before workspace capture 
 terminal duplicates and uncertain-intent cleanup require no filesystem access.
 The ordinary review/fixture workers cannot adopt these runs. See
 [controlled patch operations](PATCHES.md) before using the write-capable profile.
+
+## Durable sandbox tests (Phase 10B)
+
+The separate `python -m runveil_worker.sandbox_worker` entrypoint binds the reviewed
+fixture image and exposes only `tests.run` under explicit `--allow-execute`. See
+[sandbox operations](SANDBOX.md#durable-sandbox-tests--phase-10b) for submission,
+fixed-profile identity, checkpoint recovery and terminal-only uncertain-intent
+handling. It does not extend the general worker CLI, SQS adapter or patch approvals.

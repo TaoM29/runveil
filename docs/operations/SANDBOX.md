@@ -1,7 +1,8 @@
 # Disposable fixture sandbox — Phase 10A
 
-This is a local **operator-only boundary demonstration**, not an agent tool or a
-completed software engineering application. Use a reviewed image built from the
+The Phase 10A standalone command is a local **operator-only boundary demonstration**.
+The Phase 10B durable worker integration is described below; neither completes the
+software engineering application. Use a reviewed image built from the
 `sandbox/` directory. A Linux Docker daemon with cgroup v2, CPU/memory/PID controls
 and default seccomp is required; Docker Desktop's Linux VM is supported. Docker,
 the image and the local operator are trusted. Do not expose this command publicly.
@@ -91,3 +92,95 @@ Existing runtime EXECUTE denial, durable intent/recovery, approval and WRITE gra
 trace projections and evaluation guards are unchanged. Next work must define a
 pinned durable execution profile before making sandbox execution agent-accessible.
 See [ADR 0032](../adr/0032-disposable-fixture-sandbox.md).
+
+## Durable sandbox tests — Phase 10B
+
+`runveil_worker.sandbox_worker` adds one offline `sandbox-tests-v1` profile for the
+fixed `clamp-v1` baseline. It exposes only `tests.run` with empty arguments through
+a narrow core execution path. The ordinary tool registry remains read-only. The
+image, fixture, isolation policy, local socket identity and covered implementation
+are pinned in configuration version 12. No WRITE/NETWORK permission, repository
+mount, patch, approval substitution or persistent workspace is enabled.
+
+After building the image above and migrating the local database:
+
+```sh
+# DATABASE_URL must name the migrated local Runveil database.
+SANDBOX_IMAGE=$(docker image inspect runveil-sandbox:phase10a --format '{{.Id}}')
+uv run python -m runveil_worker.sandbox_worker submit --image "$SANDBOX_IMAGE"
+# Copy the returned UUID into RUN_ID.
+RUN_ID=RETURNED-UUID
+uv run python -m runveil_worker.sandbox_worker work --run-id "$RUN_ID" --image "$SANDBOX_IMAGE" --allow-execute
+```
+
+Submission pins authority but does not execute Docker. Work additionally requires
+an explicit operator EXECUTE grant. Both calls accept `--socket` for the same local
+absolute Unix socket. Socket path/device/inode and adapter/core source fingerprints
+must still match. Daemon restart, source changes or a different image can refuse
+clean execution. Keep the pinned image locally available: rebuilding a tag can
+remove its previous local image ID. Hashes identify the binding, not its authenticity or the entire
+host environment. The reviewed image and trusted daemon assumptions still apply.
+
+The profile permits two scripted model calls, one tool call and three steps; it
+pins a 120-second elapsed budget plus the existing token/cost/repeated-call limits.
+Usage/pricing remain synthetic. Tests are never retried. A test failure is recorded
+as a successful tool observation with `status: tests_failed`, followed by final
+summary `Sandbox test status: tests_failed.` and run status SUCCEEDED. This means
+the observation workflow completed; it does **not** mean the code was repaired.
+Infrastructure/cleanup failures instead produce a failed tool and FAILED run.
+
+The tool result holds at most 4096 characters of untrusted output with an explicit
+truncation flag. Existing trace API/UI show invocation identity/status, budgets
+and final summary; raw tool output remains in the durable tool record/context.
+Opt-in telemetry works through the existing `RUNVEIL_TELEMETRY=json` setting.
+No new API/UI or evaluation suite is introduced. Historical evidence is unchanged;
+source changes correctly change existing implementation fingerprints.
+
+### Recovery and ownership
+
+Every attempt commits a tool intent before Docker work. Its container name is
+`runveil-sandbox-` followed by the tool-call UUID **without hyphens**. Ownership,
+revision/history and elapsed budget are rechecked before create and before start.
+Outcome writes remain fenced. Docker I/O does not hold database locks. A request
+already sent, or a process paused immediately after admission, cannot be atomically
+revoked by PostgreSQL; container limits still apply and stale outcomes cannot commit.
+
+Clean checkpoints resume under the identical binding and explicit EXECUTE grant,
+without repeating committed results. After a crash leaves an unresolved model/tool
+intent, the same work command can terminate it without Docker, image, socket access
+or an execution grant:
+
+```sh
+uv run python -m runveil_worker.sandbox_worker work --run-id "$RUN_ID"
+```
+
+It still respects the existing 660-second live lease; it never steals ownership.
+Once eligible, the worker validates the fixed profile/history and records
+`execution_interrupted` (or elapsed expiry when that takes precedence). It never
+replays the uncertain call, inspects Docker to guess its outcome, or adopts a
+container. Terminal duplicates select no work. Configuration/grant rejection may
+leave the acquired lease until expiry, matching existing worker admission behavior.
+Do not manually shorten production leases to bypass an active owner.
+
+Operator container cleanup remains separate. Inspect the exact derived name after
+a crash or failed invocation before concluding its resources are gone. Budget or
+ownership failures can take precedence over cleanup errors; only a committed result
+with `cleanup_confirmed: true` confirms successful observed cleanup. An absent name
+immediately after an uncertain create is not proof that a delayed daemon request
+cannot create it later. No cleanup reconciler or exactly-once guarantee is added.
+
+### Verification
+
+The normal integration suite uses PostgreSQL and deterministic Docker-command stubs
+for grants, image drift, persisted provenance, recovery cuts, stale ownership,
+model argument refusal and safe cleanup failures. Real Docker is separately opt-in:
+
+```sh
+export RUNVEIL_TEST_DATABASE_URL='postgresql+psycopg://runveil:runveil-local-only@127.0.0.1:5432/postgres'
+RUNVEIL_SANDBOX_IMAGE="$SANDBOX_IMAGE" uv run pytest packages/persistence/tests/test_sandbox_worker.py -k real_docker
+```
+
+That test executes a fresh worker process, verifies the real failed baseline against
+its persisted tool record and checks container removal. CI runs it after building
+the sandbox image and the Phase 10A isolation acceptance. See
+[ADR 0033](../adr/0033-durable-sandbox-execution.md) and [handoff](PHASE_10B.md).

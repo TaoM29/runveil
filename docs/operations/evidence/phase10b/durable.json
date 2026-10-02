@@ -1,0 +1,387 @@
+{
+  "profile": "sandbox-tests-v1",
+  "image": "sha256:c959e2034bc2e0b03a4b6dd5593e326781d4f2b52b1d5d99279c4cc6c229c8d4",
+  "worker": {
+    "selected": true,
+    "error_code": null,
+    "summary": "Sandbox test status: tests_failed."
+  },
+  "tool_call_id": "3225dd2d-0b1e-467c-841a-b63c3a092d51",
+  "tool_status": "SUCCEEDED",
+  "tool_result": {
+    "output": "test_bounds (test_clamp.ClampTests.test_bounds) ... \n  test_bounds (test_clamp.ClampTests.test_bounds) (value=-3) ... FAIL\n\n======================================================================\nFAIL: test_bounds (test_clamp.ClampTests.test_bounds) (value=-3)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/workspace/repository/test_clamp.py\", line 10, in test_bounds\n    self.assertEqual(clamp(value, 0, 10), expected)\nAssertionError: -3 != 0\n\n----------------------------------------------------------------------\nRan 1 test in 0.001s\n\nFAILED (failures=1)\n",
+    "status": "tests_failed",
+    "exit_code": 1,
+    "output_truncated": false,
+    "cleanup_confirmed": true
+  },
+  "container_absence_confirmed": true,
+  "trace": {
+    "schema_version": 1,
+    "run_id": "95118a7a-da17-4b5d-8917-4074b2813002",
+    "agent_version_id": "ead9026d-a451-4bad-a093-1e2d8341aa57",
+    "status": "SUCCEEDED",
+    "revision": 2,
+    "created_at": "2026-10-02T10:38:41.677519Z",
+    "started_at": "2026-10-02T10:38:42.346583Z",
+    "finished_at": "2026-10-02T10:38:43.909271Z",
+    "observed_at": "2026-10-02T10:38:44.093164Z",
+    "elapsed_ms": 1562.688,
+    "event_sequence": 17,
+    "history_complete": true,
+    "model_calls": 2,
+    "tool_calls": 1,
+    "checkpoint": {
+      "event_sequence": 16,
+      "schema_version": 12,
+      "tokens": {
+        "attempts": 2,
+        "input_tokens": 20,
+        "output_tokens": 10,
+        "unknown_attempts": 0,
+        "last_usage": {
+          "input_tokens": 10,
+          "output_tokens": 5
+        }
+      },
+      "cost": {
+        "known_nanousd": 50000,
+        "unknown_attempts": 0
+      },
+      "retries_scheduled": 0,
+      "error_code": null,
+      "final_summary": "Sandbox test status: tests_failed.",
+      "final_summary_truncated": false
+    },
+    "approval": null,
+    "events": [
+      {
+        "sequence": 1,
+        "kind": "run.created",
+        "run_revision": 0,
+        "step_number": null,
+        "created_at": "2026-10-02T10:38:41.700193Z",
+        "retry_of": null,
+        "to_status": "QUEUED",
+        "invocation": null
+      },
+      {
+        "sequence": 2,
+        "kind": "run.transitioned",
+        "run_revision": 1,
+        "step_number": null,
+        "created_at": "2026-10-02T10:38:42.349095Z",
+        "retry_of": null,
+        "to_status": "RUNNING",
+        "invocation": null
+      },
+      {
+        "sequence": 3,
+        "kind": "step.recorded",
+        "run_revision": 1,
+        "step_number": 1,
+        "created_at": "2026-10-02T10:38:42.364463Z",
+        "retry_of": null,
+        "to_status": null,
+        "invocation": null
+      },
+      {
+        "sequence": 4,
+        "kind": "checkpoint.created",
+        "run_revision": 1,
+        "step_number": 1,
+        "created_at": "2026-10-02T10:38:42.366345Z",
+        "retry_of": null,
+        "to_status": null,
+        "invocation": null
+      },
+      {
+        "sequence": 5,
+        "kind": "model.requested",
+        "run_revision": 1,
+        "step_number": null,
+        "created_at": "2026-10-02T10:38:42.411262Z",
+        "retry_of": null,
+        "to_status": null,
+        "invocation": {
+          "id": "42491f32-6516-48e0-94b8-1ad4fa6dede2",
+          "kind": "model",
+          "name": "fixture-v1",
+          "provider": "scripted-sandbox-tests-v1",
+          "model_invocation_id": null,
+          "status": "SUCCEEDED",
+          "requested_sequence": 5,
+          "completed_sequence": 6,
+          "requested_at": "2026-10-02T10:38:42.411262Z",
+          "completed_at": "2026-10-02T10:38:42.444296Z",
+          "duration_ms": 33.034,
+          "error_code": null
+        }
+      },
+      {
+        "sequence": 6,
+        "kind": "model.completed",
+        "run_revision": 1,
+        "step_number": null,
+        "created_at": "2026-10-02T10:38:42.444296Z",
+        "retry_of": null,
+        "to_status": null,
+        "invocation": {
+          "id": "42491f32-6516-48e0-94b8-1ad4fa6dede2",
+          "kind": "model",
+          "name": "fixture-v1",
+          "provider": "scripted-sandbox-tests-v1",
+          "model_invocation_id": null,
+          "status": "SUCCEEDED",
+          "requested_sequence": 5,
+          "completed_sequence": 6,
+          "requested_at": "2026-10-02T10:38:42.411262Z",
+          "completed_at": "2026-10-02T10:38:42.444296Z",
+          "duration_ms": 33.034,
+          "error_code": null
+        }
+      },
+      {
+        "sequence": 7,
+        "kind": "step.recorded",
+        "run_revision": 1,
+        "step_number": 2,
+        "created_at": "2026-10-02T10:38:42.449625Z",
+        "retry_of": null,
+        "to_status": null,
+        "invocation": null
+      },
+      {
+        "sequence": 8,
+        "kind": "checkpoint.created",
+        "run_revision": 1,
+        "step_number": 2,
+        "created_at": "2026-10-02T10:38:42.450593Z",
+        "retry_of": null,
+        "to_status": null,
+        "invocation": null
+      },
+      {
+        "sequence": 9,
+        "kind": "tool.requested",
+        "run_revision": 1,
+        "step_number": null,
+        "created_at": "2026-10-02T10:38:42.484261Z",
+        "retry_of": null,
+        "to_status": null,
+        "invocation": {
+          "id": "3225dd2d-0b1e-467c-841a-b63c3a092d51",
+          "kind": "tool",
+          "name": "tests.run",
+          "provider": null,
+          "model_invocation_id": "42491f32-6516-48e0-94b8-1ad4fa6dede2",
+          "status": "SUCCEEDED",
+          "requested_sequence": 9,
+          "completed_sequence": 10,
+          "requested_at": "2026-10-02T10:38:42.484261Z",
+          "completed_at": "2026-10-02T10:38:43.779247Z",
+          "duration_ms": 1294.9859999999999,
+          "error_code": null
+        }
+      },
+      {
+        "sequence": 10,
+        "kind": "tool.completed",
+        "run_revision": 1,
+        "step_number": null,
+        "created_at": "2026-10-02T10:38:43.779247Z",
+        "retry_of": null,
+        "to_status": null,
+        "invocation": {
+          "id": "3225dd2d-0b1e-467c-841a-b63c3a092d51",
+          "kind": "tool",
+          "name": "tests.run",
+          "provider": null,
+          "model_invocation_id": "42491f32-6516-48e0-94b8-1ad4fa6dede2",
+          "status": "SUCCEEDED",
+          "requested_sequence": 9,
+          "completed_sequence": 10,
+          "requested_at": "2026-10-02T10:38:42.484261Z",
+          "completed_at": "2026-10-02T10:38:43.779247Z",
+          "duration_ms": 1294.9859999999999,
+          "error_code": null
+        }
+      },
+      {
+        "sequence": 11,
+        "kind": "step.recorded",
+        "run_revision": 1,
+        "step_number": 3,
+        "created_at": "2026-10-02T10:38:43.789597Z",
+        "retry_of": null,
+        "to_status": null,
+        "invocation": null
+      },
+      {
+        "sequence": 12,
+        "kind": "checkpoint.created",
+        "run_revision": 1,
+        "step_number": 3,
+        "created_at": "2026-10-02T10:38:43.791523Z",
+        "retry_of": null,
+        "to_status": null,
+        "invocation": null
+      },
+      {
+        "sequence": 13,
+        "kind": "model.requested",
+        "run_revision": 1,
+        "step_number": null,
+        "created_at": "2026-10-02T10:38:43.850868Z",
+        "retry_of": null,
+        "to_status": null,
+        "invocation": {
+          "id": "d9660508-b967-439b-83c1-495b1f949464",
+          "kind": "model",
+          "name": "fixture-v1",
+          "provider": "scripted-sandbox-tests-v1",
+          "model_invocation_id": null,
+          "status": "SUCCEEDED",
+          "requested_sequence": 13,
+          "completed_sequence": 14,
+          "requested_at": "2026-10-02T10:38:43.850868Z",
+          "completed_at": "2026-10-02T10:38:43.891836Z",
+          "duration_ms": 40.967999999999996,
+          "error_code": null
+        }
+      },
+      {
+        "sequence": 14,
+        "kind": "model.completed",
+        "run_revision": 1,
+        "step_number": null,
+        "created_at": "2026-10-02T10:38:43.891836Z",
+        "retry_of": null,
+        "to_status": null,
+        "invocation": {
+          "id": "d9660508-b967-439b-83c1-495b1f949464",
+          "kind": "model",
+          "name": "fixture-v1",
+          "provider": "scripted-sandbox-tests-v1",
+          "model_invocation_id": null,
+          "status": "SUCCEEDED",
+          "requested_sequence": 13,
+          "completed_sequence": 14,
+          "requested_at": "2026-10-02T10:38:43.850868Z",
+          "completed_at": "2026-10-02T10:38:43.891836Z",
+          "duration_ms": 40.967999999999996,
+          "error_code": null
+        }
+      },
+      {
+        "sequence": 15,
+        "kind": "step.recorded",
+        "run_revision": 1,
+        "step_number": 4,
+        "created_at": "2026-10-02T10:38:43.896663Z",
+        "retry_of": null,
+        "to_status": null,
+        "invocation": null
+      },
+      {
+        "sequence": 16,
+        "kind": "checkpoint.created",
+        "run_revision": 1,
+        "step_number": 4,
+        "created_at": "2026-10-02T10:38:43.897985Z",
+        "retry_of": null,
+        "to_status": null,
+        "invocation": null
+      },
+      {
+        "sequence": 17,
+        "kind": "run.transitioned",
+        "run_revision": 2,
+        "step_number": null,
+        "created_at": "2026-10-02T10:38:43.910944Z",
+        "retry_of": null,
+        "to_status": "SUCCEEDED",
+        "invocation": null
+      }
+    ],
+    "next_after_sequence": null
+  },
+  "telemetry": [
+    {
+      "attributes": {
+        "input_tokens": 10,
+        "invocation_id": "42491f32-6516-48e0-94b8-1ad4fa6dede2",
+        "outcome": "returned",
+        "output_tokens": 5,
+        "request_sequence": 5,
+        "run_id": "95118a7a-da17-4b5d-8917-4074b2813002",
+        "usage_complete": true
+      },
+      "end_ns": 1790937522426495000,
+      "event": "execution.span",
+      "name": "model.attempt",
+      "parent_span_id": "e852199ee88709a7",
+      "service": "runveil-worker",
+      "span_id": "45556591d7c2c3ea",
+      "start_ns": 1790937522426229000,
+      "trace_id": "563f587186e07fd1adfb39082b613c15"
+    },
+    {
+      "attributes": {
+        "invocation_id": "3225dd2d-0b1e-467c-841a-b63c3a092d51",
+        "outcome": "returned",
+        "request_sequence": 9,
+        "run_id": "95118a7a-da17-4b5d-8917-4074b2813002"
+      },
+      "end_ns": 1790937523724613000,
+      "event": "execution.span",
+      "name": "tool.dispatch",
+      "parent_span_id": "e852199ee88709a7",
+      "service": "runveil-worker",
+      "span_id": "8e9b6f45c8f91421",
+      "start_ns": 1790937522500118000,
+      "trace_id": "563f587186e07fd1adfb39082b613c15"
+    },
+    {
+      "attributes": {
+        "input_tokens": 10,
+        "invocation_id": "d9660508-b967-439b-83c1-495b1f949464",
+        "outcome": "returned",
+        "output_tokens": 5,
+        "request_sequence": 13,
+        "run_id": "95118a7a-da17-4b5d-8917-4074b2813002",
+        "usage_complete": true
+      },
+      "end_ns": 1790937523865894000,
+      "event": "execution.span",
+      "name": "model.attempt",
+      "parent_span_id": "e852199ee88709a7",
+      "service": "runveil-worker",
+      "span_id": "6c522402410829f8",
+      "start_ns": 1790937523865508000,
+      "trace_id": "563f587186e07fd1adfb39082b613c15"
+    },
+    {
+      "attributes": {
+        "input_tokens": 20,
+        "known_nanousd": 50000,
+        "model_attempts": 2,
+        "outcome": "succeeded",
+        "output_tokens": 10,
+        "retries_scheduled": 0,
+        "run_id": "95118a7a-da17-4b5d-8917-4074b2813002",
+        "steps": 3,
+        "unknown_cost_attempts": 0,
+        "unknown_usage_attempts": 0
+      },
+      "end_ns": 1790937523913635000,
+      "event": "execution.span",
+      "name": "agent.execute",
+      "parent_span_id": null,
+      "service": "runveil-worker",
+      "span_id": "e852199ee88709a7",
+      "start_ns": 1790937522333054000,
+      "trace_id": "563f587186e07fd1adfb39082b613c15"
+    }
+  ]
+}

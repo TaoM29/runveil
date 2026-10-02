@@ -115,3 +115,5 @@ For the separate, explicitly opt-in hosted check, see
 
 CI also builds the fixed sandbox image and runs the [Phase 10 boundary acceptance](SANDBOX.md).
 This requires a Linux Docker daemon with cgroup v2 and default seccomp enabled.
+After the image build, CI opts into the fresh-process durable sandbox integration
+test with `RUNVEIL_SANDBOX_IMAGE`; without that variable, only that Docker test skips.

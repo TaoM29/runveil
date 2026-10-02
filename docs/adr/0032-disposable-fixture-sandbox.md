@@ -49,3 +49,10 @@ dependencies or changes to Phase 8/9 artifacts are needed.
 
 Docker flag semantics follow the [run reference](https://docs.docker.com/reference/cli/docker/container/run)
 and [resource constraints](https://docs.docker.com/engine/containers/resource_constraints/).
+
+## Subsequent durable integration
+
+[ADR 0033](0033-durable-sandbox-execution.md) adds the explicitly reviewed Phase 10B
+worker profile. It supersedes the temporary prohibition on worker integration only
+for that pinned, fenced, non-replaying profile; standalone runner and isolation
+limits above remain in force.
