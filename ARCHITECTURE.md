@@ -1,6 +1,6 @@
 # Architecture
 
-## Implemented through Phase 10B; durable sandbox execution review pending
+## Implemented through Phase 10C; sandbox inspection/review pending
 
 ```mermaid
 flowchart LR
@@ -560,3 +560,25 @@ No migration, dependency, API/UI or evaluator changes. See
 [ADR 0033](docs/adr/0033-durable-sandbox-execution.md),
 [operations](docs/operations/SANDBOX.md#durable-sandbox-tests--phase-10b) and
 [handoff](docs/operations/PHASE_10B.md).
+
+## Phase 10C sandbox inspection and exact review
+
+The separate `sandbox-review-v1` profile uses configuration/checkpoint version 13,
+with the same pinned sandbox identity and a closed empty-input inspection operation.
+Three fixture files are read inside the disposable container; no host checkout is
+mounted and no fixture code is imported. Completed bounded UTF-8 inspection output
+is durable before the provider proposes an exact clamp.py replacement.
+
+Core and persistence independently bind proposals to that recorded preimage.
+The approval row/digest and immutable run/version retain exact patch and sandbox
+identity; local inspection derives hashes and a unified diff from canonical text.
+Existing fenced pause/lease release, revision/digest decisions, deadlines,
+accounting, telemetry and conservative recovery apply. Approval permits only a
+review-complete summary. Version 11 remains the only approved mutation path.
+
+The local review CLI is the operator boundary for this profile. Existing approval
+HTTP/UI capabilities remain limited to their prior profiles; read-only traces
+understand version 13 metadata/accounting. No migration, dependency, patch writer,
+new evaluation claim or Phase 10 closure is included. See
+[ADR 0034](docs/adr/0034-sandbox-inspection-review.md) and
+[operations](docs/operations/SANDBOX.md#sandbox-inspection-and-exact-review--phase-10c).

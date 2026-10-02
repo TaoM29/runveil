@@ -20,8 +20,9 @@ on a versioned public code-reading corpus, with opt-in
 [paired statistical reports](docs/operations/STATISTICS.md). These scripted results
 verify the harness and statistical methods, not model quality. Hosted approval
 flows and real model-quality evaluations remain future work. A [Docker sandbox](docs/operations/SANDBOX.md) supports isolated, bounded fixture
-tests through an explicitly authorized durable scripted worker. Sandbox-bound
-patching and end-to-end coding acceptance remain future Phase 10 work.
+tests through an explicitly authorized durable scripted worker.
+A separate review worker inspects the pinned fixture and records exact patch proposals for human review.
+Applying sandbox patches and end-to-end coding acceptance remain future Phase 10 work.
 
 Reliability is verified with deterministic tests and worker-process crash/recovery
 checks. This is a development project, not a production service.
