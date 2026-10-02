@@ -460,3 +460,57 @@ These public scripted repairs demonstrate integration, not hidden-task or stocha
 model performance. Existing failure/recovery/authorization tests remain required.
 See [ADR 0037](../adr/0037-controlled-task-catalog.md),
 [Phase 10 closure audit](PHASE_10.md) and [handoff](PHASE_10F.md).
+
+## Sandbox evidence search — Phase 10G
+
+Use the new `software-engineering-v2` profile (configuration/checkpoint v16) for
+inspect → search → failing baseline → exact proposal → human approval → approved
+application and post-change tests. The separate `software_search_worker` CLI
+supports the same three pinned tasks and decision/inspection commands:
+
+```sh
+docker build --network=none -t runveil-sandbox:phase10g sandbox
+SANDBOX_IMAGE=$(docker image inspect runveil-sandbox:phase10g --format '{{.Id}}')
+uv run python -m runveil_worker.software_search_worker submit --image "$SANDBOX_IMAGE" --fixture mean-v1
+# Set RUN_ID to the returned UUID.
+uv run python -m runveil_worker.software_search_worker work --run-id "$RUN_ID" --image "$SANDBOX_IMAGE" --allow-execute
+uv run python -m runveil_worker.software_search_worker inspect --run-id "$RUN_ID"
+# Review the exact proposal, diff, search/baseline evidence and application consequence.
+# Set REVISION and DIGEST from the inspected revision and approval.digest.
+uv run python -m runveil_worker.software_search_worker approve --run-id "$RUN_ID" --revision "$REVISION" --digest "$DIGEST"
+uv run python -m runveil_worker.software_search_worker work --run-id "$RUN_ID" --image "$SANDBOX_IMAGE" --allow-execute --allow-write
+uv run python -m runveil_worker.software_search_worker inspect --run-id "$RUN_ID"
+```
+
+`reject` uses the same revision/digest. There is no automatic approval. The local
+CLI remains a trusted database-operator interface; no HTTP approval/UI expansion.
+`--allow-execute` grants the fixed pre-approval tools, including repository.search
+and READ; mutation still separately requires `--allow-write`. Both pinned and
+operator grants are checked. Nine steps/four model/five tool calls fit the original
+one-hour deadline and token limits; the new profile pins a 125,000-nanodollar cost
+ceiling (four scripted calls consume 100,000). Review time consumes the deadline.
+
+Search is a pure scan of the original complete sandbox-produced snapshot. It does
+not read the host checkout or create another container. Queries are case-sensitive
+literal strings of 1–128 characters, excluding CR/LF/NUL; max_matches is 1–10.
+Results contain the inspection digest, files_scanned=3, ordered one-based path/line
+matches, at most 160 characters per excerpt and truncation. There is at most one
+match per line; regexes, globs, arbitrary paths and commands are unsupported. The
+scripted provider searches `return` and uses the source hit when selecting its
+known repair. This establishes integration, not independent model-quality evidence.
+
+Inspect includes the durable search request/result alongside other ordered tools,
+even for failures before approval. Persistence recomputes results from the recorded
+inspection, checks model provenance/order and requires matching search observations
+in later baseline/proposal requests. Approval and mutation admission repeat those
+checks. A completed search resumes without another search/inspection; unresolved
+intent fails with `execution_interrupted` without constructing Docker or replaying.
+Existing unknown-mutation recovery, cleanup and operator procedures still apply.
+Search never silently adopts a later workspace; mutation revalidates the entire
+original preimage inside its container.
+
+Existing v15 tasks use `software_worker` with their original configuration. Covered
+implementation changes invalidate old live bindings: use the original installation
+for those runs or submit new runs, never repin a job. Uncertain-intent recovery stays
+binding-free. See [ADR 0038](../adr/0038-sandbox-evidence-search.md),
+[handoff](PHASE_10G.md) and [Phase 10 closure review](PHASE_10.md).

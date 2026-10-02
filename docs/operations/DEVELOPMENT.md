@@ -118,8 +118,8 @@ This requires a Linux Docker daemon with cgroup v2 and default seccomp enabled.
 After the image build, CI opts into the fresh-process durable sandbox integration
 tests (baseline, review, approved patch, patch validation boundaries and integrated
 software workflow) with
-`RUNVEIL_SANDBOX_IMAGE`; without that variable, those eight Docker cases skip.
+`RUNVEIL_SANDBOX_IMAGE`; without that variable, those eleven Docker cases skip.
 
-The integrated software workflow runs against all three pinned coding fixtures.
+Both original and search-enabled integrated workflows run against all three pinned coding fixtures.
 Its container-level refusal check also covers foreign source and test-file targets.
 See the [Phase 10 closure assessment](PHASE_10.md).

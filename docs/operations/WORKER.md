@@ -442,3 +442,13 @@ Continuation obtains the task from the pinned configuration and rejects `--fixtu
 versions 12–14 stay clamp-only. The same explicit EXECUTE/WRITE, approval and no-replay
 boundaries apply. See [task selection](SANDBOX.md#controlled-task-selection--phase-10f)
 and the [closure audit](PHASE_10.md).
+
+## Search-enabled fixture workflow (Phase 10G)
+
+New tasks can use `runveil_worker.software_search_worker`, profile
+`software-engineering-v2`, configuration/checkpoint version 16. It inserts durable
+bounded literal search of the sandbox inspection before baseline tests. Search
+requires explicit READ/tool grants, shares the original snapshot identity and is
+independently revalidated at approval and mutation boundaries. The old v15 CLI and
+configuration remain supported. See [operations](SANDBOX.md#sandbox-evidence-search--phase-10g),
+[handoff](PHASE_10G.md) and [closure assessment](PHASE_10.md).
