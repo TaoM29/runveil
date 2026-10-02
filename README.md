@@ -2,47 +2,65 @@
 
 > This repository is under active development.
 
-A custom Python runtime for durable, bounded AI-agent execution.
+A custom Python runtime for durable, bounded AI-agent execution. Runveil is building
+toward a software-engineering agent that investigates a repository, proposes a
+patch, waits for human approval, and validates the change in an isolated environment.
+The project owns the execution loop, persistence, recovery, and authorization logic.
 
-Runveil explores the engineering around model calls: typed tools, persisted
-execution, checkpoints, recovery, retries and resource limits. The core runtime
-is built directly so its behavior can be inspected and tested.
+## Where we are
 
-The goal is a software-engineering agent that investigates a repository and
-proposes changes in an isolated environment, with human approval before applying
-them. Today, the backend supports durable execution and controlled read-only
-repository tools, durable patch reviews and approved single-file replacement in a
-controlled local checkout. A local authenticated API and small operator console
-expose approval inspection and decisions. A separate read-only trace API and
-[trace console](docs/operations/TRACES.md) expose ordered execution evidence and
-persisted accounting. Opt-in [execution telemetry](docs/operations/TELEMETRY.md)
-adds correlated OpenTelemetry spans and safe JSON output. An offline
-[evaluation harness](docs/operations/EVALUATIONS.md) compares immutable configurations
-on a versioned public code-reading corpus, with opt-in
-[paired statistical reports](docs/operations/STATISTICS.md). These scripted results
-verify the harness and statistical methods, not model quality. Hosted approval
-flows and real model-quality evaluations remain future work. A [Docker sandbox](docs/operations/SANDBOX.md) supports isolated, bounded fixture
-tests through an explicitly authorized durable scripted worker.
-A separate review worker inspects the pinned fixture and records exact patch proposals for human review.
-A distinct WRITE-authorized sandbox worker applies approved patches and records test/diff evidence.
-An integrated [fixture workflow](docs/operations/SANDBOX.md#fixture-engineering-workflow--phase-10e) connects inspection, failing baseline tests, exact review and approved validation in one durable run.
-The workflow supports three controlled repairs: clamp bounds, whitespace slugs and fractional means.
-The search-enabled workflow now covers the original Phase 10 checklist across three controlled tasks.
-The [Phase 10 audit](docs/operations/PHASE_10.md) is ready for bounded-scope closure review.
+**Now: Phase 12, private AWS deployment.** The runtime and local workflows are
+implemented, including sandboxed coding tasks and read-only MCP tools. Terraform
+and container configuration are implemented through Phase 12B, with local and
+offline verification. Live AWS acceptance is pending; this is not a production service.
 
-Reliability is verified with deterministic tests and worker-process crash/recovery
-checks. This is a development project, not a production service.
+What works today:
 
-[Architecture](ARCHITECTURE.md) · [Roadmap](ROADMAP.md) ·
-[Development guide](docs/operations/DEVELOPMENT.md) ·
-[Phase 5 verification](docs/operations/PHASE_5.md) ·
-[Phase 6 acceptance](docs/operations/PHASE_6.md) ·
-[Phase 7 acceptance](docs/operations/PHASE_7.md) ·
-[Phase 8 acceptance](docs/operations/PHASE_8.md) ·
-[Phase 9 acceptance](docs/operations/PHASE_9.md) · [Contributing](CONTRIBUTING.md)
+- Durable execution with checkpoints, crash recovery, bounded retries, and limits
+  on steps, time, tokens, estimated cost, and tool calls.
+- Typed repository read/search tools, read-only MCP integration, and human approval
+  bound to the exact proposed patch before controlled writes.
+- Docker-isolated coding workflows across three controlled tasks: inspect, search,
+  run failing tests, propose a repair, approve, apply, and validate.
+- Local approval and trace consoles, execution telemetry, and an offline evaluation
+  harness with paired statistical comparisons.
 
-[MIT License](LICENSE)
+The web [showcase](docs/operations/SHOWCASE.md) at `/` and `/runs` presents recorded
+public fixture runs. Local operator tools live at `/approvals` and `/traces`.
+Scripted fixtures verify runtime behavior; they do not establish general coding-agent
+or model quality. Phase 10 and 11 closure reviews remain pending.
 
-The [product showcase](docs/operations/SHOWCASE.md) presents the recorded Phase 10
-workflow at `/` and `/runs`, including exact proposals and test evidence. Live local
-trace inspection stays at `/traces`; the existing approval console is at `/approvals`.
+## Tech stack
+
+| Layer                      | In place                                                                                     | Remaining                                                    |
+| -------------------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| Runtime & API              | Python 3.12, Pydantic, FastAPI; custom agent loop and workers                                | Broader agent workflows beyond controlled fixtures           |
+| Persistence & delivery     | PostgreSQL, SQLAlchemy, Alembic; SQS notification adapter                                    | Live AWS delivery and recovery acceptance                    |
+| Web                        | Next.js, React, TypeScript, Tailwind CSS                                                     | Public deployment                                            |
+| Models & tools             | Scripted and hosted OpenAI-compatible providers, MCP Python SDK, Docker sandbox              | Temporary GPU-hosted vLLM and inference benchmarks           |
+| Observability & evaluation | OpenTelemetry, persisted traces, offline evaluations and paired statistics                   | Real model-quality evaluation                                |
+| Infrastructure             | Terraform for private RDS, SQS, ECS/Fargate, ECR, S3 state, Secrets Manager, CloudWatch logs | Live provisioning, health, recovery, IAM and teardown checks |
+| Quality & delivery         | GitHub Actions, pytest, Ruff, mypy, Vitest, ESLint, Prettier; image and Terraform checks     | Automated production delivery with AWS OIDC                  |
+
+The AWS configuration currently targets a private read-only API and a fixed scripted
+worker workflow. Hosting the web app, models, MCP servers, and Docker sandbox workers
+is outside that deployment slice.
+
+## What's next
+
+1. Review Phase 12B and run bounded private AWS acceptance: migrations, TLS health,
+   queue delivery, worker recovery, permission boundaries, and cleanup.
+2. Automate production delivery, then benchmark temporary self-hosted inference
+   with vLLM.
+3. Complete security hardening and publish a live demo with reproducible evidence.
+
+See the [roadmap](ROADMAP.md) for review gates and the
+[AWS runbook](docs/operations/AWS_RUNTIME.md) for the immediate next slice.
+
+## Explore or run locally
+
+Start with the [development guide](docs/operations/DEVELOPMENT.md) for setup and
+verification. Local development uses Python/uv, Node.js/npm, and Docker Compose.
+
+[Architecture](ARCHITECTURE.md) · [Project charter](docs/PROJECT_PLAN.md) ·
+[Contributing](CONTRIBUTING.md) · [MIT License](LICENSE)
