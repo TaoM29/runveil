@@ -40,7 +40,8 @@ from runveil_core.sandbox_patch import (
     authorize_sandbox_patch,
 )
 from runveil_core.sandbox_review import SANDBOX_REVIEW_PROFILE, proposal_diff
-from runveil_core.software import SOFTWARE_PROFILE, baseline_failed
+from runveil_core.sandbox_search import SEARCH_TOOL
+from runveil_core.software import SEARCH_PROFILE, SOFTWARE_PROFILE, baseline_failed
 from runveil_core.tools import ToolError, ToolPolicy
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -52,6 +53,7 @@ from runveil_persistence.models import EventRow, JobRow, ModelInvocationRow, Too
 from runveil_persistence.mutations import authorized_patch
 from runveil_persistence.repositories import AgentRepository, RunRepository
 from runveil_persistence.sandbox_mutations import authorized_sandbox_patch
+from runveil_persistence.sandbox_search import expected_search
 from runveil_persistence.worker_approvals import pause_review, prepare_pause, validate_review_state
 
 
@@ -123,7 +125,7 @@ class PostgresExecutionStore:
         )
         error = (
             PATCH_UNKNOWN
-            if previous.schema_version in (14, 15)
+            if previous.schema_version in (14, 15, 16)
             and mutation is not None
             and mutation.tool_name == APPLY_TOOL
             else "elapsed_time_exceeded"
@@ -218,6 +220,7 @@ class PostgresExecutionStore:
                     13: SANDBOX_REVIEW_PROFILE,
                     14: SANDBOX_PATCH_PROFILE,
                     15: SOFTWARE_PROFILE,
+                    16: SEARCH_PROFILE,
                 }[config.schema_version]
             ):
                 raise ConfigurationRejected("Sandbox execution requires the dedicated profile")
@@ -384,7 +387,7 @@ class PostgresExecutionStore:
                 or state.steps_used >= config.max_steps
             ):
                 raise ValueError("Ambiguous interrupted execution history")
-            if config.schema_version in (14, 15) and state.approval_resolved:
+            if config.schema_version in (14, 15, 16) and state.approval_resolved:
                 _, payload = await authorized_sandbox_patch(session, run_id)
                 call = await session.get(ToolCallRow, outstanding[0].id)
                 if (
@@ -455,7 +458,7 @@ class PostgresExecutionStore:
         blocked: RuntimeState | None = None
         async with self._boundary(cursor) as (session, _):
             if tool_name == APPLY_TOOL:
-                if config.schema_version in (14, 15):
+                if config.schema_version in (14, 15, 16):
                     pinned, sandbox_payload = await authorized_sandbox_patch(session, cursor.run_id)
                     expected = sandbox_payload.model_dump(mode="json")
                 else:
@@ -648,7 +651,7 @@ class PostgresExecutionStore:
                     if response.usage != state.tokens.last_usage:
                         raise ValueError("Outcome usage differs from accounting")
             if (
-                state.schema_version == 15
+                state.schema_version in (15, 16)
                 and previous is not None
                 and not previous.approval_resolved
             ):
@@ -664,7 +667,7 @@ class PostgresExecutionStore:
                         if state.error_code != expected_error:
                             raise ValueError("Baseline outcome differs from workflow state")
             if (
-                state.schema_version in (14, 15)
+                state.schema_version in (14, 15, 16)
                 and previous is not None
                 and previous.approval_resolved
             ):
@@ -693,8 +696,14 @@ class PostgresExecutionStore:
                         or (state.final_result is not None) != (outcome.tests.status == "passed")
                     ):
                         raise ValueError("Sandbox outcome differs from approved mutation")
+            if state.schema_version == 16 and pending.kind == "tool" and result is not None:
+                searched = await session.get(ToolCallRow, pending.id)
+                if searched is not None and searched.tool_name == SEARCH_TOOL:
+                    expected = await expected_search(session, searched)
+                    if result != expected.model_dump(mode="json") or state.error_code is not None:
+                        raise ValueError("Search outcome differs from recorded sandbox evidence")
             approval = None
-            if state.schema_version in (10, 11, 13, 14, 15):
+            if state.schema_version in (10, 11, 13, 14, 15, 16):
                 approval = await prepare_pause(session, pending, previous, state, config, result)
             invocations = InvocationRepository(session)
             complete = (
