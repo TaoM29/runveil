@@ -1,5 +1,5 @@
 import pytest
-from runveil_persistence.database import database_url
+from runveil_persistence.database import create_engine, database_url
 
 
 @pytest.mark.parametrize(
@@ -16,3 +16,20 @@ def test_database_url_requires_explicit_configuration(monkeypatch: pytest.Monkey
     monkeypatch.delenv("DATABASE_URL", raising=False)
     with pytest.raises(ValueError, match="must be set"):
         database_url()
+
+
+@pytest.mark.asyncio
+async def test_rds_tls_options_reach_psycopg_without_connecting() -> None:
+    url = database_url(
+        "postgresql+psycopg://runtime:fake%40password@db.example.invalid:5432/runveil"
+        "?sslmode=verify-full&sslrootcert=/run/certs/rds.pem"
+    )
+    engine = create_engine(url)
+    try:
+        _, options = engine.dialect.create_connect_args(engine.url)
+        assert options["sslmode"] == "verify-full"
+        assert options["sslrootcert"] == "/run/certs/rds.pem"
+        assert options["host"] == "db.example.invalid"
+        assert options["password"] == "fake@password"
+    finally:
+        await engine.dispose()

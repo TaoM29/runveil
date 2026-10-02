@@ -10,6 +10,23 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.13.5"
+          terraform_wrapper: false
+      - run: terraform fmt -check -recursive infra/terraform
+      - name: Validate and test infrastructure without AWS credentials
+        run: |
+          for root in bootstrap environment; do
+            terraform -chdir="infra/terraform/$root" init -backend=false -input=false -lockfile=readonly
+            terraform -chdir="infra/terraform/$root" validate
+            terraform -chdir="infra/terraform/$root" test
+          done
   foundation:
     runs-on: ubuntu-latest
     timeout-minutes: 15
