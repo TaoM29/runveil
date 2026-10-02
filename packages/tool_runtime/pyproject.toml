@@ -2,7 +2,11 @@
 name = "runveil-tool-runtime"
 version = "0.1.0"
 requires-python = ">=3.12,<3.13"
-dependencies = ["runveil-agent-core", "pydantic>=2.11,<3"]
+dependencies = [
+    "runveil-agent-core",
+    "pydantic>=2.11,<3",
+    "mcp>=1.30,<2",
+]
 
 [tool.uv.sources]
 runveil-agent-core = { workspace = true }

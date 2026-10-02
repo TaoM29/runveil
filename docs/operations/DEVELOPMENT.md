@@ -101,6 +101,7 @@ For the separate, explicitly opt-in hosted check, see
 - [In-process demonstration](RUNTIME.md)
 - [Durable worker and execution profiles](WORKER.md)
 - [Repository read/search tools](REPOSITORY_TOOLS.md)
+- [Typed read-only MCP tools and offline demonstration](MCP.md)
 - [Model providers](MODELS.md)
 - [Persistence and migrations](PERSISTENCE.md)
 - [SQS notification adapter](BROKER.md)

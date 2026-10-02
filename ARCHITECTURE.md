@@ -1,6 +1,6 @@
 # Architecture
 
-## Implemented through Phase 10F; multi-task workflow review pending
+## Implemented through Phase 11A; MCP slice review pending
 
 ```mermaid
 flowchart LR
@@ -26,6 +26,8 @@ flowchart LR
     Runtime --> Tools[Typed registry and explicit grants]
     Tools --> Fixture[Registered read-only fixture tool]
     Tools --> Repository[Native repository read/search adapter]
+    Tools --> MCP[Typed read-only MCP adapter / official SDK]
+    MCP --> MCPServer[Operator-selected trusted stdio server]
     Repository --> Checkout[Operator-selected local root and exact file allowlist]
     Runtime --> SandboxTests[Narrow tests.run capability / explicit EXECUTE]
     SandboxTests --> Docker[Disposable pinned fixture container]
@@ -699,3 +701,19 @@ metadata-only boundary. Both preserve memory-only credentials, full-document
 navigation, request invalidation and existing proxies. Phase 10 decisions remain
 CLI-only. See [ADR 0039](docs/adr/0039-recorded-product-showcase.md) and
 [operations](docs/operations/SHOWCASE.md). This adds no Phase 11 functionality.
+
+## Phase 11A typed read-only MCP
+
+`runveil_tools.mcp` owns the official-SDK stdio session and bounded capability/tool
+discovery. The operator selects remote tools and local Pydantic contracts; exact
+schema matches become ordinary `TypedTool` bindings with local `mcp.*` names and
+READ/READ_ONLY classification. Remote metadata grants no authority. Both native
+policy grants, typed arguments/results, deadlines, intent/outcome persistence and
+existing telemetry apply without changes to core or persistence. Only structured
+JSON output is retained. Existing approvals cannot authorize MCP mutations.
+
+The offline persisted demo uses a public SDK server. This slice has no resumable
+worker profile, transport reconnect, tool retry or mutating MCP support. Stdio is
+trusted host execution, not isolation; SDK wire decoding precedes response-size
+checks. See [ADR 0040](docs/adr/0040-typed-read-only-mcp.md),
+[operations](docs/operations/MCP.md) and [handoff](docs/operations/PHASE_11A.md).
