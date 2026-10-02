@@ -55,6 +55,7 @@ class ToolErrorCode(StrEnum):
     RESOURCE_UNAVAILABLE = "tool_resource_unavailable"
     RESOURCE_LIMIT = "tool_resource_limit"
     RESOURCE_INVALID = "tool_resource_invalid"
+    CLEANUP_UNCONFIRMED = "sandbox_cleanup_unconfirmed"
 
 
 class ToolError(Exception):

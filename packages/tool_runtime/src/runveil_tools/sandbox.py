@@ -7,10 +7,11 @@ import os
 import re
 import shutil
 import sys
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from runveil_core.models import Contract
 
@@ -33,6 +34,11 @@ class SandboxResult(Contract):
 
 class SandboxError(Exception):
     """Fixed diagnostic only; never carries Docker stderr or host configuration."""
+
+
+class _AdmissionStopped(Exception):
+    def __init__(self, cause: Exception) -> None:
+        self.cause = cause
 
 
 @dataclass(frozen=True)
@@ -132,10 +138,16 @@ class FixtureSandbox:
         except OSError:
             return False
 
-    async def run(self, fixture: str) -> SandboxResult:
+    async def run(
+        self,
+        fixture: str,
+        *,
+        invocation_id: UUID | None = None,
+        admit: Callable[[], Awaitable[None]] | None = None,
+    ) -> SandboxResult:
         if fixture not in FIXTURES:
             raise ValueError("Unknown project fixture")
-        name = "runveil-sandbox-" + uuid4().hex
+        name = "runveil-sandbox-" + (invocation_id or uuid4()).hex
         result = SandboxResult(
             image=self.image,
             fixture=fixture,
@@ -143,11 +155,20 @@ class FixtureSandbox:
             status="infrastructure_error",
             cleanup_confirmed=False,
         )
+        # Admission failure before create owns no resource and needs no cleanup.
+        if admit is not None:
+            await admit()
         uncertain_create = True
         try:
             created = await _command(self._create(name, fixture), CONTROL_TIMEOUT)
             uncertain_create = created.timeout or created.limit
             if created.code == 0:
+                if admit is not None:
+                    try:
+                        await admit()
+                    except Exception as exc:
+                        # Keep storage/ownership failures out of Docker error normalization.
+                        raise _AdmissionStopped(exc) from None
                 attached = await _command(
                     (*self._docker, "start", "--attach", name), EXECUTION_TIMEOUT
                 )
@@ -183,6 +204,8 @@ class FixtureSandbox:
                                     "output": attached.output.decode("utf-8", errors="replace"),
                                 }
                             )
+        except _AdmissionStopped as exc:
+            raise exc.cause from None
         except (OSError, ValueError, TypeError, AttributeError):
             # Infrastructure diagnostics can include sensitive host configuration.
             pass

@@ -27,8 +27,17 @@ from runveil_core.models import (
     validate_response,
 )
 from runveil_core.mutations import APPLY_TOOL, PatchWriter, authorize_patch
+from runveil_core.sandbox import (
+    TEST_TOOL,
+    SandboxExecutor,
+    SandboxIdentity,
+    TestsInput,
+    TestsResult,
+    authorize_sandbox,
+    test_offer,
+)
 from runveil_core.telemetry import observe
-from runveil_core.tools import ToolError, ToolErrorCode, ToolPolicy, ToolRegistry
+from runveil_core.tools import Permission, ToolError, ToolErrorCode, ToolPolicy, ToolRegistry
 
 
 class ModelRetryPolicy(Contract):
@@ -59,8 +68,9 @@ class ModelPricing(Contract):
 
 
 class RuntimeConfig(Contract):
-    schema_version: Literal[2, 3, 4, 5, 6, 7, 8, 9, 10, 11] = 2
+    schema_version: Literal[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] = 2
     workspace: WorkspaceIdentity | None = None
+    sandbox: SandboxIdentity | None = None
     max_model_calls: Annotated[int, Field(ge=0, le=64)] | None = None
     max_tool_calls: Annotated[int, Field(ge=0, le=64)] | None = None
     max_identical_tool_calls: Annotated[int, Field(ge=1, le=64)] | None = None
@@ -110,17 +120,32 @@ class RuntimeConfig(Contract):
                 raise ValueError("Invocation limits require both model and tool limits")
         elif self.max_model_calls is not None or self.max_tool_calls is not None:
             raise ValueError("Invocation limits require configuration version 8 or later")
-        if (self.schema_version >= 9) != (self.workspace is not None):
+        if (self.schema_version in (9, 10, 11)) != (self.workspace is not None):
             raise ValueError(
-                "Workspace identity requires configuration version 9 or later and a binding"
+                "Workspace identity requires configuration version 9, 10 or 11 and a binding"
             )
-        if self.schema_version >= 10 and PROPOSAL_TOOL not in self.tool_policy.allowed_tools:
+        if self.schema_version in (10, 11) and PROPOSAL_TOOL not in self.tool_policy.allowed_tools:
             raise ValueError("Worker review requires the pinned proposal tool")
         if self.schema_version == 11:
             try:
                 authorize_patch(self.tool_policy, self.tool_policy)
             except ToolError:
                 raise ValueError("Patch configuration requires an explicit WRITE grant") from None
+        if (self.schema_version == 12) != (self.sandbox is not None):
+            raise ValueError("Sandbox execution requires version 12 and a binding")
+        if self.schema_version == 12:
+            try:
+                authorize_sandbox(self.tool_policy, self.tool_policy)
+            except ToolError:
+                raise ValueError("Sandbox configuration requires an EXECUTE grant") from None
+            if (
+                self.tool_policy
+                != ToolPolicy(allowed_tools=(TEST_TOOL,), permissions=(Permission.EXECUTE,))
+                or self.model_retry != ModelRetryPolicy()
+            ):
+                raise ValueError(
+                    "Sandbox profile permits only fixed test execution without retries"
+                )
         return self
 
 
@@ -169,7 +194,7 @@ class CostAccounting(Contract):
 
 
 class RuntimeState(Contract):
-    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] = 2
+    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] = 2
     approval_id: UUID | None = None
     approval_resolved: bool = False
     cost: CostAccounting | None = None
@@ -185,7 +210,9 @@ class RuntimeState(Contract):
 
     @model_validator(mode="after")
     def approval_version(self) -> RuntimeState:
-        if self.schema_version < 10 and (self.approval_id is not None or self.approval_resolved):
+        if self.schema_version not in (10, 11) and (
+            self.approval_id is not None or self.approval_resolved
+        ):
             raise ValueError("Approval state requires version 10")
         if self.approval_resolved and self.approval_id is None:
             raise ValueError("Resolved approval requires an identity")
@@ -298,6 +325,7 @@ async def execute(
     tool_policy: ToolPolicy | None = None,
     allow_model_retries: bool = False,
     patch_writer: PatchWriter | None = None,
+    sandbox: SandboxExecutor | None = None,
 ) -> RuntimeState:
     """Execute from the store's validated start/resume boundary; never replay intent."""
     with observe("agent.execute", root=True, run_id=str(run_id)) as telemetry:
@@ -312,6 +340,7 @@ async def execute(
                 tool_policy=tool_policy,
                 allow_model_retries=allow_model_retries,
                 patch_writer=patch_writer,
+                sandbox=sandbox,
             )
         except BudgetExceeded as exc:
             state = exc.state
@@ -354,6 +383,7 @@ async def _execute(
     tool_policy: ToolPolicy | None = None,
     allow_model_retries: bool = False,
     patch_writer: PatchWriter | None = None,
+    sandbox: SandboxExecutor | None = None,
 ) -> RuntimeState:
     """Execute from the store's validated start/resume boundary; never replay intent."""
     registry = tools if tools is not None else ToolRegistry()
@@ -377,6 +407,10 @@ async def _execute(
             state = state.account_model_usage(TokenUsage(), config)
         await store.complete(started.interrupted, state, error_code="execution_interrupted")
         return state
+    if config.schema_version == 12:
+        authorize_sandbox(config.tool_policy, operator_policy)
+        if sandbox is None or sandbox.identity != config.sandbox:
+            raise ValueError("Sandbox execution requires the verified binding")
     if config.schema_version == 11 and state.approval_resolved:
         authorize_patch(config.tool_policy, operator_policy)
         if patch_writer is None or patch_writer.workspace != config.workspace:
@@ -430,9 +464,31 @@ async def _execute(
             ) as telemetry:
                 try:
                     async with asyncio.timeout(seconds):
-                        observation = await registry.dispatch(
-                            action.tool_name, action.arguments, config.tool_policy, operator_policy
-                        )
+                        if config.schema_version == 12 and action.tool_name == TEST_TOOL:
+                            authorize_sandbox(config.tool_policy, operator_policy)
+                            if sandbox is None or sandbox.identity != config.sandbox:
+                                raise ToolError(ToolErrorCode.DENIED)
+                            if action.arguments:
+                                raise ToolError(ToolErrorCode.INVALID_ARGUMENTS)
+                            TestsInput.model_validate(action.arguments)
+
+                            async def admit(attempt: Pending = pending) -> None:
+                                await store.remaining_seconds(attempt.cursor, pending=attempt)
+
+                            tested = await sandbox.run(pending.id, admit)
+                            try:
+                                observation = TestsResult.model_validate_json(
+                                    tested.model_dump_json()
+                                ).model_dump(mode="json")
+                            except (ValueError, AttributeError):
+                                raise ToolError(ToolErrorCode.INVALID_OUTPUT) from None
+                        else:
+                            observation = await registry.dispatch(
+                                action.tool_name,
+                                action.arguments,
+                                config.tool_policy,
+                                operator_policy,
+                            )
                 except TimeoutError:
                     await remaining(pending)
                     state = state.model_copy(update={"error_code": ToolErrorCode.TIMEOUT.value})
@@ -459,7 +515,7 @@ async def _execute(
                     "source_model_id": None,
                 }
             )
-            reviewing = config.schema_version >= 10 and action.tool_name == PROPOSAL_TOOL
+            reviewing = config.schema_version in (10, 11) and action.tool_name == PROPOSAL_TOOL
             if reviewing:
                 state = state.model_copy(
                     update={"approval_id": uuid4(), "approval_resolved": False}
@@ -471,7 +527,9 @@ async def _execute(
         request = ModelRequest(
             model=config.model,
             messages=state.messages,
-            available_tools=registry.offers(config.tool_policy, operator_policy),
+            available_tools=(test_offer(),)
+            if config.schema_version == 12
+            else registry.offers(config.tool_policy, operator_policy),
             temperature=config.temperature,
             max_output_tokens=config.max_output_tokens,
             timeout_seconds=config.timeout_seconds,
