@@ -13,3 +13,15 @@ coverage/
 .env
 .env.*
 .DS_Store
+
+# Terraform state, plans and operator-specific environment configuration
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+*.tfvars.json
+*.tfbackend
+crash.log
+crash.*.log
+**/backend_override.tf

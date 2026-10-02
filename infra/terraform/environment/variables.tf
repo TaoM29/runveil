@@ -1,0 +1,60 @@
+variable "account_id" {
+  type = string
+  validation {
+    condition     = can(regex("^[0-9]{12}$", var.account_id))
+    error_message = "Use the explicitly approved 12-digit AWS account ID."
+  }
+}
+variable "region" {
+  type = string
+  validation {
+    condition     = can(regex("^(us|eu|ap|ca|sa|af|me|il|mx)-[a-z]+-[0-9]+$", var.region))
+    error_message = "Use a commercial AWS region supported by the SQS adapter."
+  }
+}
+variable "environment" {
+  type = string
+  validation {
+    condition     = contains(["dev", "staging", "prod"], var.environment)
+    error_message = "Choose dev, staging or prod; use separate accounts for production."
+  }
+}
+variable "availability_zones" {
+  type = list(string)
+  validation {
+    condition     = length(var.availability_zones) == 2 && length(toset(var.availability_zones)) == 2 && alltrue([for az in var.availability_zones : can(regex("^${var.region}[a-z]$", az))])
+    error_message = "Supply two distinct standard availability zones in the selected region."
+  }
+}
+variable "vpc_cidr" {
+  type    = string
+  default = "10.42.0.0/16"
+  validation {
+    condition     = can(cidrsubnet(var.vpc_cidr, 8, 1)) && can(regex("^10\\.[0-9]+\\.0\\.0/16$", var.vpc_cidr))
+    error_message = "Use a canonical private 10.x.0.0/16 network."
+  }
+}
+variable "postgres_version" {
+  description = "Explicit RDS PostgreSQL 17 minor version, verified available in the target region before apply."
+  type        = string
+  validation {
+    condition     = can(regex("^17\\.[0-9]+$", var.postgres_version))
+    error_message = "Pin a PostgreSQL 17 minor version, matching the local major version."
+  }
+}
+variable "allow_database_destroy" {
+  type    = bool
+  default = false
+  validation {
+    condition     = !var.allow_database_destroy || var.environment != "prod"
+    error_message = "Production deletion protection requires a reviewed code change."
+  }
+}
+variable "final_snapshot_suffix" {
+  type    = string
+  default = "retained"
+  validation {
+    condition     = can(regex("^[a-z][a-z0-9]{0,19}$", var.final_snapshot_suffix))
+    error_message = "Use a short alphanumeric suffix beginning with a letter."
+  }
+}
