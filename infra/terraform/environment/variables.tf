@@ -58,3 +58,32 @@ variable "final_snapshot_suffix" {
     error_message = "Use a short alphanumeric suffix beginning with a letter."
   }
 }
+
+variable "enable_private_runtime" {
+  description = "Provision private compute dependencies. Creates chargeable VPC endpoints even at zero replicas."
+  type        = bool
+  default     = false
+}
+variable "runtime_image_digest" {
+  description = "Digest of the reviewed linux/amd64 image pushed to this environment's ECR repository."
+  type        = string
+  default     = null
+  validation {
+    condition     = var.runtime_image_digest == null ? true : can(regex("^sha256:[0-9a-f]{64}$", var.runtime_image_digest)) && var.enable_private_runtime
+    error_message = "Enable the runtime and provide an immutable sha256 digest, never a tag."
+  }
+}
+variable "migration_image_digest" {
+  description = "Operator attestation: the migration task for exactly this image exited successfully."
+  type        = string
+  default     = null
+}
+variable "activate_runtime" {
+  description = "Start one API, relay and consumer after the matching migration task succeeds."
+  type        = bool
+  default     = false
+  validation {
+    condition     = !var.activate_runtime || (var.enable_private_runtime && var.runtime_image_digest != null && var.migration_image_digest == var.runtime_image_digest)
+    error_message = "Activation requires the deployed image's successful migration attestation."
+  }
+}

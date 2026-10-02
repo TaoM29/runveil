@@ -20,6 +20,10 @@ variables {
 
 run "private_foundation" {
   command = apply
+  assert {
+    condition     = length(aws_ecs_service.runtime) == 0 && length(aws_vpc_endpoint.interface) == 0 && length(aws_ecr_repository.runtime) == 0 && length(aws_secretsmanager_secret.runtime) == 0
+    error_message = "Existing foundation users must not opt into compute costs implicitly."
+  }
 
   assert {
     condition     = !aws_db_instance.main.publicly_accessible && aws_db_instance.main.storage_encrypted && aws_db_instance.main.manage_master_user_password && aws_db_instance.main.password == null

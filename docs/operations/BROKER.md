@@ -34,6 +34,9 @@ uv run python -m runveil_worker.sqs work \
   --queue-url https://sqs.us-east-1.amazonaws.com/123456789012/approved-queue
 ```
 
+[Phase 12B](AWS_RUNTIME.md) adds a separate fixed-fixture service supervisor; the
+following CLI commands retain their existing one-shot behavior.
+
 Every command is one-shot: publish leases/sends at most one eligible notification;
 work receives at most one message with a ten-second long poll and 30-second
 visibility. Run relay and consumers repeatedly under operator supervision for

@@ -18,7 +18,7 @@ commit or push is authorized.
 | 9     | Statistical comparison                                    | Complete; Phase 10 continuation authorized      |
 | 10    | Sandboxed software engineering application                | Implemented through 10G; closure review pending |
 | 11    | MCP adapter through existing policy                       | Closure assessed; human review pending          |
-| 12    | AWS infrastructure with Terraform                         | 12A implemented; review pending                 |
+| 12    | AWS infrastructure with Terraform                         | 12B implemented; review pending                 |
 | 13    | Production CI/CD                                          | Planned                                         |
 | 14    | Temporary self-hosted inference and benchmarks            | Planned                                         |
 | 15    | Security hardening                                        | Planned                                         |
@@ -474,14 +474,20 @@ Phase 10/showcase human acceptance remains a separate review, not an inferred si
   application deployment is claimed. See [ADR 0042](docs/adr/0042-private-aws-data-foundation.md),
   [runbook](docs/operations/AWS.md) and [handoff](docs/operations/PHASE_12A.md).
 
-The current user explicitly authorized Phase 12 continuation. Earlier closure reviews
-remain separate human decisions. Phase 12's fresh cloud environment, application health
-and clean teardown acceptance are still open. ECR/ECS, application secrets/roles,
-private migrations, worker supervision and live operations remain subsequent slices.
+- **12B — Implemented; review pending:** opt-in private API, relay and
+  fixed-fixture consumer task definitions, explicit migrations, separate runtime
+  identities and database grants, immutable image packaging and private endpoints.
+  Services require matching migration/image attestation before activation. No AWS
+  apply, public API or sandbox-worker hosting. See [ADR 0043](docs/adr/0043-private-fixture-deployment.md),
+  [runtime operations](docs/operations/AWS_RUNTIME.md) and [handoff](docs/operations/PHASE_12B.md).
+
+The user explicitly authorized Phase 12 continuation. Earlier closure reviews remain
+separate human decisions. Live AWS health, recovery, restore, IAM denial and clean
+teardown acceptance are still open. This is not public deployment readiness.
 
 ## Recommended next slice
 
-Review Phase 12A, then package the API and supervise the fixed SQS fixture path for
-private compute with separate runtime database and AWS roles. Demonstrate immutable
-images, explicit migrations and health/recovery before public exposure. Keep Docker
-sandbox profiles out of Fargate until their execution boundary is separately reviewed.
+Review Phase 12B and its local verification evidence, then conduct a bounded private
+non-production AWS acceptance with reviewed account, cost, credentials and operator
+access. Demonstrate migration, TLS health, fixture delivery/recovery, crossed IAM
+denials, rotation and teardown before expanding services or public exposure.

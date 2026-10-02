@@ -1,6 +1,6 @@
 # Architecture
 
-## Runtime through Phase 11; Phase 12A infrastructure defined, review pending
+## Runtime through Phase 11; Phase 12B private deployment defined, review pending
 
 ```mermaid
 flowchart LR
@@ -764,3 +764,28 @@ The next deployment slice must address supervision, private migrations, database
 roles, secret injection and immutable images. See [ADR 0042](docs/adr/0042-private-aws-data-foundation.md)
 and the [AWS runbook](docs/operations/AWS.md). Phase 12 live health and teardown gates
 remain open; no production-readiness claim is made.
+
+## Phase 12B private fixture deployment
+
+An opt-in extension of the environment root now defines private Fargate API, relay
+and fixed-fixture consumer services, plus an explicit one-shot migration task.
+The same digest-pinned, non-root backend image runs each bounded command. Separate
+execution/task roles scope image pull, logging, injected secrets and queue actions.
+Three unprivileged PostgreSQL users separate trace reads, execution and publication;
+only the administrative migration task receives RDS owner credentials. Migration
+uses an explicit transaction/lock and all services refuse an unexpected schema revision.
+
+Services stay at zero replicas until the operator attests the matching image's
+migration success. Dedicated application subnets use five private interface endpoints
+and an ECR-layer-only S3 gateway endpoint, without NAT or public addresses. Database
+subnets remain isolated. The API exposes only TLS health/readiness and authenticated
+read-only traces to an explicit private client group; the local approval API is
+unchanged. Operator private connectivity and certificate issuance remain external.
+
+Relay/consumer supervision retains the existing queue/profile, lease and acknowledgement
+boundaries, adds bounded backoff and drains on SIGTERM. No Docker-dependent profile,
+public endpoint, web, hosted model or general run submission is deployed. This is
+configuration plus local evidence, not live AWS acceptance or high availability.
+See [ADR 0043](docs/adr/0043-private-fixture-deployment.md),
+[deployment runbook](docs/operations/AWS_RUNTIME.md) and
+[handoff](docs/operations/PHASE_12B.md).

@@ -1,6 +1,8 @@
 # AWS infrastructure: Phase 12A
 
-This is a private data foundation, not a deployed application. The implementation
+The default configuration is the private data foundation. [Phase 12B](AWS_RUNTIME.md)
+adds opt-in private runtime deployment and supersedes the deferred-compute notes below.
+The implementation
 has not been applied to AWS. Full Phase 12 health and teardown acceptance is open.
 See [ADR 0042](../adr/0042-private-aws-data-foundation.md) and the
 [handoff](PHASE_12A.md).

@@ -28,9 +28,9 @@ resource "aws_route_table_association" "database" {
   route_table_id = aws_route_table.isolated.id
 }
 resource "aws_security_group" "client" {
-  for_each    = toset(["api", "worker", "migration"])
+  for_each    = toset(var.enable_private_runtime ? ["api", "worker", "migration", "relay"] : ["api", "worker", "migration"])
   name        = "${local.name}-${each.key}-database-client"
-  description = "Database-only access boundary for ${each.key}; no attached compute in Phase 12A"
+  description = "Database client boundary for ${each.key}"
   vpc_id      = aws_vpc.main.id
 }
 resource "aws_security_group" "database" {

@@ -59,6 +59,11 @@ jobs:
           uv run alembic upgrade head
           uv run alembic check
       - run: uv run pytest
+      - name: Private runtime image and TLS deployment acceptance
+        run: |
+          docker build --platform linux/amd64 -f deploy/Dockerfile -t runveil-runtime:phase12b .
+          RUNVEIL_RUNTIME_IMAGE=$(docker image inspect runveil-runtime:phase12b --format '{{.Id}}')
+          uv run python scripts/cloud_smoke.py --image "$RUNVEIL_RUNTIME_IMAGE"
       - name: Phase 5 process-death acceptance (offline)
         run: uv run python scripts/phase5_acceptance.py
       - name: Phase 10 sandbox boundary acceptance

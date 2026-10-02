@@ -100,6 +100,10 @@ For the separate, explicitly opt-in hosted check, see
 credential-free init/validation/mock tests, protected state and future live acceptance.
 The separate Terraform CI job never initializes an AWS backend or applies to AWS.
 
+The [private runtime runbook](AWS_RUNTIME.md) adds the digest-pinned backend image,
+TLS Docker smoke and restricted database role acceptance. CI builds the image and
+runs that disposable acceptance without cloud credentials.
+
 ## Runtime operations
 
 - [Recorded product showcase and console routes](SHOWCASE.md)
