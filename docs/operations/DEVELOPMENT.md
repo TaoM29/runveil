@@ -57,6 +57,12 @@ intentional reset.
 
 ## Quality checks
 
+Imported agent skills under `.agents/skills/` retain their upstream formatting and
+are excluded from Ruff and Prettier. These are assistant support assets, outside
+Runveil's application code and existing type/test targets. Some helpers parse their
+adjacent skill documents, so blanket formatting can also change their behavior.
+Keep application code in the checked workspace paths rather than this directory.
+
 ```sh
 uv run ruff format --check .
 uv run ruff check .
