@@ -16,7 +16,7 @@ commit or push is authorized.
 | 7     | Telemetry and trace UI                                    | Complete; Phase 8 continuation authorized  |
 | 8     | Deterministic evaluation harness                          | Complete; Phase 9 continuation authorized  |
 | 9     | Statistical comparison                                    | Complete; Phase 10 continuation authorized |
-| 10    | Sandboxed software engineering application                | Implemented through 10A; review pending    |
+| 10    | Sandboxed software engineering application                | Implemented through 10B; review pending    |
 | 11    | MCP adapter through existing policy                       | Planned                                    |
 | 12    | AWS infrastructure with Terraform                         | Planned                                    |
 | 13    | Production CI/CD                                          | Planned                                    |
@@ -347,7 +347,7 @@ Phase 10 continuation was authorized on 2026-10-02.
 
 ## Phase 10 review gates
 
-- **10A — Implemented; review pending:** operator-only disposable Docker fixture
+- **10A — Implemented; Phase 10B continuation authorized:** operator-only disposable Docker fixture
   execution with an immutable image ID, fixed test command, bounded resources/output,
   isolated tmpfs workspace and verified cleanup. A buggy coding fixture and separate
   isolation/timeout/output probes establish the boundary. Existing runtime EXECUTE
@@ -356,9 +356,19 @@ Phase 10 continuation was authorized on 2026-10-02.
   [operations](docs/operations/SANDBOX.md) and [handoff](docs/operations/PHASE_10A.md).
   This does not close Phase 10's agent-driven coding acceptance gate.
 
+- **10B — Implemented; review pending:** pinned `sandbox-tests-v1` worker with a
+  narrow `tests.run` EXECUTE capability, explicit operator grant, existing durable
+  intent/outcome/checkpoint/accounting and pre-create/pre-start ownership checks.
+  Clean checkpoints resume; uncertain intent terminates without Docker or replay.
+  A fresh worker runs the real clamp baseline and persists its failed-test observation.
+  General tool dispatch remains read-only and patch approvals are unchanged.
+  See [ADR 0033](docs/adr/0033-durable-sandbox-execution.md),
+  [operations](docs/operations/SANDBOX.md#durable-sandbox-tests--phase-10b) and
+  [handoff](docs/operations/PHASE_10B.md). No repaired-task or full Phase 10 closure claim.
+
 ## Recommended next slice
 
-Review 10A, then add one pinned, durable sandbox test-execution profile with explicit
-EXECUTE authorization, persisted intent/outcome, ownership fencing and conservative
-uncertain-intent recovery. Keep patching and the multi-task coding acceptance gate
-for subsequent focused slices. No automatic continuation is authorized.
+Review 10B, then add sandbox-bound fixture inspection and exact patch proposals with
+immutable preimage/diff evidence and the existing human review boundary. Applying
+approved patches and demonstrating several repaired tasks remain later Phase 10
+work. No automatic continuation is authorized.

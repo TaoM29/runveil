@@ -1,6 +1,6 @@
 # Architecture
 
-## Implemented through Phase 10A; sandbox boundary review pending
+## Implemented through Phase 10B; durable sandbox execution review pending
 
 ```mermaid
 flowchart LR
@@ -27,6 +27,8 @@ flowchart LR
     Tools --> Fixture[Registered read-only fixture tool]
     Tools --> Repository[Native repository read/search adapter]
     Repository --> Checkout[Operator-selected local root and exact file allowlist]
+    Runtime --> SandboxTests[Narrow tests.run capability / explicit EXECUTE]
+    SandboxTests --> Docker[Disposable pinned fixture container]
 ```
 
 Both applications expose `GET /health` with a typed/structured service identity.
@@ -534,3 +536,27 @@ security claim. Local result JSON is separate from runtime and evaluation eviden
 One intentionally failing clamp repository and three boundary probes provide the
 first concrete sandbox acceptance. See [ADR 0032](docs/adr/0032-disposable-fixture-sandbox.md),
 [operations](docs/operations/SANDBOX.md) and [handoff](docs/operations/PHASE_10A.md).
+
+## Phase 10B durable sandbox test profile
+
+Configuration/checkpoint version 12 binds an immutable fixture image, closed
+fixture/policy IDs, local socket identity and implementation digest. It has no
+repository workspace or approval state. The fixed `sandbox-tests-v1` worker uses
+two scripted model calls and one `tests.run` with explicit pinned/operator EXECUTE
+grants. The general registry remains read-only; existing approved-write paths are
+unchanged. No model-controlled command, path, image, fixture or environment is accepted.
+
+Existing tool intents, outcomes, budgets and telemetry carry the invocation. The
+container name derives from its committed UUID. The runner rechecks the live
+claim/history/deadline before create and start, outside database transactions;
+late outcomes remain fenced. These are admission checks, not atomic Docker revocation.
+A clean checkpoint resumes without duplicate outcomes. Uncertain intent terminates
+without constructing a Docker binding, even if the image/socket is unavailable.
+Cleanup after crashes remains operator-owned and never triggers execution replay.
+
+A bounded test observation distinguishes failed tests from runtime infrastructure
+failure; the scripted final summary makes that distinction visible in existing traces.
+No migration, dependency, API/UI or evaluator changes. See
+[ADR 0033](docs/adr/0033-durable-sandbox-execution.md),
+[operations](docs/operations/SANDBOX.md#durable-sandbox-tests--phase-10b) and
+[handoff](docs/operations/PHASE_10B.md).
