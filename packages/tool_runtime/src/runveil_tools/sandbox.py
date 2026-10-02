@@ -94,7 +94,7 @@ class FixtureSandbox:
         self.image = image
         self._docker = (docker, "--host", "unix://" + str(socket))
 
-    def _create(self, name: str, fixture: str) -> tuple[str, ...]:
+    def _create(self, name: str, fixture: str, inspection: bool = False) -> tuple[str, ...]:
         return (
             *self._docker,
             "create",
@@ -126,6 +126,7 @@ class FixtureSandbox:
             "-B",
             "/opt/runner.py",
             fixture,
+            *(("inspect",) if inspection else ()),
         )
 
     async def _cleanup(self, name: str) -> bool:
@@ -142,10 +143,11 @@ class FixtureSandbox:
         self,
         fixture: str,
         *,
+        inspection: bool = False,
         invocation_id: UUID | None = None,
         admit: Callable[[], Awaitable[None]] | None = None,
     ) -> SandboxResult:
-        if fixture not in FIXTURES:
+        if fixture not in FIXTURES or (inspection and fixture != "clamp-v1"):
             raise ValueError("Unknown project fixture")
         name = "runveil-sandbox-" + (invocation_id or uuid4()).hex
         result = SandboxResult(
@@ -160,7 +162,7 @@ class FixtureSandbox:
             await admit()
         uncertain_create = True
         try:
-            created = await _command(self._create(name, fixture), CONTROL_TIMEOUT)
+            created = await _command(self._create(name, fixture, inspection), CONTROL_TIMEOUT)
             uncertain_create = created.timeout or created.limit
             if created.code == 0:
                 if admit is not None:
@@ -176,7 +178,9 @@ class FixtureSandbox:
                     result = result.model_copy(
                         update={
                             "status": "output_limit" if attached.limit else "timeout",
-                            "output": attached.output.decode("utf-8", errors="replace"),
+                            "output": attached.output.decode(
+                                "utf-8", errors="strict" if inspection else "replace"
+                            ),
                         }
                     )
                 else:
@@ -201,7 +205,9 @@ class FixtureSandbox:
                                         code
                                     ],
                                     "exit_code": code,
-                                    "output": attached.output.decode("utf-8", errors="replace"),
+                                    "output": attached.output.decode(
+                                        "utf-8", errors="strict" if inspection else "replace"
+                                    ),
                                 }
                             )
         except _AdmissionStopped as exc:

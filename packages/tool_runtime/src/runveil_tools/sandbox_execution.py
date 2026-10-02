@@ -10,6 +10,7 @@ from pathlib import Path
 from uuid import UUID
 
 from runveil_core.sandbox import SandboxIdentity, TestsResult
+from runveil_core.sandbox_review import InspectionResult
 from runveil_core.tools import ToolError, ToolErrorCode
 
 from runveil_tools.sandbox import FixtureSandbox, SandboxError
@@ -27,6 +28,8 @@ class BoundSandbox:
             "runveil_tools.sandbox",
             "runveil_tools.sandbox_execution",
             "runveil_core.sandbox",
+            "runveil_core.sandbox_review",
+            "runveil_core.approvals",
             "runveil_core.runtime",
             "runveil_core.tools",
             "runveil_core.models",
@@ -62,3 +65,19 @@ class BoundSandbox:
                 "output_truncated": len(result.output) > 4096 or result.status == "output_limit",
             }
         )
+
+    async def inspect(
+        self, invocation_id: UUID, admit: Callable[[], Awaitable[None]]
+    ) -> InspectionResult:
+        try:
+            result = await self._runner.run(
+                self.identity.fixture, inspection=True, invocation_id=invocation_id, admit=admit
+            )
+        except SandboxError:
+            raise ToolError(ToolErrorCode.CLEANUP_UNCONFIRMED) from None
+        if result.status != "passed" or result.exit_code != 0 or not result.cleanup_confirmed:
+            raise ToolError(ToolErrorCode.RESOURCE_UNAVAILABLE)
+        try:
+            return InspectionResult.model_validate_json(result.output)
+        except ValueError:
+            raise ToolError(ToolErrorCode.INVALID_OUTPUT) from None
