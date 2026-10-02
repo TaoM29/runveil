@@ -36,6 +36,15 @@ from runveil_core.sandbox import (
     authorize_sandbox,
     test_offer,
 )
+from runveil_core.sandbox_review import (
+    INSPECT_TOOL,
+    REVIEW_POLICY,
+    InspectionResult,
+    SandboxInspector,
+    authorize_review,
+    review_offers,
+    validate_proposal,
+)
 from runveil_core.telemetry import observe
 from runveil_core.tools import Permission, ToolError, ToolErrorCode, ToolPolicy, ToolRegistry
 
@@ -68,7 +77,7 @@ class ModelPricing(Contract):
 
 
 class RuntimeConfig(Contract):
-    schema_version: Literal[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] = 2
+    schema_version: Literal[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13] = 2
     workspace: WorkspaceIdentity | None = None
     sandbox: SandboxIdentity | None = None
     max_model_calls: Annotated[int, Field(ge=0, le=64)] | None = None
@@ -131,8 +140,8 @@ class RuntimeConfig(Contract):
                 authorize_patch(self.tool_policy, self.tool_policy)
             except ToolError:
                 raise ValueError("Patch configuration requires an explicit WRITE grant") from None
-        if (self.schema_version == 12) != (self.sandbox is not None):
-            raise ValueError("Sandbox execution requires version 12 and a binding")
+        if (self.schema_version in (12, 13)) != (self.sandbox is not None):
+            raise ValueError("Sandbox execution requires version 12 or 13 and a binding")
         if self.schema_version == 12:
             try:
                 authorize_sandbox(self.tool_policy, self.tool_policy)
@@ -146,6 +155,10 @@ class RuntimeConfig(Contract):
                 raise ValueError(
                     "Sandbox profile permits only fixed test execution without retries"
                 )
+        if self.schema_version == 13 and (
+            self.tool_policy != REVIEW_POLICY or self.model_retry != ModelRetryPolicy()
+        ):
+            raise ValueError("Sandbox review permits only inspection and proposals without retries")
         return self
 
 
@@ -194,7 +207,7 @@ class CostAccounting(Contract):
 
 
 class RuntimeState(Contract):
-    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] = 2
+    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13] = 2
     approval_id: UUID | None = None
     approval_resolved: bool = False
     cost: CostAccounting | None = None
@@ -210,7 +223,7 @@ class RuntimeState(Contract):
 
     @model_validator(mode="after")
     def approval_version(self) -> RuntimeState:
-        if self.schema_version not in (10, 11) and (
+        if self.schema_version not in (10, 11, 13) and (
             self.approval_id is not None or self.approval_resolved
         ):
             raise ValueError("Approval state requires version 10")
@@ -326,6 +339,7 @@ async def execute(
     allow_model_retries: bool = False,
     patch_writer: PatchWriter | None = None,
     sandbox: SandboxExecutor | None = None,
+    inspection: SandboxInspector | None = None,
 ) -> RuntimeState:
     """Execute from the store's validated start/resume boundary; never replay intent."""
     with observe("agent.execute", root=True, run_id=str(run_id)) as telemetry:
@@ -341,6 +355,7 @@ async def execute(
                 allow_model_retries=allow_model_retries,
                 patch_writer=patch_writer,
                 sandbox=sandbox,
+                inspection=inspection,
             )
         except BudgetExceeded as exc:
             state = exc.state
@@ -384,6 +399,7 @@ async def _execute(
     allow_model_retries: bool = False,
     patch_writer: PatchWriter | None = None,
     sandbox: SandboxExecutor | None = None,
+    inspection: SandboxInspector | None = None,
 ) -> RuntimeState:
     """Execute from the store's validated start/resume boundary; never replay intent."""
     registry = tools if tools is not None else ToolRegistry()
@@ -411,6 +427,10 @@ async def _execute(
         authorize_sandbox(config.tool_policy, operator_policy)
         if sandbox is None or sandbox.identity != config.sandbox:
             raise ValueError("Sandbox execution requires the verified binding")
+    if config.schema_version == 13:
+        authorize_review(config.tool_policy, operator_policy)
+        if inspection is None or inspection.identity != config.sandbox:
+            raise ValueError("Sandbox review requires the verified binding")
     if config.schema_version == 11 and state.approval_resolved:
         authorize_patch(config.tool_policy, operator_policy)
         if patch_writer is None or patch_writer.workspace != config.workspace:
@@ -482,6 +502,47 @@ async def _execute(
                                 ).model_dump(mode="json")
                             except (ValueError, AttributeError):
                                 raise ToolError(ToolErrorCode.INVALID_OUTPUT) from None
+                        elif config.schema_version == 13:
+                            authorize_review(config.tool_policy, operator_policy)
+                            if inspection is None or inspection.identity != config.sandbox:
+                                raise ToolError(ToolErrorCode.DENIED)
+                            if action.tool_name == INSPECT_TOOL:
+                                if action.arguments:
+                                    raise ToolError(ToolErrorCode.INVALID_ARGUMENTS)
+                                if any(m.tool_name == INSPECT_TOOL for m in state.messages):
+                                    raise ToolError(ToolErrorCode.DENIED)
+
+                                async def admit_inspection(attempt: Pending = pending) -> None:
+                                    await store.remaining_seconds(attempt.cursor, pending=attempt)
+
+                                inspected = await inspection.inspect(pending.id, admit_inspection)
+                                try:
+                                    observation = InspectionResult.model_validate_json(
+                                        inspected.model_dump_json()
+                                    ).model_dump(mode="json")
+                                except (ValueError, AttributeError):
+                                    raise ToolError(ToolErrorCode.INVALID_OUTPUT) from None
+                            elif action.tool_name == PROPOSAL_TOOL:
+                                if state.approval_id is not None:
+                                    raise ToolError(ToolErrorCode.DENIED)
+                                try:
+                                    proposal = PatchProposal.model_validate(action.arguments)
+                                except ValueError:
+                                    raise ToolError(ToolErrorCode.INVALID_ARGUMENTS) from None
+                                snapshots = [
+                                    m
+                                    for m in state.messages
+                                    if m.role == "tool" and m.tool_name == INSPECT_TOOL
+                                ]
+                                if len(snapshots) != 1:
+                                    raise ToolError(ToolErrorCode.RESOURCE_INVALID)
+                                snapshot = InspectionResult.model_validate_json(
+                                    snapshots[0].content
+                                )
+                                validate_proposal(proposal, snapshot)
+                                observation = proposal.model_dump(mode="json")
+                            else:
+                                raise ToolError(ToolErrorCode.DENIED)
                         else:
                             observation = await registry.dispatch(
                                 action.tool_name,
@@ -515,7 +576,7 @@ async def _execute(
                     "source_model_id": None,
                 }
             )
-            reviewing = config.schema_version in (10, 11) and action.tool_name == PROPOSAL_TOOL
+            reviewing = config.schema_version in (10, 11, 13) and action.tool_name == PROPOSAL_TOOL
             if reviewing:
                 state = state.model_copy(
                     update={"approval_id": uuid4(), "approval_resolved": False}
@@ -529,6 +590,8 @@ async def _execute(
             messages=state.messages,
             available_tools=(test_offer(),)
             if config.schema_version == 12
+            else review_offers()
+            if config.schema_version == 13
             else registry.offers(config.tool_policy, operator_policy),
             temperature=config.temperature,
             max_output_tokens=config.max_output_tokens,
