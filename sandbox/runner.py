@@ -11,15 +11,19 @@ import subprocess
 import sys
 import time
 
-FIXTURES = {"clamp-v1", "boundary-v1", "timeout-v1", "output-v1"}
-PATHS = ("TASK.md", "clamp.py", "test_clamp.py")
+TASK_PATHS = {
+    "clamp-v1": ("TASK.md", "clamp.py", "test_clamp.py"),
+    "slug-v1": ("TASK.md", "slug.py", "test_slug.py"),
+    "mean-v1": ("TASK.md", "mean.py", "test_mean.py"),
+}
+FIXTURES = {*TASK_PATHS, "boundary-v1", "timeout-v1", "output-v1"}
 
 
-def inspect_files() -> list[dict[str, str]]:
-    if set(os.listdir(".")) != set(PATHS):
+def inspect_files(paths: tuple[str, str, str]) -> list[dict[str, str]]:
+    if set(os.listdir(".")) != set(paths):
         raise ValueError("Unexpected fixture entry")
     files = []
-    for path in PATHS:
+    for path in paths:
         descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
         with os.fdopen(descriptor, "rb") as source:
             info = os.fstat(source.fileno())
@@ -90,7 +94,7 @@ def validate_tests() -> dict[str, str | int | bool | None]:
     }
 
 
-def apply_patch() -> int:
+def apply_patch(paths: tuple[str, str, str]) -> int:
     # Newline framing avoids relying on Docker's stdin EOF behavior.
     signal.alarm(8)  # Bound input wait even if the host disappears before sending.
     try:
@@ -106,7 +110,7 @@ def apply_patch() -> int:
     if (
         set(proposal) != {"schema_version", "path", "before", "after"}
         or proposal["schema_version"] != 1
-        or proposal["path"] != "clamp.py"
+        or proposal["path"] != paths[1]
         or not isinstance(proposal["before"], str)
         or not isinstance(proposal["after"], str)
         or proposal["before"] == proposal["after"]
@@ -114,7 +118,7 @@ def apply_patch() -> int:
         or len(proposal["after"].encode()) > 4096
     ):
         return 125
-    before = inspect_files()
+    before = inspect_files(paths)
     if (
         payload["inspection"] != {"files": before, "cleanup_confirmed": True}
         or proposal["before"] != before[1]["content"]
@@ -131,11 +135,11 @@ def apply_patch() -> int:
         target.write(proposal["after"].encode())
         target.flush()
         os.fsync(target.fileno())
-    os.replace(".runveil-patch", "clamp.py")
-    if inspect_files() != expected:
+    os.replace(".runveil-patch", paths[1])
+    if inspect_files(paths) != expected:
         return 125
     tests = validate_tests()
-    after = inspect_files()
+    after = inspect_files(paths)
     if after != expected:
         return 125
     print(
@@ -156,20 +160,20 @@ def apply_patch() -> int:
 
 
 def main() -> int:
-    inspection = len(sys.argv) == 3 and sys.argv[1:] == ["clamp-v1", "inspect"]
-    patch = len(sys.argv) == 3 and sys.argv[1:] == ["clamp-v1", "apply"]
+    inspection = len(sys.argv) == 3 and sys.argv[1] in TASK_PATHS and sys.argv[2] == "inspect"
+    patch = len(sys.argv) == 3 and sys.argv[1] in TASK_PATHS and sys.argv[2] == "apply"
     if not (inspection or patch) and (len(sys.argv) != 2 or sys.argv[1] not in FIXTURES):
         return 125
     shutil.copytree("/opt/fixtures/" + sys.argv[1], "/workspace/repository", symlinks=True)
     os.chdir("/workspace/repository")
     if inspection:
-        output = json.dumps({"files": inspect_files()}, ensure_ascii=False)
+        output = json.dumps({"files": inspect_files(TASK_PATHS[sys.argv[1]])}, ensure_ascii=False)
         if len(output.encode()) > 12000:
             return 125
         print(output)
         return 0
     if patch:
-        return apply_patch()
+        return apply_patch(TASK_PATHS[sys.argv[1]])
     try:
         return subprocess.run(
             [sys.executable, "-B", "-m", "unittest", "discover", "-s", ".", "-v"],

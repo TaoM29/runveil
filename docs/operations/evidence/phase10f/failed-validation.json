@@ -1,0 +1,138 @@
+{
+  "schema_version": 1,
+  "scope": "Explicit fault injection: scripted provider proposed an ineffective mean repair; trusted operator approved that exact proposal to verify failure inspection.",
+  "final": {
+    "run_id": "7d1f31fa-8d47-4cb9-9dc6-6731202b84e3",
+    "revision": 4,
+    "status": "FAILED",
+    "profile": "software-engineering-v1",
+    "sandbox": {
+      "image": "sha256:bc676fcb9023fcd25156387220f21b93c67bd4f7de0910be12b1b1b2307ed07c",
+      "fixture": "mean-v1",
+      "policy": "docker-fixture-v1",
+      "endpoint_digest": "dceb10e11eb5fed367bfa493e3acabc87e531696d82e72cd6d0bf79f0baaee9c",
+      "implementation_digest": "16fd3ba5b787a03d3151cbed57139e2538c217153b6e742dae9674dc2de3fb4b"
+    },
+    "error_code": "sandbox_validation_failed",
+    "summary": null,
+    "approval": {
+      "id": "22319cef-2682-4888-a672-e61bd00c0f29",
+      "run_id": "7d1f31fa-8d47-4cb9-9dc6-6731202b84e3",
+      "proposal": {
+        "schema_version": 1,
+        "path": "mean.py",
+        "before": "def mean(values: list[float]) -> float:\n    if not values:\n        raise ValueError(\"values must not be empty\")\n    return sum(values) // len(values)\n",
+        "after": "def mean(values: list[float]) -> float:\n    if not values:\n        raise ValueError(\"values must not be empty\")\n    return sum(values) // len(values)\n# deliberately ineffective repair\n"
+      },
+      "digest": "0039df59ab3869d43ee933abebb8ff2b31fa5128c1e577cb83734ac9d6c927e1",
+      "status": "APPROVED",
+      "requested_at": "2026-10-02T12:59:50.092828Z",
+      "decided_at": "2026-10-02T12:59:50.159739Z"
+    },
+    "diff": "--- a/mean.py\n+++ b/mean.py\n@@ -2,3 +2,4 @@\n     if not values:\n         raise ValueError(\"values must not be empty\")\n     return sum(values) // len(values)\n+# deliberately ineffective repair\n",
+    "approval_authorizes": "Apply the exact patch in a disposable sandbox and run tests.",
+    "patch_applied": true,
+    "mutation": {
+      "id": "5289a80e-9130-45f1-9db0-26225e521080",
+      "status": "SUCCEEDED",
+      "error_code": null,
+      "result": {
+        "tests": {
+          "output": "test_arithmetic (test_mean.MeanTests.test_arithmetic) ... \n  test_arithmetic (test_mean.MeanTests.test_arithmetic) (values=[1.0, 2.0]) ... FAIL\n  test_arithmetic (test_mean.MeanTests.test_arithmetic) (values=[-2.0, -1.0]) ... FAIL\n  test_arithmetic (test_mean.MeanTests.test_arithmetic) (values=[0.25]) ... FAIL\n\n======================================================================\nFAIL: test_arithmetic (test_mean.MeanTests.test_arithmetic) (values=[1.0, 2.0])\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/workspace/repository/test_mean.py\", line 10, in test_arithmetic\n    self.assertEqual(mean(values), expected)\nAssertionError: 1.0 != 1.5\n\n======================================================================\nFAIL: test_arithmetic (test_mean.MeanTests.test_arithmetic) (values=[-2.0, -1.0])\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/workspace/repository/test_mean.py\", line 10, in test_arithmetic\n    self.assertEqual(mean(values), expected)\nAssertionError: -2.0 != -1.5\n\n======================================================================\nFAIL: test_arithmetic (test_mean.MeanTests.test_arithmetic) (values=[0.25])\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/workspace/repository/test_mean.py\", line 10, in test_arithmetic\n    self.assertEqual(mean(values), expected)\nAssertionError: 0.0 != 0.25\n\n----------------------------------------------------------------------\nRan 1 test in 0.000s\n\nFAILED (failures=3)\n",
+          "status": "tests_failed",
+          "exit_code": 1,
+          "output_truncated": false,
+          "cleanup_confirmed": true
+        },
+        "applied": true,
+        "after_digest": "fe4dfd8b38158b3f049916cd118348bfe2ea7418ba5f9f402df1330ce33b47d6",
+        "approved_diff": "--- a/mean.py\n+++ b/mean.py\n@@ -2,3 +2,4 @@\n     if not values:\n         raise ValueError(\"values must not be empty\")\n     return sum(values) // len(values)\n+# deliberately ineffective repair\n",
+        "before_digest": "abd07cfa27b9c2bf34601df38e04691d9a590abfd8aa99d2a0ac6dd64cf5f605",
+        "proposal_digest": "0039df59ab3869d43ee933abebb8ff2b31fa5128c1e577cb83734ac9d6c927e1",
+        "cleanup_confirmed": true
+      }
+    },
+    "tools": [
+      {
+        "id": "310f8aaf-71a8-4548-95d4-789abab8e145",
+        "name": "repository.inspect",
+        "status": "SUCCEEDED",
+        "requested_sequence": 9,
+        "completed_sequence": 10,
+        "error_code": null,
+        "result": {
+          "files": [
+            {
+              "path": "TASK.md",
+              "content": "# Preserve fractional means\n\nRepair mean.py so mean(values) returns the arithmetic mean without rounding or\ntruncation, including fractional and negative results. Preserve ValueError for an\nempty list. Do not modify the tests or this task description.\n"
+            },
+            {
+              "path": "mean.py",
+              "content": "def mean(values: list[float]) -> float:\n    if not values:\n        raise ValueError(\"values must not be empty\")\n    return sum(values) // len(values)\n"
+            },
+            {
+              "path": "test_mean.py",
+              "content": "import unittest\n\nfrom mean import mean\n\n\nclass MeanTests(unittest.TestCase):\n    def test_arithmetic(self) -> None:\n        for values, expected in (([1.0, 2.0], 1.5), ([-2.0, -1.0], -1.5), ([0.25], 0.25)):\n            with self.subTest(values=values):\n                self.assertEqual(mean(values), expected)\n        with self.assertRaises(ValueError):\n            mean([])\n"
+            }
+          ],
+          "cleanup_confirmed": true
+        }
+      },
+      {
+        "id": "5d012b34-0de1-49d5-9061-f2aebd3d1f1a",
+        "name": "tests.run",
+        "status": "SUCCEEDED",
+        "requested_sequence": 17,
+        "completed_sequence": 18,
+        "error_code": null,
+        "result": {
+          "output": "test_arithmetic (test_mean.MeanTests.test_arithmetic) ... \n  test_arithmetic (test_mean.MeanTests.test_arithmetic) (values=[1.0, 2.0]) ... FAIL\n  test_arithmetic (test_mean.MeanTests.test_arithmetic) (values=[-2.0, -1.0]) ... FAIL\n  test_arithmetic (test_mean.MeanTests.test_arithmetic) (values=[0.25]) ... FAIL\n\n======================================================================\nFAIL: test_arithmetic (test_mean.MeanTests.test_arithmetic) (values=[1.0, 2.0])\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/workspace/repository/test_mean.py\", line 10, in test_arithmetic\n    self.assertEqual(mean(values), expected)\nAssertionError: 1.0 != 1.5\n\n======================================================================\nFAIL: test_arithmetic (test_mean.MeanTests.test_arithmetic) (values=[-2.0, -1.0])\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/workspace/repository/test_mean.py\", line 10, in test_arithmetic\n    self.assertEqual(mean(values), expected)\nAssertionError: -2.0 != -1.5\n\n======================================================================\nFAIL: test_arithmetic (test_mean.MeanTests.test_arithmetic) (values=[0.25])\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/workspace/repository/test_mean.py\", line 10, in test_arithmetic\n    self.assertEqual(mean(values), expected)\nAssertionError: 0.0 != 0.25\n\n----------------------------------------------------------------------\nRan 1 test in 0.001s\n\nFAILED (failures=3)\n",
+          "status": "tests_failed",
+          "exit_code": 1,
+          "output_truncated": false,
+          "cleanup_confirmed": true
+        }
+      },
+      {
+        "id": "38b0a969-8909-42d2-ad13-19027fc0d5db",
+        "name": "repository.propose_patch",
+        "status": "SUCCEEDED",
+        "requested_sequence": 25,
+        "completed_sequence": 26,
+        "error_code": null,
+        "result": {
+          "path": "mean.py",
+          "after": "def mean(values: list[float]) -> float:\n    if not values:\n        raise ValueError(\"values must not be empty\")\n    return sum(values) // len(values)\n# deliberately ineffective repair\n",
+          "before": "def mean(values: list[float]) -> float:\n    if not values:\n        raise ValueError(\"values must not be empty\")\n    return sum(values) // len(values)\n",
+          "schema_version": 1
+        }
+      },
+      {
+        "id": "5289a80e-9130-45f1-9db0-26225e521080",
+        "name": "repository.apply_patch",
+        "status": "SUCCEEDED",
+        "requested_sequence": 35,
+        "completed_sequence": 36,
+        "error_code": null,
+        "result": {
+          "tests": {
+            "output": "test_arithmetic (test_mean.MeanTests.test_arithmetic) ... \n  test_arithmetic (test_mean.MeanTests.test_arithmetic) (values=[1.0, 2.0]) ... FAIL\n  test_arithmetic (test_mean.MeanTests.test_arithmetic) (values=[-2.0, -1.0]) ... FAIL\n  test_arithmetic (test_mean.MeanTests.test_arithmetic) (values=[0.25]) ... FAIL\n\n======================================================================\nFAIL: test_arithmetic (test_mean.MeanTests.test_arithmetic) (values=[1.0, 2.0])\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/workspace/repository/test_mean.py\", line 10, in test_arithmetic\n    self.assertEqual(mean(values), expected)\nAssertionError: 1.0 != 1.5\n\n======================================================================\nFAIL: test_arithmetic (test_mean.MeanTests.test_arithmetic) (values=[-2.0, -1.0])\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/workspace/repository/test_mean.py\", line 10, in test_arithmetic\n    self.assertEqual(mean(values), expected)\nAssertionError: -2.0 != -1.5\n\n======================================================================\nFAIL: test_arithmetic (test_mean.MeanTests.test_arithmetic) (values=[0.25])\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/workspace/repository/test_mean.py\", line 10, in test_arithmetic\n    self.assertEqual(mean(values), expected)\nAssertionError: 0.0 != 0.25\n\n----------------------------------------------------------------------\nRan 1 test in 0.000s\n\nFAILED (failures=3)\n",
+            "status": "tests_failed",
+            "exit_code": 1,
+            "output_truncated": false,
+            "cleanup_confirmed": true
+          },
+          "applied": true,
+          "after_digest": "fe4dfd8b38158b3f049916cd118348bfe2ea7418ba5f9f402df1330ce33b47d6",
+          "approved_diff": "--- a/mean.py\n+++ b/mean.py\n@@ -2,3 +2,4 @@\n     if not values:\n         raise ValueError(\"values must not be empty\")\n     return sum(values) // len(values)\n+# deliberately ineffective repair\n",
+          "before_digest": "abd07cfa27b9c2bf34601df38e04691d9a590abfd8aa99d2a0ac6dd64cf5f605",
+          "proposal_digest": "0039df59ab3869d43ee933abebb8ff2b31fa5128c1e577cb83734ac9d6c927e1",
+          "cleanup_confirmed": true
+        }
+      }
+    ],
+    "inspection_digest": "abd07cfa27b9c2bf34601df38e04691d9a590abfd8aa99d2a0ac6dd64cf5f605",
+    "before_sha256": "11026184bec75a564b3393dba6fb4b231e4c2ee3fbe3e88d5c265eba265c2990",
+    "after_sha256": "e6e1b371c2f8c96e0ec08e0c5173ccf098bf137a053f69df93aae5e162db0db9"
+  }
+}

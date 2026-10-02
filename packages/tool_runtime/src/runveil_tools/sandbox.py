@@ -14,9 +14,10 @@ from pathlib import Path
 from typing import Literal
 from uuid import UUID, uuid4
 
+from runveil_core.fixtures import FIXTURE_PATHS
 from runveil_core.models import Contract
 
-FIXTURES = ("clamp-v1", "boundary-v1", "timeout-v1", "output-v1")
+FIXTURES = (*FIXTURE_PATHS, "boundary-v1", "timeout-v1", "output-v1")
 OUTPUT_LIMIT = 16_384
 CONTROL_TIMEOUT = 15.0
 EXECUTION_TIMEOUT = 15.0
@@ -174,7 +175,7 @@ class FixtureSandbox:
     ) -> SandboxResult:
         if (
             fixture not in FIXTURES
-            or ((inspection or patch_input is not None) and fixture != "clamp-v1")
+            or ((inspection or patch_input is not None) and fixture not in FIXTURE_PATHS)
             or (inspection and patch_input is not None)
             or (patch_input is not None and len(patch_input) > 32768)
         ):

@@ -435,3 +435,10 @@ terminal recovery needs no Docker binding or execution grants. See the
 [complete operator procedure](SANDBOX.md#fixture-engineering-workflow--phase-10e)
 and [handoff](PHASE_10E.md). This is the single scripted project-owned clamp task,
 not a general coding agent or Phase 10 closure.
+
+Phase 10F extends only the version-15 workflow to three tasks. At submission use
+`--fixture clamp-v1` (default), `--fixture slug-v1` or `--fixture mean-v1`.
+Continuation obtains the task from the pinned configuration and rejects `--fixture`;
+versions 12–14 stay clamp-only. The same explicit EXECUTE/WRITE, approval and no-replay
+boundaries apply. See [task selection](SANDBOX.md#controlled-task-selection--phase-10f)
+and the [closure audit](PHASE_10.md).

@@ -1,4 +1,4 @@
-"""Verified adapter binding for the single durable clamp test profile."""
+"""Verified adapter binding for pinned durable fixture profiles."""
 
 import hashlib
 import json
@@ -9,20 +9,27 @@ from importlib.metadata import version
 from pathlib import Path
 from uuid import UUID
 
+from runveil_core.fixtures import FixtureName
 from runveil_core.sandbox import SandboxIdentity, TestsResult
 from runveil_core.sandbox_patch import (
     SandboxPatchInput,
     SandboxPatchObservation,
     SandboxPatchResult,
 )
-from runveil_core.sandbox_review import InspectionResult, proposal_diff
+from runveil_core.sandbox_review import InspectionResult, proposal_diff, validate_inspection
 from runveil_core.tools import ToolError, ToolErrorCode
 
 from runveil_tools.sandbox import FixtureSandbox, SandboxError
 
 
 class BoundSandbox:
-    def __init__(self, image: str, *, socket: Path = Path("/var/run/docker.sock")) -> None:
+    def __init__(
+        self,
+        image: str,
+        *,
+        socket: Path = Path("/var/run/docker.sock"),
+        fixture: FixtureName = "clamp-v1",
+    ) -> None:
         if not socket.is_absolute():
             raise ValueError("A local absolute Docker socket is required")
         endpoint = socket.resolve(strict=True)
@@ -33,6 +40,7 @@ class BoundSandbox:
             "runveil_tools.sandbox",
             "runveil_tools.sandbox_execution",
             "runveil_core.sandbox",
+            "runveil_core.fixtures",
             "runveil_core.sandbox_review",
             "runveil_core.sandbox_patch",
             "runveil_core.software",
@@ -48,6 +56,7 @@ class BoundSandbox:
         implementation.update(sys.version.encode() + version("pydantic").encode())
         self.identity = SandboxIdentity(
             image=image,
+            fixture=fixture,
             endpoint_digest=hashlib.sha256(
                 json.dumps([str(endpoint), stat.st_dev, stat.st_ino]).encode()
             ).hexdigest(),
@@ -85,7 +94,9 @@ class BoundSandbox:
         if result.status != "passed" or result.exit_code != 0 or not result.cleanup_confirmed:
             raise ToolError(ToolErrorCode.RESOURCE_UNAVAILABLE)
         try:
-            return InspectionResult.model_validate_json(result.output)
+            inspected = InspectionResult.model_validate_json(result.output)
+            validate_inspection(inspected, self.identity.fixture)
+            return inspected
         except ValueError:
             raise ToolError(ToolErrorCode.INVALID_OUTPUT) from None
 
@@ -93,6 +104,7 @@ class BoundSandbox:
         self, invocation_id: UUID, payload: SandboxPatchInput, admit: Callable[[], Awaitable[None]]
     ) -> SandboxPatchResult:
         payload = SandboxPatchInput.model_validate_json(payload.model_dump_json())
+        validate_inspection(payload.inspection, self.identity.fixture)
         try:
             result = await self._runner.run(
                 self.identity.fixture,

@@ -51,6 +51,7 @@ from runveil_core.sandbox_review import (
     SandboxInspector,
     authorize_review,
     review_offers,
+    validate_inspection,
     validate_proposal,
 )
 from runveil_core.software import SOFTWARE_POLICY, baseline_failed, workflow_tool
@@ -151,6 +152,12 @@ class RuntimeConfig(Contract):
                 raise ValueError("Patch configuration requires an explicit WRITE grant") from None
         if (self.schema_version in (12, 13, 14, 15)) != (self.sandbox is not None):
             raise ValueError("Sandbox execution requires version 12, 13, 14 or 15 and a binding")
+        if (
+            self.schema_version in (12, 13, 14)
+            and self.sandbox is not None
+            and self.sandbox.fixture != "clamp-v1"
+        ):
+            raise ValueError("Legacy sandbox profiles are clamp-only")
         if self.schema_version == 12:
             try:
                 authorize_sandbox(self.tool_policy, self.tool_policy)
@@ -611,9 +618,12 @@ async def _execute(
 
                                 inspected = await inspection.inspect(pending.id, admit_inspection)
                                 try:
-                                    observation = InspectionResult.model_validate_json(
+                                    snapshot = InspectionResult.model_validate_json(
                                         inspected.model_dump_json()
-                                    ).model_dump(mode="json")
+                                    )
+                                    assert config.sandbox is not None
+                                    validate_inspection(snapshot, config.sandbox.fixture)
+                                    observation = snapshot.model_dump(mode="json")
                                 except (ValueError, AttributeError):
                                     raise ToolError(ToolErrorCode.INVALID_OUTPUT) from None
                             elif action.tool_name == PROPOSAL_TOOL:
@@ -633,6 +643,8 @@ async def _execute(
                                 snapshot = InspectionResult.model_validate_json(
                                     snapshots[0].content
                                 )
+                                assert config.sandbox is not None
+                                validate_inspection(snapshot, config.sandbox.fixture)
                                 validate_proposal(proposal, snapshot)
                                 if config.schema_version in (14, 15):
                                     try:

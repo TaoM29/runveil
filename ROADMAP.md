@@ -386,7 +386,7 @@ Phase 10 continuation was authorized on 2026-10-02.
   [operations](docs/operations/SANDBOX.md#approved-sandbox-patch-and-validation--phase-10d)
   and [handoff](docs/operations/PHASE_10D.md).
 
-- **10E — Implemented; review pending:** separate `software-engineering-v1` profile
+- **10E — Implemented; Phase 10F continuation authorized:** separate `software-engineering-v1` profile
   connects inspection, a recorded failing baseline, exact proposal, approval and
   controlled application/post-change tests. Persistence independently validates the
   baseline's ordering, provenance and model context. Local inspection covers queued
@@ -396,12 +396,26 @@ Phase 10 continuation was authorized on 2026-10-02.
   [operations](docs/operations/SANDBOX.md#fixture-engineering-workflow--phase-10e)
   and [handoff](docs/operations/PHASE_10E.md).
 
+- **10F — Implemented; review pending:** closed clamp, whitespace-slug and fractional-mean
+  tasks in the existing software workflow, with submission-only pinned selection,
+  complete task-specific allowlists and independent cross-fixture checks. Earlier
+  profiles remain clamp-only. Fresh-process Docker acceptance verifies baseline
+  failure, exact repair, approval/rejection, post-change tests and retained evidence
+  for all three tasks. See [ADR 0037](docs/adr/0037-controlled-task-catalog.md),
+  [closure audit](docs/operations/PHASE_10.md) and [handoff](docs/operations/PHASE_10F.md).
+
+## Phase 10 closure assessment
+
+The three acceptance criteria are evidenced within the public scripted fixture
+scope: several repairs complete end to end, failures remain inspectable, and fixture
+execution stays off the host. This does not establish general coding/model quality.
+The original implementation checklist still requires search in the sandbox workflow;
+the older host repository search capability does not meet that boundary. Phase 10
+is **not closed**. No original requirement is silently waived.
+
 ## Recommended next slice
 
-Review 10E, then extend the integrated workflow to several small project-owned
-repairs with explicit pinned fixture identities and independent acceptance. The
-current request prioritized connecting existing capabilities, so fixture expansion
-from the prior recommendation remains deferred. Audit bounded sandbox search and
-remaining Phase 10 closure requirements. Preserve approval/WRITE separation,
-inspectable failures and no-replay mutation recovery. Phase 10 remains open;
-no automatic continuation is authorized.
+Review 10F, then integrate bounded search over the pinned sandbox evidence with
+explicit authorization, durable provenance and focused acceptance. Reassess the
+original checklist and closure gate afterward. Do not start Phase 11 automatically.
+No automatic continuation is authorized.

@@ -407,3 +407,56 @@ orchestration and boundaries, not model quality or several-task acceptance.
 Additional fixture selection, bounded search and the Phase 10 closure audit remain
 separate review work. See [ADR 0036](../adr/0036-fixture-engineering-workflow.md) and
 [handoff](PHASE_10E.md).
+
+## Controlled task selection — Phase 10F
+
+The existing `software-engineering-v1` workflow now has a closed task catalog:
+
+| Fixture    | Repair                                        | Only writable file | Fixed validation |
+| ---------- | --------------------------------------------- | ------------------ | ---------------- |
+| `clamp-v1` | Respect both lower and upper bounds           | `clamp.py`         | `test_clamp.py`  |
+| `slug-v1`  | Normalize repeated spaces, tabs and newlines  | `slug.py`          | `test_slug.py`   |
+| `mean-v1`  | Preserve fractional/negative arithmetic means | `mean.py`          | `test_mean.py`   |
+
+Each workspace contains exactly TASK.md, that source file and its test file. Task
+and test bytes are immutable through an approved repair. All existing byte, process,
+time, output and resource limits remain. Inspection, baseline and application each
+use a fresh disposable container from the pinned image. The model cannot select
+repositories, paths, commands, fixtures or environment variables.
+
+Build the reviewed image, then choose the fixture **at submission only**:
+
+```sh
+docker build --network=none -t runveil-sandbox:phase10f sandbox
+SANDBOX_IMAGE=$(docker image inspect runveil-sandbox:phase10f --format '{{.Id}}')
+uv run python -m runveil_worker.software_worker submit --image "$SANDBOX_IMAGE" --fixture slug-v1
+# Set RUN_ID to the returned UUID; use the same work/inspect/approve/reject flow above.
+uv run python -m runveil_worker.software_worker work --run-id "$RUN_ID" --image "$SANDBOX_IMAGE" --allow-execute
+uv run python -m runveil_worker.software_worker inspect --run-id "$RUN_ID"
+# After reviewing revision, approval.digest, exact diff, task identity and failing baseline:
+uv run python -m runveil_worker.software_worker approve --run-id "$RUN_ID" --revision "$REVISION" --digest "$DIGEST"
+uv run python -m runveil_worker.software_worker work --run-id "$RUN_ID" --image "$SANDBOX_IMAGE" --allow-execute --allow-write
+uv run python -m runveil_worker.software_worker inspect --run-id "$RUN_ID"
+```
+
+Omitting `--fixture` defaults to clamp. Unknown fixture names are refused. Other
+commands reject the option: continuation and uncertain-intent recovery derive task
+identity from the original configuration. The pinned `sandbox.fixture` appears in
+inspection evidence alongside the image, policy, implementation and endpoint digests.
+The old test/review/patch profiles (versions 12–14) remain clamp-only, even if called
+programmatically with a new task identity.
+
+Adapter, core and durable approval validation independently reject inspection from
+another task or a mixed file set. Proposals target only the pinned task's source;
+the image runner independently rejects other source/test targets and revalidates
+the entire workspace. No approval transfer, task switching, repeated mutation,
+new grant or recovery exception is introduced. The catalog is part of the covered
+implementation identity; use new runs with this installation rather than repinning
+old live work. Container crash cleanup remains an operator responsibility.
+
+The same CI command now exercises all three tasks in fresh processes, including
+approval and rejection, independent exact replacement/postimage checks and cleanup.
+These public scripted repairs demonstrate integration, not hidden-task or stochastic
+model performance. Existing failure/recovery/authorization tests remain required.
+See [ADR 0037](../adr/0037-controlled-task-catalog.md),
+[Phase 10 closure audit](PHASE_10.md) and [handoff](PHASE_10F.md).

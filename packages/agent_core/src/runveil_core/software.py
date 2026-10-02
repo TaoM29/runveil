@@ -1,4 +1,4 @@
-"""The closed inspect/test/propose workflow for the project-owned clamp task."""
+"""The closed inspect/test/propose workflow for the project-owned fixture tasks."""
 
 from runveil_core.approvals import PROPOSAL_TOOL
 from runveil_core.models import Message

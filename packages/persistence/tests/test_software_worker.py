@@ -1,6 +1,7 @@
 """End-to-end fixture workflow and its new baseline/proposal boundary."""
 
 import asyncio
+import hashlib
 import json
 import os
 import sys
@@ -10,6 +11,7 @@ from uuid import UUID
 
 import pytest
 from runveil_core.agents import JsonValue
+from runveil_core.fixtures import FIXTURE_PATHS, FixtureName
 from runveil_core.models import FinalResult, FinishAction, ModelRequest, ModelResponse, TokenUsage
 from runveil_core.mutations import APPLY_TOOL
 from runveil_core.runtime import Cursor, Pending, RuntimeConfig, RuntimeState
@@ -46,7 +48,7 @@ def workflow_output(
         args: tuple[str, ...], timeout: float, data: bytes | None = None
     ) -> docker_module._CommandResult:
         if args[3] == "create":
-            baseline = args[-1] == "clamp-v1"
+            baseline = args[-1] in FIXTURE_PATHS
             stub.exit_code = int(baseline and not passed)
             stub.start_output = b"controlled baseline" if baseline else inspected
         return await command(args, timeout, data)
@@ -292,7 +294,10 @@ async def test_checkpoint_reuse_and_uncertain_effect_never_replay(
         assert evidence["patch_applied"] is (False if cut == "baseline" else None)
 
 
-async def test_real_docker_engineering_workflow_in_fresh_processes(database: AsyncEngine) -> None:
+@pytest.mark.parametrize("fixture", ["clamp-v1", "slug-v1", "mean-v1"])
+async def test_real_docker_engineering_workflow_in_fresh_processes(
+    database: AsyncEngine, fixture: FixtureName
+) -> None:
     image = os.environ.get("RUNVEIL_SANDBOX_IMAGE")
     if not image:
         pytest.skip("Set RUNVEIL_SANDBOX_IMAGE for Docker acceptance")
@@ -324,7 +329,7 @@ async def test_real_docker_engineering_workflow_in_fresh_processes(database: Asy
             await child.wait()
 
     for decision in ("approve", "reject"):
-        run_id = str((await cli("submit", "--image", image))["run_id"])
+        run_id = str((await cli("submit", "--image", image, "--fixture", fixture))["run_id"])
         assert (await cli("inspect", "--run-id", run_id))["status"] == "QUEUED"
         assert (await cli("work", "--run-id", run_id, "--image", image, "--allow-execute"))[
             "approval_id"
@@ -333,7 +338,38 @@ async def test_real_docker_engineering_workflow_in_fresh_processes(database: Asy
         assert review["patch_applied"] is False and review["mutation"] is None
         approval = review["approval"]
         assert isinstance(approval, dict)
-        assert "+    return min(max(value, lower), upper)" in str(review["diff"])
+        from runveil_core.sandbox_review import InspectionResult
+
+        expected_line = {
+            "clamp-v1": "    return min(max(value, lower), upper)",
+            "slug-v1": '    return "-".join(text.lower().split())',
+            "mean-v1": "    return sum(values) / len(values)",
+        }[fixture]
+        assert "+" + expected_line in str(review["diff"])
+        # Independent fixture oracle: text reads only; never import/execute on the host.
+        root = Path(__file__).resolve().parents[3] / "sandbox" / "fixtures" / fixture
+        files = [
+            {"path": path, "content": (root / path).read_text()} for path in FIXTURE_PATHS[fixture]
+        ]
+        original = InspectionResult.model_validate_json(json.dumps({"files": files}))
+        expected_after = "\n".join(
+            expected_line if line.startswith("    return ") else line
+            for line in files[1]["content"].split("\n")
+        )
+        assert approval["proposal"] == {
+            "schema_version": 1,
+            "path": files[1]["path"],
+            "before": files[1]["content"],
+            "after": expected_after,
+        }
+        files[1]["content"] = expected_after
+        expected_digest = hashlib.sha256(
+            json.dumps(
+                {"files": files, "cleanup_confirmed": True},
+                ensure_ascii=False,
+                separators=(",", ":"),
+            ).encode()
+        ).hexdigest()
         # Neither extra grants nor the old patch worker can consume a waiting workflow.
         assert not (
             await cli(
@@ -371,9 +407,12 @@ async def test_real_docker_engineering_workflow_in_fresh_processes(database: Asy
                 TEST_TOOL,
                 "repository.propose_patch",
             ] + ([APPLY_TOOL] if decision == "approve" else [])
+            assert calls[0].result == original.model_dump(mode="json")
             assert calls[1].result and calls[1].result["status"] == "tests_failed"
             if decision == "approve":
                 assert calls[-1].result and calls[-1].result["cleanup_confirmed"] is True
+                assert calls[-1].result["after_digest"] == expected_digest
+                assert calls[-1].result["approved_diff"] == review["diff"]
                 tests = calls[-1].result["tests"]
                 assert isinstance(tests, dict) and tests["status"] == "passed"
             models = list(
@@ -405,3 +444,88 @@ async def test_real_docker_engineering_workflow_in_fresh_processes(database: Asy
                 )
                 assert absent.code == 0 and not absent.output.strip()
         assert not (await cli("work", "--run-id", run_id))["selected"]
+
+
+@pytest.mark.parametrize("boundary", ["adapter", "core", "storage"])
+async def test_cross_fixture_evidence_is_refused(
+    database: AsyncEngine, docker_stub: DockerStub, monkeypatch: pytest.MonkeyPatch, boundary: str
+) -> None:
+    from runveil_core import runtime
+    from runveil_persistence.models import ApprovalRow
+    from runveil_tools import sandbox_execution
+
+    workflow_output(docker_stub, monkeypatch)  # Deliberately returns clamp evidence for mean.
+    if boundary in ("core", "storage"):
+        monkeypatch.setattr(
+            sandbox_execution, "validate_inspection", lambda snapshot, fixture: None
+        )
+    if boundary == "storage":
+        monkeypatch.setattr(runtime, "validate_inspection", lambda snapshot, fixture: None)
+    sessions = async_sessionmaker(database)
+    run_id = await worker.submit_patch(
+        sessions, IMAGE, socket=docker_stub.endpoint, workflow=True, fixture="mean-v1"
+    )
+    if boundary == "storage":
+        with pytest.raises(ToolError, match="tool_resource_invalid"):
+            await worker.work_patch_once(
+                sessions,
+                run_id=run_id,
+                image=IMAGE,
+                socket=docker_stub.endpoint,
+                allow_execute=True,
+                workflow=True,
+            )
+    else:
+        state = await worker.work_patch_once(
+            sessions,
+            run_id=run_id,
+            image=IMAGE,
+            socket=docker_stub.endpoint,
+            allow_execute=True,
+            workflow=True,
+        )
+        assert state and state.error_code == "tool_resource_invalid"
+    async with sessions() as session:
+        assert await session.scalar(select(ApprovalRow.id)) is None
+        assert (
+            await session.scalar(select(ToolCallRow.id).where(ToolCallRow.tool_name == APPLY_TOOL))
+            is None
+        )
+
+
+async def test_real_docker_task_runner_rejects_foreign_and_test_targets() -> None:
+    from uuid import uuid4
+
+    from runveil_core.approvals import PatchProposal
+    from runveil_core.sandbox_patch import SandboxPatchInput
+    from runveil_tools.sandbox_execution import BoundSandbox
+
+    image = os.environ.get("RUNVEIL_SANDBOX_IMAGE")
+    if not image:
+        pytest.skip("Set RUNVEIL_SANDBOX_IMAGE for Docker acceptance")
+
+    async def admit() -> None:
+        pass  # Direct trusted-operator runner boundary; no durable workflow authority.
+
+    fixtures: tuple[FixtureName, ...] = ("slug-v1", "mean-v1")
+    for fixture in fixtures:
+        binding = BoundSandbox(image, fixture=fixture)
+        inspected = await binding.inspect(uuid4(), admit)
+        payload = SandboxPatchInput(
+            approval_id=uuid4(),
+            inspection=inspected,
+            proposal=PatchProposal(
+                path=inspected.files[1].path,
+                before=inspected.files[1].content,
+                after=inspected.files[1].content + "# repair\n",
+            ),
+        )
+        for target in ("clamp.py", inspected.files[2].path):
+            # Bypass host contracts to exercise the image's independent target allowlist.
+            raw = json.loads(payload.model_dump_json())
+            raw["proposal"]["path"] = target
+            outcome = await docker_module.FixtureSandbox(image).run(
+                fixture, patch_input=json.dumps(raw).encode(), invocation_id=uuid4(), admit=admit
+            )
+            assert outcome.status == "infrastructure_error" and outcome.exit_code is None
+            assert outcome.cleanup_confirmed

@@ -1,6 +1,6 @@
 # Architecture
 
-## Implemented through Phase 10E; fixture workflow review pending
+## Implemented through Phase 10F; multi-task workflow review pending
 
 ```mermaid
 flowchart LR
@@ -635,3 +635,25 @@ This connects the existing project-owned task; it does not close Phase 10's sear
 or several-task acceptance gates. No API/UI, runner, schema, dependency or hosted
 model change. See [ADR 0036](docs/adr/0036-fixture-engineering-workflow.md) and
 [operations](docs/operations/SANDBOX.md#fixture-engineering-workflow--phase-10e).
+
+## Phase 10F closed task catalog
+
+The version-15 software workflow now accepts `clamp-v1`, `slug-v1` and `mean-v1`
+at submission. The immutable sandbox identity pins the task; continuation reads
+that identity and accepts no task override. Versions 12–14 remain clamp-only.
+The shared policy, ordered workflow, budgets, approval and recovery semantics do
+not change. A closed scripted repair table handles the three public task types.
+
+Each task has an ordered TASK.md/source/test allowlist. Inspection contracts reject
+mixed or incomplete sets; adapter, core and persistence independently check the
+snapshot against the pinned task. Proposals can replace only its source file.
+The container runner independently maps the selected task to its three paths and
+retains the existing full workspace checks, atomic replacement, fixed tests and
+cleanup. The catalog is included in the implementation digest; image identity
+pins fixture and runner bytes. No model-selected path or command is introduced.
+
+Real Docker acceptance covers all three failing baselines, exact approved repairs,
+post-change tests, rejection, postimage digests and unchanged task/test content.
+This establishes bounded scripted multi-task orchestration, not model quality.
+The [Phase 10 closure audit](docs/operations/PHASE_10.md) retains sandbox search as
+an open original requirement. See [ADR 0037](docs/adr/0037-controlled-task-catalog.md).

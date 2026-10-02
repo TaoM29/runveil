@@ -17,6 +17,7 @@ from runveil_core.sandbox_review import (
     INSPECT_TOOL,
     SANDBOX_REVIEW_PROFILE,
     InspectionResult,
+    validate_inspection,
     validate_proposal,
 )
 from runveil_core.software import SOFTWARE_PROFILE, baseline_failed, workflow_tool
@@ -82,6 +83,12 @@ async def sandbox_preimage(
         or InspectionResult.model_validate_json(observations[0].content) != snapshot
     ):
         raise ValueError("Proposal model context differs from recorded inspection")
+    run = await RunRepository(session).get(call.run_id)
+    version = await AgentRepository(session).get_version(run.agent_version_id)
+    config = RuntimeConfig.model_validate_json(version.configuration_json)
+    if config.sandbox is None:
+        raise ValueError("Inspection requires a pinned sandbox")
+    validate_inspection(snapshot, config.sandbox.fixture)
     validate_proposal(proposal, snapshot)
     job = await session.get(JobRow, call.run_id)
     if job is not None and job.profile == SOFTWARE_PROFILE:
