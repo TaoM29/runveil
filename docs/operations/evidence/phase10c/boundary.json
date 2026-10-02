@@ -1,0 +1,53 @@
+{
+  "results": [
+    {
+      "policy": "docker-fixture-v1",
+      "image": "sha256:09d00daf632b368aa055e3c63f84b6ec9a8731249e0927275c6c4a2e2fdb0b04",
+      "fixture": "boundary-v1",
+      "container": "runveil-sandbox-e7163bfb2435411dbdc5908c90a084c9",
+      "status": "passed",
+      "exit_code": 0,
+      "cleanup_confirmed": true,
+      "output_bytes": 164,
+      "output_sha256": "9cc9949cc1f5106e8f4810e426239c8adcb1df6bfede82ae949d0a367811951d",
+      "output_excerpt": "test_isolation (test_boundary.BoundaryTests.test_isolation) ... ok\n\n----------------------------------------------------------------------\nRan 1 test in 0.001s\n\nOK\n"
+    },
+    {
+      "policy": "docker-fixture-v1",
+      "image": "sha256:09d00daf632b368aa055e3c63f84b6ec9a8731249e0927275c6c4a2e2fdb0b04",
+      "fixture": "clamp-v1",
+      "container": "runveil-sandbox-a3833ddf9916447ea9f55307cb4651b9",
+      "status": "tests_failed",
+      "exit_code": 1,
+      "cleanup_confirmed": true,
+      "output_bytes": 626,
+      "output_sha256": "5a343470e058c2b88207688e3f122bc4d64325153bea8b9c02c01084e3456f5b",
+      "output_excerpt": "test_bounds (test_clamp.ClampTests.test_bounds) ... \n  test_bounds (test_clamp.ClampTests.test_bounds) (value=-3) ... FAIL\n\n======================================================================\nFAIL: test_bounds (test_clamp.ClampTests.test_bounds) (value=-3)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/workspace/repository/test_clamp.py\", line 10, in test_bounds\n    self.assertEqual(clamp(value, 0, 10), expected)\nAssertionError: -3 != 0\n\n----------------------------------------------------------------------\nRan 1 test in 0.001s\n\nFAILED (failures=1)\n"
+    },
+    {
+      "policy": "docker-fixture-v1",
+      "image": "sha256:09d00daf632b368aa055e3c63f84b6ec9a8731249e0927275c6c4a2e2fdb0b04",
+      "fixture": "timeout-v1",
+      "container": "runveil-sandbox-8705942d89f947a79ac975e1a231e577",
+      "status": "timeout",
+      "exit_code": 124,
+      "cleanup_confirmed": true,
+      "output_bytes": 58,
+      "output_sha256": "36d4e288fbf794ecc696a214457c03185891868d3be0596e2347352804160051",
+      "output_excerpt": "test_timeout (test_timeout.TimeoutProbe.test_timeout) ... "
+    },
+    {
+      "policy": "docker-fixture-v1",
+      "image": "sha256:09d00daf632b368aa055e3c63f84b6ec9a8731249e0927275c6c4a2e2fdb0b04",
+      "fixture": "output-v1",
+      "container": "runveil-sandbox-98b211dd40a0438ba502238849751722",
+      "status": "output_limit",
+      "exit_code": null,
+      "cleanup_confirmed": true,
+      "output_bytes": 16384,
+      "output_sha256": "260dd4b24453bba7ae757099f9d122a1341f43a45a8bc58217ea95bbb3f05986",
+      "output_excerpt": "test_output (test_output.OutputProbe.test_output) ... xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    }
+  ],
+  "cancellation_cleanup": true
+}

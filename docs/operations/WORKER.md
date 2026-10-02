@@ -401,3 +401,12 @@ fixture image and exposes only `tests.run` under explicit `--allow-execute`. See
 [sandbox operations](SANDBOX.md#durable-sandbox-tests--phase-10b) for submission,
 fixed-profile identity, checkpoint recovery and terminal-only uncertain-intent
 handling. It does not extend the general worker CLI, SQS adapter or patch approvals.
+
+## Sandbox inspection and review (Phase 10C)
+
+`python -m runveil_worker.sandbox_review_worker` owns the distinct
+`sandbox-review-v1` profile: fixed in-container inspection, recorded exact preimage,
+proposal and durable human review. Approval only finishes review and never writes
+files. See [sandbox operations](SANDBOX.md#sandbox-inspection-and-exact-review--phase-10c)
+for commands, exact evidence, operator grants and recovery limits. Existing
+fixture/SQS/host-patch profiles cannot adopt these approvals.

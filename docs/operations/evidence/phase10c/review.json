@@ -1,0 +1,188 @@
+{
+  "kind": "phase10c-local-cli-acceptance",
+  "image": "sha256:09d00daf632b368aa055e3c63f84b6ec9a8731249e0927275c6c4a2e2fdb0b04",
+  "runs": [
+    {
+      "decision": "approve",
+      "inspection": {
+        "run_id": "c4ca7126-2af0-4030-88bb-83c6480c2464",
+        "revision": 2,
+        "status": "WAITING_FOR_APPROVAL",
+        "profile": "sandbox-review-v1",
+        "sandbox": {
+          "image": "sha256:09d00daf632b368aa055e3c63f84b6ec9a8731249e0927275c6c4a2e2fdb0b04",
+          "fixture": "clamp-v1",
+          "policy": "docker-fixture-v1",
+          "endpoint_digest": "dceb10e11eb5fed367bfa493e3acabc87e531696d82e72cd6d0bf79f0baaee9c",
+          "implementation_digest": "689a00d868200320817d70c23d759842f8ea8f5237708f7eec642bdf93cdf078"
+        },
+        "approval": {
+          "id": "6507eda2-7f1f-4b04-a536-5426e018ffbb",
+          "run_id": "c4ca7126-2af0-4030-88bb-83c6480c2464",
+          "proposal": {
+            "schema_version": 1,
+            "path": "clamp.py",
+            "before": "def clamp(value: int, lower: int, upper: int) -> int:\n    \"\"\"Return value bounded by inclusive lower/upper limits.\"\"\"\n    return min(value, upper)\n",
+            "after": "def clamp(value: int, lower: int, upper: int) -> int:\n    \"\"\"Return value bounded by inclusive lower/upper limits.\"\"\"\n    return min(max(value, lower), upper)\n"
+          },
+          "digest": "e7675b6188996e487b2f5f405f002f7baa7b8789fa60b9258c06bee1131aa570",
+          "status": "PENDING",
+          "requested_at": "2026-10-02T11:06:11.643842Z",
+          "decided_at": null
+        },
+        "inspection_digest": "112c3cb50add4efbf6ffd2574e083503c2ceec190fc04f33cdb112aa783fb636",
+        "before_sha256": "940722ea4077e63463373a273a3e7f02608142e7c4bfb3f9f523d6841d3da2e3",
+        "after_sha256": "f57dd1a09ad1423fbf4013418b85c3341de8c30f8c9a77b4433637b81a997b70",
+        "diff": "--- a/clamp.py\n+++ b/clamp.py\n@@ -1,3 +1,3 @@\n def clamp(value: int, lower: int, upper: int) -> int:\n     \"\"\"Return value bounded by inclusive lower/upper limits.\"\"\"\n-    return min(value, upper)\n+    return min(max(value, lower), upper)\n",
+        "patch_applied": false
+      },
+      "final_status": "SUCCEEDED",
+      "worker_result": {
+        "selected": true,
+        "error_code": null,
+        "approval_id": "6507eda2-7f1f-4b04-a536-5426e018ffbb",
+        "summary": "Human approved the sandbox proposal. No patch was applied."
+      },
+      "terminal_duplicate_selected": false,
+      "tool_calls": [
+        {
+          "id": "1fd0a620-2ec8-49b3-b361-f94d87535a60",
+          "tool": "repository.inspect",
+          "status": "SUCCEEDED"
+        },
+        {
+          "id": "79666f02-e833-4cb9-b058-96dd1ace0c5c",
+          "tool": "repository.propose_patch",
+          "status": "SUCCEEDED"
+        }
+      ],
+      "container_absent": true,
+      "trace": {
+        "status": "SUCCEEDED",
+        "checkpoint": {
+          "event_sequence": 30,
+          "schema_version": 13,
+          "tokens": {
+            "attempts": 3,
+            "input_tokens": 30,
+            "output_tokens": 15,
+            "unknown_attempts": 0,
+            "last_usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          },
+          "cost": {
+            "known_nanousd": 75000,
+            "unknown_attempts": 0
+          },
+          "retries_scheduled": 0,
+          "error_code": null,
+          "final_summary": "Human approved the sandbox proposal. No patch was applied.",
+          "final_summary_truncated": false
+        },
+        "approval": {
+          "id": "6507eda2-7f1f-4b04-a536-5426e018ffbb",
+          "status": "APPROVED",
+          "requested_at": "2026-10-02T11:06:11.643842Z",
+          "decided_at": "2026-10-02T11:06:13.357535Z"
+        },
+        "tool_calls": 2,
+        "model_calls": 3
+      }
+    },
+    {
+      "decision": "reject",
+      "inspection": {
+        "run_id": "e3feeeb3-cccb-420f-911c-8ea75fe70249",
+        "revision": 2,
+        "status": "WAITING_FOR_APPROVAL",
+        "profile": "sandbox-review-v1",
+        "sandbox": {
+          "image": "sha256:09d00daf632b368aa055e3c63f84b6ec9a8731249e0927275c6c4a2e2fdb0b04",
+          "fixture": "clamp-v1",
+          "policy": "docker-fixture-v1",
+          "endpoint_digest": "dceb10e11eb5fed367bfa493e3acabc87e531696d82e72cd6d0bf79f0baaee9c",
+          "implementation_digest": "689a00d868200320817d70c23d759842f8ea8f5237708f7eec642bdf93cdf078"
+        },
+        "approval": {
+          "id": "0498e224-aa01-4d33-ac31-7eda5a6b7b58",
+          "run_id": "e3feeeb3-cccb-420f-911c-8ea75fe70249",
+          "proposal": {
+            "schema_version": 1,
+            "path": "clamp.py",
+            "before": "def clamp(value: int, lower: int, upper: int) -> int:\n    \"\"\"Return value bounded by inclusive lower/upper limits.\"\"\"\n    return min(value, upper)\n",
+            "after": "def clamp(value: int, lower: int, upper: int) -> int:\n    \"\"\"Return value bounded by inclusive lower/upper limits.\"\"\"\n    return min(max(value, lower), upper)\n"
+          },
+          "digest": "e7675b6188996e487b2f5f405f002f7baa7b8789fa60b9258c06bee1131aa570",
+          "status": "PENDING",
+          "requested_at": "2026-10-02T11:06:19.451359Z",
+          "decided_at": null
+        },
+        "inspection_digest": "112c3cb50add4efbf6ffd2574e083503c2ceec190fc04f33cdb112aa783fb636",
+        "before_sha256": "940722ea4077e63463373a273a3e7f02608142e7c4bfb3f9f523d6841d3da2e3",
+        "after_sha256": "f57dd1a09ad1423fbf4013418b85c3341de8c30f8c9a77b4433637b81a997b70",
+        "diff": "--- a/clamp.py\n+++ b/clamp.py\n@@ -1,3 +1,3 @@\n def clamp(value: int, lower: int, upper: int) -> int:\n     \"\"\"Return value bounded by inclusive lower/upper limits.\"\"\"\n-    return min(value, upper)\n+    return min(max(value, lower), upper)\n",
+        "patch_applied": false
+      },
+      "final_status": "FAILED",
+      "worker_result": {
+        "selected": false,
+        "error_code": null,
+        "approval_id": null,
+        "summary": null
+      },
+      "terminal_duplicate_selected": false,
+      "tool_calls": [
+        {
+          "id": "4aded416-3ea0-4cf5-bef1-5e0b31d12e8c",
+          "tool": "repository.inspect",
+          "status": "SUCCEEDED"
+        },
+        {
+          "id": "77bc39d2-fd15-48bb-acf1-5a0e91455856",
+          "tool": "repository.propose_patch",
+          "status": "SUCCEEDED"
+        }
+      ],
+      "container_absent": true,
+      "trace": {
+        "status": "FAILED",
+        "checkpoint": {
+          "event_sequence": 20,
+          "schema_version": 13,
+          "tokens": {
+            "attempts": 2,
+            "input_tokens": 20,
+            "output_tokens": 10,
+            "unknown_attempts": 0,
+            "last_usage": {
+              "input_tokens": 10,
+              "output_tokens": 5
+            }
+          },
+          "cost": {
+            "known_nanousd": 50000,
+            "unknown_attempts": 0
+          },
+          "retries_scheduled": 0,
+          "error_code": null,
+          "final_summary": null,
+          "final_summary_truncated": false
+        },
+        "approval": {
+          "id": "0498e224-aa01-4d33-ac31-7eda5a6b7b58",
+          "status": "REJECTED",
+          "requested_at": "2026-10-02T11:06:19.451359Z",
+          "decided_at": "2026-10-02T11:06:21.068848Z"
+        },
+        "tool_calls": 2,
+        "model_calls": 2
+      }
+    }
+  ],
+  "telemetry": {
+    "tool_spans": 4,
+    "raw_fixture_content_absent": true
+  }
+}

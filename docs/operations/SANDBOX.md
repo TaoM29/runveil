@@ -184,3 +184,68 @@ That test executes a fresh worker process, verifies the real failed baseline aga
 its persisted tool record and checks container removal. CI runs it after building
 the sandbox image and the Phase 10A isolation acceptance. See
 [ADR 0033](../adr/0033-durable-sandbox-execution.md) and [handoff](PHASE_10B.md).
+
+## Sandbox inspection and exact review — Phase 10C
+
+`sandbox-review-v1` is a separate offline worker, with configuration/checkpoint
+version 13. Its first tool call runs the fixed `repository.inspect` operation
+inside a disposable container from the pinned image. It reads only TASK.md,
+clamp.py and test_clamp.py, at most 4096 UTF-8 bytes each and 12000 serialized
+bytes overall. Files must be ordinary, contain no NUL, and match the complete
+ordered allowlist. The runner does not import fixture code during inspection.
+Malformed, failed, truncated or oversized output cannot become a preimage.
+
+The scripted provider proposes one exact clamp.py replacement. Core validation
+and the database pause/decision boundaries independently compare its before-text
+to the successful recorded inspection preceding the proposal model request.
+A clean restart uses that record without another container. An uncertain
+inspection or proposal intent fails without constructing an adapter or replaying
+Docker. The existing name/cleanup/operator recovery procedure above still applies.
+
+Build the current reviewed image before submitting; do not move its tag during
+an active acceptance run. Export the migrated `DATABASE_URL` as in development:
+
+```sh
+docker build --network=none -t runveil-sandbox:phase10c sandbox
+SANDBOX_IMAGE=$(docker image inspect runveil-sandbox:phase10c --format '{{.Id}}')
+uv run python -m runveil_worker.sandbox_review_worker submit --image "$SANDBOX_IMAGE"
+# Set RUN_ID to the returned UUID.
+uv run python -m runveil_worker.sandbox_review_worker work --run-id "$RUN_ID" --image "$SANDBOX_IMAGE" --allow-execute
+uv run python -m runveil_worker.sandbox_review_worker inspect --run-id "$RUN_ID"
+# Use the inspected revision and approval.digest, after reviewing exact before/after and diff.
+uv run python -m runveil_worker.sandbox_review_worker approve --run-id "$RUN_ID" --revision "$REVISION" --digest "$DIGEST"
+uv run python -m runveil_worker.sandbox_review_worker work --run-id "$RUN_ID" --image "$SANDBOX_IMAGE" --allow-execute
+```
+
+Use `reject` with the same revision/digest arguments to terminate instead. Decisions
+are one-time and do not dispatch workers. The local CLI is a trusted database
+operator interface; the existing approval HTTP API/browser console do not support
+this new profile. The read-only trace API supports version 13 accounting and
+approval metadata, while continuing to omit raw file/proposal payloads.
+
+Inspection output includes exact proposal text, its digest, immutable sandbox
+identity, an inspection digest, before/after SHA-256 hashes and a deterministic
+unified diff. JSON escapes terminal controls; exact before/after text is canonical,
+including final newlines. The diff is a display aid, not an executable patch.
+Approval resumes only to a persisted review summary: **no patch is applied**.
+This profile has neither WRITE nor NETWORK permission. Existing version-11 host
+patch authority cannot adopt these approvals.
+
+The worker pins five steps (three model calls, two tool calls), a one-hour elapsed
+budget, and the existing token/cost/repeated-call budgets; no retry is allowed.
+Review wait consumes the original deadline. The explicit `--allow-execute` grants
+the two fixed capabilities (inspection EXECUTE and proposal READ), including on
+clean continuation. Changed image, socket identity or covered implementation
+refuses execution. Admission refusal may retain the normal lease until expiry.
+Terminal uncertain-intent recovery needs only `work --run-id`, as for Phase 10B.
+
+CI runs the real fresh-process review test alongside the durable test worker:
+
+```sh
+RUNVEIL_SANDBOX_IMAGE="$SANDBOX_IMAGE" uv run pytest packages/persistence/tests/test_sandbox_worker.py packages/persistence/tests/test_sandbox_review.py -k real_docker
+```
+
+Applying patches, testing repaired results and demonstrating several controlled
+tasks remain later Phase 10 work. This scripted repair proposal establishes no
+model-quality claim. See [ADR 0034](../adr/0034-sandbox-inspection-review.md) and
+[handoff](PHASE_10C.md).
