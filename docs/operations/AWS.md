@@ -12,6 +12,19 @@ AWS provider is pinned to **6.16.0**, with signed registry checksums in both loc
 Upgrades require a reviewed lock update and the checks below. No AWS credentials
 or backend access are needed; every test file explicitly mocks the AWS provider.
 
+When creating or updating provider locks, include both the Linux CI platform and
+the native Mac development platform for each root:
+
+```sh
+for root in bootstrap environment; do
+  terraform -chdir="infra/terraform/$root" providers lock -platform=linux_amd64 -platform=darwin_arm64
+done
+```
+
+Commit the resulting locks. The platform-specific `h1` hashes are required for
+validation of the unpacked provider when CI uses `-lockfile=readonly`; archive
+`zh` hashes alone do not cover that validation step on a different platform.
+
 ```sh
 terraform fmt -check -recursive infra/terraform
 for root in bootstrap environment; do

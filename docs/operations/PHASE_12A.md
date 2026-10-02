@@ -117,3 +117,39 @@ After reviewing this slice, package the API and fixed fixture SQS path for priva
 compute, with separate migration/runtime database roles and task identities. Verify
 health and bounded supervision before exposing endpoints. Keep Docker-dependent
 profiles out of that Fargate slice. Stop here for review.
+
+## Follow-up: Linux CI provider lock correction
+
+The first hosted Terraform job on `22d7c4a` failed during `terraform validate`:
+[failed job](https://github.com/TaoM29/runveil/actions/runs/37029215181/job/110911514155).
+The locks contained signed archive checksums and the Mac ARM unpacked-provider
+checksum, but omitted the Linux AMD64 unpacked-provider checksum. Read-only init
+verified/downloaded the Linux archive without recording its `h1` hash; validation
+then rejected the unpacked package. Earlier Mac-only verification did not catch this.
+
+Added the provider-generated Linux hash to both lockfiles using
+`terraform -chdir=infra/terraform/bootstrap providers lock -platform=linux_amd64`
+and copied the verified lock to the environment root, which has the same exact
+provider constraint. Retained the Mac hash, provider version and all archive hashes.
+The runbook now requires Linux and Mac platforms when generating or updating locks.
+No infrastructure, application or CI permission/verification behavior was weakened.
+
+Verification uses Terraform 1.13.5 in a disposable `linux/amd64` container, with
+source mounted read-only, temporary in-memory working files and no AWS credentials.
+It first reproduces the original checksum failure, then repeats read-only init,
+formatting, validation and all mock tests for both corrected roots, and compares
+the resulting locks with the source files to detect any modification.
+
+Results: the original checksum failure reproduced on Linux AMD64; corrected
+`terraform fmt -check -recursive`, `init -backend=false -input=false -lockfile=readonly`,
+`validate` and `test` passed for both roots (six test runs). Both locks remained
+byte-for-byte unchanged. The initial container used a non-executable temporary
+mount; rerunning with an executable temporary mount resolved that harness-only
+failure. `npm run format:check` and `git diff --check` passed. The disposable
+container and in-memory provider cache were removed automatically.
+
+Application tests are not rerun for this checksum/documentation-only fix. No new
+repository files, commit, push, cloud resource or hosted rerun is part of this fix.
+The hosted check will remain red until the correction is committed and pushed by
+an authorized follow-up. Recommended next step: review and publish this correction,
+then require green CI before continuing the next infrastructure slice.
