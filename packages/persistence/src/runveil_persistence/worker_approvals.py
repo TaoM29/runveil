@@ -11,6 +11,12 @@ from runveil_core.models import Message, ModelRequest, ModelResponse, ToolAction
 from runveil_core.mutations import PATCH_PROFILE
 from runveil_core.runs import RunStatus
 from runveil_core.runtime import Pending, RuntimeConfig, RuntimeState
+from runveil_core.sandbox_review import (
+    INSPECT_TOOL,
+    SANDBOX_REVIEW_PROFILE,
+    InspectionResult,
+    validate_proposal,
+)
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,6 +34,51 @@ from runveil_persistence.models import (
 from runveil_persistence.repositories import AgentRepository, RunRepository
 
 
+def review_profile(config: RuntimeConfig) -> str:
+    return {10: REVIEW_PROFILE, 11: PATCH_PROFILE, 13: SANDBOX_REVIEW_PROFILE}[
+        config.schema_version
+    ]
+
+
+async def sandbox_preimage(
+    session: AsyncSession, call: ToolCallRow, proposal: PatchProposal
+) -> InspectionResult:
+    inspections = list(
+        await session.scalars(
+            select(ToolCallRow)
+            .where(ToolCallRow.run_id == call.run_id, ToolCallRow.tool_name == INSPECT_TOOL)
+            .limit(2)
+        )
+    )
+    source = await session.get(ModelInvocationRow, call.model_invocation_id)
+    if (
+        len(inspections) != 1
+        or source is None
+        or source.run_id != call.run_id
+        or source.status != "SUCCEEDED"
+    ):
+        raise ValueError("Proposal requires one recorded sandbox inspection")
+    inspected = inspections[0]
+    if (
+        inspected.status != "SUCCEEDED"
+        or inspected.request != {}
+        or inspected.result is None
+        or inspected.completed_event_sequence is None
+        or inspected.completed_event_sequence >= source.requested_event_sequence
+    ):
+        raise ValueError("Inspection must complete before the proposal model request")
+    snapshot = InspectionResult.model_validate_json(json.dumps(inspected.result))
+    request = ModelRequest.model_validate_json(json.dumps(source.request))
+    observations = [m for m in request.messages if m.role == "tool" and m.tool_name == INSPECT_TOOL]
+    if (
+        len(observations) != 1
+        or InspectionResult.model_validate_json(observations[0].content) != snapshot
+    ):
+        raise ValueError("Proposal model context differs from recorded inspection")
+    validate_proposal(proposal, snapshot)
+    return snapshot
+
+
 async def validate_review_state(
     session: AsyncSession,
     run_id: UUID,
@@ -37,9 +88,9 @@ async def validate_review_state(
     row = await session.get(ApprovalRow, state.approval_id, populate_existing=True)
     job = await session.get(JobRow, run_id)
     if (
-        config.schema_version not in (10, 11)
+        config.schema_version not in (10, 11, 13)
         or job is None
-        or job.profile != (PATCH_PROFILE if config.schema_version == 11 else REVIEW_PROFILE)
+        or job.profile != review_profile(config)
         or row is None
         or row.run_id != run_id
     ):
@@ -86,6 +137,8 @@ async def validate_review_state(
         or action.arguments != call.request
     ):
         raise ValueError("Approval differs from model action")
+    if config.schema_version == 13:
+        await sandbox_preimage(session, call, request.proposal)
     return row
 
 
@@ -101,7 +154,7 @@ async def prepare_pause(
         raise ValueError("Approval boundary requires prior state")
     call = await session.get(ToolCallRow, pending.id) if pending.kind == "tool" else None
     reviewing = (
-        config.schema_version in (10, 11)
+        config.schema_version in (10, 11, 13)
         and call is not None
         and call.tool_name == PROPOSAL_TOOL
         and result is not None
@@ -116,7 +169,7 @@ async def prepare_pause(
     job = await session.get(JobRow, pending.cursor.run_id)
     if (
         job is None
-        or job.profile != (PATCH_PROFILE if config.schema_version == 11 else REVIEW_PROFILE)
+        or job.profile != review_profile(config)
         or previous.approval_id is not None
         or state.approval_id is None
         or state.approval_resolved
@@ -136,6 +189,8 @@ async def prepare_pause(
     proposal = PatchProposal.model_validate(result)
     if proposal != PatchProposal.model_validate(call.request):
         raise ValueError("Proposal output differs from request")
+    if config.schema_version == 13:
+        await sandbox_preimage(session, call, proposal)
     row = ApprovalRow(
         id=state.approval_id,
         run_id=pending.cursor.run_id,
@@ -194,7 +249,11 @@ async def resolve_worker_review(
     if run.status != RunStatus.WAITING_FOR_APPROVAL:
         raise InvalidTransition("Run is not waiting for approval")
     job = await session.get(JobRow, run_id, with_for_update=True, populate_existing=True)
-    if profile not in (REVIEW_PROFILE, PATCH_PROFILE) or job is None or job.profile != profile:
+    if (
+        profile not in (REVIEW_PROFILE, PATCH_PROFILE, SANDBOX_REVIEW_PROFILE)
+        or job is None
+        or job.profile != profile
+    ):
         raise ValueError("Not a worker review")
     if job.token is not None or job.expires_at is not None:
         raise OwnershipLost("Waiting approval must have released its worker")

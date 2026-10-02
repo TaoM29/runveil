@@ -48,6 +48,8 @@ class DockerStub:
     def __init__(self, endpoint: Path) -> None:
         self.endpoint = endpoint
         self.operations: list[str] = []
+        self.start_output = b"controlled failing test"
+        self.exit_code = 1
         self.hook: Callable[[str], Awaitable[None]] | None = None
 
     async def command(self, args: tuple[str, ...], timeout: float) -> docker_module._CommandResult:
@@ -56,14 +58,14 @@ class DockerStub:
         if self.hook:
             await self.hook(operation)
         if operation == "start":
-            return docker_module._CommandResult(1, b"controlled failing test")
+            return docker_module._CommandResult(self.exit_code, self.start_output)
         if operation == "inspect":
             return docker_module._CommandResult(
                 0,
                 json.dumps(
                     {
                         "Status": "exited",
-                        "ExitCode": 1,
+                        "ExitCode": self.exit_code,
                         "OOMKilled": False,
                         "Error": "",
                     }

@@ -32,6 +32,7 @@ from runveil_core.runtime import (
     Started,
 )
 from runveil_core.sandbox import SANDBOX_PROFILE
+from runveil_core.sandbox_review import SANDBOX_REVIEW_PROFILE
 from runveil_core.tools import ToolError, ToolPolicy
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -189,7 +190,9 @@ class PostgresExecutionStore:
             ) and self.expected_config is None:
                 raise ConfigurationRejected("Workspace execution requires a verified binding")
             if config.sandbox is not None and (
-                self.claim is None or self.claim.profile != SANDBOX_PROFILE
+                self.claim is None
+                or self.claim.profile
+                != (SANDBOX_REVIEW_PROFILE if config.schema_version == 13 else SANDBOX_PROFILE)
             ):
                 raise ConfigurationRejected("Sandbox execution requires the dedicated profile")
             if self.expected_config is not None and config != self.expected_config:
@@ -608,7 +611,7 @@ class PostgresExecutionStore:
                     if response.usage != state.tokens.last_usage:
                         raise ValueError("Outcome usage differs from accounting")
             approval = None
-            if state.schema_version in (10, 11):
+            if state.schema_version in (10, 11, 13):
                 approval = await prepare_pause(session, pending, previous, state, config, result)
             invocations = InvocationRepository(session)
             complete = (

@@ -227,7 +227,7 @@ async def read_trace(
     checkpoint = None
     if checkpoint_row is not None:
         version = checkpoint_row["schema_version"]
-        supported = type(version) is int and 1 <= version <= 12
+        supported = type(version) is int and 1 <= version <= 13
         summary = checkpoint_row["summary"] if supported else None
         checkpoint = TraceCheckpoint(
             event_sequence=checkpoint_row["event_sequence"],
