@@ -8,8 +8,9 @@ paid services or queue emulators. No live AWS acceptance has been performed.
 ## Commands and prerequisites
 
 Install locked dependencies and migrate through `0007` using the [development setup](DEVELOPMENT.md#local-quickstart).
-A queue must already exist. This slice does not create queues, IAM roles, redrive
-policies or infrastructure. Only commercial regional HTTPS URLs are accepted;
+A queue must already exist. [Phase 12A Terraform](AWS.md) now defines a Standard
+queue, DLQ and separate relay/consumer policies; no live AWS apply is claimed. The
+adapter itself does not create infrastructure or attach policies to identities. Only commercial regional HTTPS URLs are accepted;
 FIFO, custom endpoints, China/GovCloud and queue URL query parameters are unsupported.
 Credentials come from the normal AWS SDK chain and are never persisted or printed.
 Use an explicitly approved account/queue and grant the relay `sqs:SendMessage`,

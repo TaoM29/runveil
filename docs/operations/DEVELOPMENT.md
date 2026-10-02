@@ -94,6 +94,12 @@ No model keys, paid services or AWS credentials are needed for these checks.
 For the separate, explicitly opt-in hosted check, see
 [provider operations](MODELS.md#opt-in-live-verification).
 
+## Infrastructure checks
+
+[Phase 12A AWS operations](AWS.md) documents pinned Terraform installation,
+credential-free init/validation/mock tests, protected state and future live acceptance.
+The separate Terraform CI job never initializes an AWS backend or applies to AWS.
+
 ## Runtime operations
 
 - [Recorded product showcase and console routes](SHOWCASE.md)
