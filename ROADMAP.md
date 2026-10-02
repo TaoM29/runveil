@@ -4,25 +4,25 @@ The [original charter](docs/PROJECT_PLAN.md) is the source of truth. Each phase 
 be independently reviewed before the next begins. No automatic continuation,
 commit or push is authorized.
 
-| Phase | Scope                                                     | Status                                    |
-| ----- | --------------------------------------------------------- | ----------------------------------------- |
-| 0     | Charter, workspaces, health, quality tooling, Compose, CI | Implemented; see verification record      |
-| 1     | Domain model, immutable versions, persistence, migrations | Implemented through Phase 1C              |
-| 2     | Provider protocol, scripted and hosted providers          | Implemented; hosted acceptance complete   |
-| 3     | Minimal persisted execution loop                          | Implemented; continued by Phase 4 request |
-| 4     | Typed tools and authorization                             | Implemented through Phase 4B              |
-| 5     | Durable worker, retries, idempotency and budgets          | Complete; Phase 6 continuation authorized |
-| 6     | Human approval and controlled mutations                   | Complete; Phase 7 continuation authorized |
-| 7     | Telemetry and trace UI                                    | Complete; Phase 8 continuation authorized |
-| 8     | Deterministic evaluation harness                          | Complete; Phase 9 continuation authorized |
-| 9     | Statistical comparison                                    | Complete (scripted scope); closure review |
-| 10    | Sandboxed software engineering application                | Planned                                   |
-| 11    | MCP adapter through existing policy                       | Planned                                   |
-| 12    | AWS infrastructure with Terraform                         | Planned                                   |
-| 13    | Production CI/CD                                          | Planned                                   |
-| 14    | Temporary self-hosted inference and benchmarks            | Planned                                   |
-| 15    | Security hardening                                        | Planned                                   |
-| 16    | Public demo and portfolio release                         | Planned                                   |
+| Phase | Scope                                                     | Status                                     |
+| ----- | --------------------------------------------------------- | ------------------------------------------ |
+| 0     | Charter, workspaces, health, quality tooling, Compose, CI | Implemented; see verification record       |
+| 1     | Domain model, immutable versions, persistence, migrations | Implemented through Phase 1C               |
+| 2     | Provider protocol, scripted and hosted providers          | Implemented; hosted acceptance complete    |
+| 3     | Minimal persisted execution loop                          | Implemented; continued by Phase 4 request  |
+| 4     | Typed tools and authorization                             | Implemented through Phase 4B               |
+| 5     | Durable worker, retries, idempotency and budgets          | Complete; Phase 6 continuation authorized  |
+| 6     | Human approval and controlled mutations                   | Complete; Phase 7 continuation authorized  |
+| 7     | Telemetry and trace UI                                    | Complete; Phase 8 continuation authorized  |
+| 8     | Deterministic evaluation harness                          | Complete; Phase 9 continuation authorized  |
+| 9     | Statistical comparison                                    | Complete; Phase 10 continuation authorized |
+| 10    | Sandboxed software engineering application                | Implemented through 10A; review pending    |
+| 11    | MCP adapter through existing policy                       | Planned                                    |
+| 12    | AWS infrastructure with Terraform                         | Planned                                    |
+| 13    | Production CI/CD                                          | Planned                                    |
+| 14    | Temporary self-hosted inference and benchmarks            | Planned                                    |
+| 15    | Security hardening                                        | Planned                                    |
+| 16    | Public demo and portfolio release                         | Planned                                    |
 
 ## Phase 1 review gates
 
@@ -343,8 +343,22 @@ summaries, failure categories and reproducible reports are verified. This does n
 establish model quality, population coverage, significance or an automatic regression
 gate. Real stochastic evaluation design and broader provider selection remain future work.
 
+Phase 10 continuation was authorized on 2026-10-02.
+
+## Phase 10 review gates
+
+- **10A — Implemented; review pending:** operator-only disposable Docker fixture
+  execution with an immutable image ID, fixed test command, bounded resources/output,
+  isolated tmpfs workspace and verified cleanup. A buggy coding fixture and separate
+  isolation/timeout/output probes establish the boundary. Existing runtime EXECUTE
+  denial, approvals, durability, traces and evaluation behavior remain unchanged.
+  See [ADR 0032](docs/adr/0032-disposable-fixture-sandbox.md),
+  [operations](docs/operations/SANDBOX.md) and [handoff](docs/operations/PHASE_10A.md).
+  This does not close Phase 10's agent-driven coding acceptance gate.
+
 ## Recommended next slice
 
-Review Phase 9 closure, then separately authorize a focused Phase 10 sandbox boundary
-slice under the charter and existing security/durability requirements. No automatic
-continuation is authorized.
+Review 10A, then add one pinned, durable sandbox test-execution profile with explicit
+EXECUTE authorization, persisted intent/outcome, ownership fencing and conservative
+uncertain-intent recovery. Keep patching and the multi-task coding acceptance gate
+for subsequent focused slices. No automatic continuation is authorized.

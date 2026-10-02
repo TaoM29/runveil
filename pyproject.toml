@@ -30,7 +30,7 @@ select = ["E", "F", "I", "B", "UP"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
-files = ["apps/api/src", "apps/worker/src", "apps/api/tests", "packages", "scripts"]
+files = ["apps/api/src", "apps/worker/src", "apps/api/tests", "packages", "scripts", "sandbox/runner.py"]
 
 [tool.pytest.ini_options]
 testpaths = ["apps/api/tests", "packages/agent_core/tests", "packages/persistence/tests", "packages/model_providers/tests", "packages/tool_runtime/tests", "packages/evaluations/tests"]

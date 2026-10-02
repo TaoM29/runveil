@@ -111,3 +111,7 @@ For the separate, explicitly opt-in hosted check, see
 - [Phase 8 evaluation acceptance and scope audit](PHASE_8.md)
 - [Paired statistical calibration and methodology](STATISTICS.md)
 - [Phase 9 statistical acceptance and scope audit](PHASE_9.md)
+- [Phase 10 disposable Docker sandbox and acceptance command](SANDBOX.md)
+
+CI also builds the fixed sandbox image and runs the [Phase 10 boundary acceptance](SANDBOX.md).
+This requires a Linux Docker daemon with cgroup v2 and default seccomp enabled.

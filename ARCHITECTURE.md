@@ -1,6 +1,6 @@
 # Architecture
 
-## Implemented through Phase 9; statistical-method closure review pending
+## Implemented through Phase 10A; sandbox boundary review pending
 
 ```mermaid
 flowchart LR
@@ -517,3 +517,20 @@ No implementation or security boundary changed. Closure covers a scripted method
 demonstration, not model inference, guaranteed interval coverage or a production
 regression gate. See the [closure audit](docs/operations/PHASE_9.md) and
 [handoff](docs/operations/PHASE_9B.md).
+
+## Phase 10A disposable fixture sandbox
+
+An operator-only `runveil_tools.sandbox` runner executes fixed unittest fixtures in
+an explicitly selected immutable local Docker image. No agent tool is registered.
+The runtime continues to deny EXECUTE and existing patch approval/WRITE boundaries
+are unchanged. Container storage is disposable tmpfs, with no host checkout/socket
+mount, network, capabilities or arbitrary command input. CPU/memory/PID/output/time
+limits bound execution; removal and an absence query follow every attempted create.
+An uncertain create or unconfirmed cleanup fails explicitly with the owned name.
+
+A container watchdog limits supported fixture tests if the host runner disappears;
+there is no durable cleanup reconciler, crash-resume guarantee or multi-tenant
+security claim. Local result JSON is separate from runtime and evaluation evidence.
+One intentionally failing clamp repository and three boundary probes provide the
+first concrete sandbox acceptance. See [ADR 0032](docs/adr/0032-disposable-fixture-sandbox.md),
+[operations](docs/operations/SANDBOX.md) and [handoff](docs/operations/PHASE_10A.md).

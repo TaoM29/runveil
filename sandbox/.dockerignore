@@ -1,0 +1,7 @@
+*
+!Dockerfile
+!runner.py
+!fixtures/
+!fixtures/**
+**/__pycache__
+**/*.pyc

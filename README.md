@@ -19,7 +19,10 @@ adds correlated OpenTelemetry spans and safe JSON output. An offline
 on a versioned public code-reading corpus, with opt-in
 [paired statistical reports](docs/operations/STATISTICS.md). These scripted results
 verify the harness and statistical methods, not model quality. Hosted approval
-flows, sandbox isolation and real model-quality evaluations remain future work.
+flows and real model-quality evaluations remain future work. An operator-only
+[Docker sandbox](docs/operations/SANDBOX.md) now verifies isolated, bounded test
+execution for fixed project fixtures; agent integration and end-to-end coding
+acceptance remain future Phase 10 work.
 
 Reliability is verified with deterministic tests and worker-process crash/recovery
 checks. This is a development project, not a production service.
