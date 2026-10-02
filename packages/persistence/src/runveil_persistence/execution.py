@@ -31,7 +31,7 @@ from runveil_core.runtime import (
     RuntimeState,
     Started,
 )
-from runveil_core.sandbox import SANDBOX_PROFILE
+from runveil_core.sandbox import SANDBOX_PROFILE, TEST_TOOL, TestsResult
 from runveil_core.sandbox_patch import (
     PATCH_UNKNOWN,
     SANDBOX_PATCH_PROFILE,
@@ -40,6 +40,7 @@ from runveil_core.sandbox_patch import (
     authorize_sandbox_patch,
 )
 from runveil_core.sandbox_review import SANDBOX_REVIEW_PROFILE, proposal_diff
+from runveil_core.software import SOFTWARE_PROFILE, baseline_failed
 from runveil_core.tools import ToolError, ToolPolicy
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -122,7 +123,7 @@ class PostgresExecutionStore:
         )
         error = (
             PATCH_UNKNOWN
-            if previous.schema_version == 14
+            if previous.schema_version in (14, 15)
             and mutation is not None
             and mutation.tool_name == APPLY_TOOL
             else "elapsed_time_exceeded"
@@ -212,9 +213,12 @@ class PostgresExecutionStore:
             if config.sandbox is not None and (
                 self.claim is None
                 or self.claim.profile
-                != {12: SANDBOX_PROFILE, 13: SANDBOX_REVIEW_PROFILE, 14: SANDBOX_PATCH_PROFILE}[
-                    config.schema_version
-                ]
+                != {
+                    12: SANDBOX_PROFILE,
+                    13: SANDBOX_REVIEW_PROFILE,
+                    14: SANDBOX_PATCH_PROFILE,
+                    15: SOFTWARE_PROFILE,
+                }[config.schema_version]
             ):
                 raise ConfigurationRejected("Sandbox execution requires the dedicated profile")
             if self.expected_config is not None and config != self.expected_config:
@@ -380,7 +384,7 @@ class PostgresExecutionStore:
                 or state.steps_used >= config.max_steps
             ):
                 raise ValueError("Ambiguous interrupted execution history")
-            if config.schema_version == 14 and state.approval_resolved:
+            if config.schema_version in (14, 15) and state.approval_resolved:
                 _, payload = await authorized_sandbox_patch(session, run_id)
                 call = await session.get(ToolCallRow, outstanding[0].id)
                 if (
@@ -451,7 +455,7 @@ class PostgresExecutionStore:
         blocked: RuntimeState | None = None
         async with self._boundary(cursor) as (session, _):
             if tool_name == APPLY_TOOL:
-                if config.schema_version == 14:
+                if config.schema_version in (14, 15):
                     pinned, sandbox_payload = await authorized_sandbox_patch(session, cursor.run_id)
                     expected = sandbox_payload.model_dump(mode="json")
                 else:
@@ -643,7 +647,27 @@ class PostgresExecutionStore:
                     response = ModelResponse.model_validate_json(json.dumps(result))
                     if response.usage != state.tokens.last_usage:
                         raise ValueError("Outcome usage differs from accounting")
-            if state.schema_version == 14 and previous is not None and previous.approval_resolved:
+            if (
+                state.schema_version == 15
+                and previous is not None
+                and not previous.approval_resolved
+            ):
+                if state.final_result is not None:
+                    raise ValueError("Software workflow cannot finish before approved validation")
+                if pending.kind == "tool" and result is not None:
+                    baseline_call = await session.get(ToolCallRow, pending.id)
+                    if baseline_call is not None and baseline_call.tool_name == TEST_TOOL:
+                        baseline = TestsResult.model_validate_json(json.dumps(result))
+                        expected_error = (
+                            None if baseline_failed(baseline) else "sandbox_baseline_invalid"
+                        )
+                        if state.error_code != expected_error:
+                            raise ValueError("Baseline outcome differs from workflow state")
+            if (
+                state.schema_version in (14, 15)
+                and previous is not None
+                and previous.approval_resolved
+            ):
                 _, payload = await authorized_sandbox_patch(session, cursor.run_id)
                 call = await session.get(ToolCallRow, pending.id)
                 if (
@@ -670,7 +694,7 @@ class PostgresExecutionStore:
                     ):
                         raise ValueError("Sandbox outcome differs from approved mutation")
             approval = None
-            if state.schema_version in (10, 11, 13, 14):
+            if state.schema_version in (10, 11, 13, 14, 15):
                 approval = await prepare_pause(session, pending, previous, state, config, result)
             invocations = InvocationRepository(session)
             complete = (

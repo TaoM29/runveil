@@ -376,7 +376,7 @@ Phase 10 continuation was authorized on 2026-10-02.
   [operations](docs/operations/SANDBOX.md#sandbox-inspection-and-exact-review--phase-10c)
   and [handoff](docs/operations/PHASE_10C.md).
 
-- **10D — Implemented; review pending:** distinct `sandbox-patch-v1` profile with
+- **10D — Implemented; Phase 10E continuation authorized:** distinct `sandbox-patch-v1` profile with
   explicit execution-time WRITE/EXECUTE grants, exact approved single-use mutation
   intent, fresh full workspace/preimage checks and bounded in-container tests.
   Durable outcomes retain approved diff, workspace digests and test observations;
@@ -386,10 +386,22 @@ Phase 10 continuation was authorized on 2026-10-02.
   [operations](docs/operations/SANDBOX.md#approved-sandbox-patch-and-validation--phase-10d)
   and [handoff](docs/operations/PHASE_10D.md).
 
+- **10E — Implemented; review pending:** separate `software-engineering-v1` profile
+  connects inspection, a recorded failing baseline, exact proposal, approval and
+  controlled application/post-change tests. Persistence independently validates the
+  baseline's ordering, provenance and model context. Local inspection covers queued
+  and failed tasks before approval; unknown mutation outcomes still fail without
+  replay. Fresh-process Docker acceptance verifies approval and rejection end to end.
+  See [ADR 0036](docs/adr/0036-fixture-engineering-workflow.md),
+  [operations](docs/operations/SANDBOX.md#fixture-engineering-workflow--phase-10e)
+  and [handoff](docs/operations/PHASE_10E.md).
+
 ## Recommended next slice
 
-Review 10D, then extend the controlled fixture/task selection deliberately to several
-small repairs with explicit pinned identities and independent end-to-end acceptance.
-Audit remaining Phase 10 search and failed-task inspection requirements before
-claiming closure. Preserve approval/WRITE separation and no-replay mutation recovery.
-No automatic continuation is authorized.
+Review 10E, then extend the integrated workflow to several small project-owned
+repairs with explicit pinned fixture identities and independent acceptance. The
+current request prioritized connecting existing capabilities, so fixture expansion
+from the prior recommendation remains deferred. Audit bounded sandbox search and
+remaining Phase 10 closure requirements. Preserve approval/WRITE separation,
+inspectable failures and no-replay mutation recovery. Phase 10 remains open;
+no automatic continuation is authorized.

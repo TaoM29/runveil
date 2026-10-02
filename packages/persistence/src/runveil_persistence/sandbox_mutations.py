@@ -10,6 +10,7 @@ from runveil_core.sandbox_patch import (
     SandboxPatchInput,
     authorize_sandbox_patch,
 )
+from runveil_core.software import SOFTWARE_PROFILE
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,15 +30,15 @@ async def authorized_sandbox_patch(
     job = await session.get(JobRow, run_id)
     checkpoint = await HistoryRepository(session).latest_checkpoint(run_id)
     if (
-        config.schema_version != 14
+        config.schema_version not in (14, 15)
         or job is None
-        or job.profile != SANDBOX_PATCH_PROFILE
+        or job.profile != {14: SANDBOX_PATCH_PROFILE, 15: SOFTWARE_PROFILE}[config.schema_version]
         or checkpoint is None
     ):
         raise ValueError("Sandbox mutation requires its dedicated profile")
     state = RuntimeState.model_validate_json(json.dumps(checkpoint.state))
     if (
-        state.schema_version != 14
+        state.schema_version != config.schema_version
         or not state.approval_resolved
         or state.approval_id is None
         or state.error_code is not None

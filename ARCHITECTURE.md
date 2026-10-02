@@ -1,6 +1,6 @@
 # Architecture
 
-## Implemented through Phase 10D; approved sandbox patch review pending
+## Implemented through Phase 10E; fixture workflow review pending
 
 ```mermaid
 flowchart LR
@@ -607,3 +607,31 @@ read-only traces understand version 14. No approval API/UI extension, new depend
 remote provider, multi-task or hostile multi-tenant claim. See
 [ADR 0035](docs/adr/0035-approved-sandbox-patches.md) and
 [operations](docs/operations/SANDBOX.md#approved-sandbox-patch-and-validation--phase-10d).
+
+## Phase 10E fixture software-engineering workflow
+
+Configuration/checkpoint version 15 and `software-engineering-v1` connect inspection,
+baseline test execution, exact proposal, human approval and controlled application
+with post-change tests in one run. Each model request offers only the next permitted
+tool; the model cannot finish early or invoke mutation. The scripted clamp task
+uses three model calls and four tool calls, with the original one-hour deadline
+and existing token/cost budgets. Baseline timeout, output limit or an unexpected
+pass terminates without a proposal, retaining the observation.
+
+Persistence independently requires one failing baseline after inspection and before
+proposal generation, including exact observations in both model contexts and the
+baseline's model-action provenance. This evidence is rechecked at approval and at
+the existing mutation boundaries. Version 14's single-use intent, explicit WRITE,
+full workspace/preimage checks, post-change validation and no-replay recovery are
+reused. Earlier profiles cannot adopt the new workflow's approvals or jobs.
+
+The local software worker exposes submit/work/inspect/approve/reject. Shared patch
+inspection now covers queued, pre-approval failure and terminal states as well as
+review, showing ordered tool evidence, exact diff, test results and mutation
+uncertainty. Traces recognize version 15 without exposing raw payloads. The sandbox
+implementation identity now covers the workflow policy module as well.
+
+This connects the existing project-owned task; it does not close Phase 10's search
+or several-task acceptance gates. No API/UI, runner, schema, dependency or hosted
+model change. See [ADR 0036](docs/adr/0036-fixture-engineering-workflow.md) and
+[operations](docs/operations/SANDBOX.md#fixture-engineering-workflow--phase-10e).

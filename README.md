@@ -23,6 +23,7 @@ flows and real model-quality evaluations remain future work. A [Docker sandbox](
 tests through an explicitly authorized durable scripted worker.
 A separate review worker inspects the pinned fixture and records exact patch proposals for human review.
 A distinct WRITE-authorized sandbox worker applies approved patches and records test/diff evidence.
+An integrated [fixture workflow](docs/operations/SANDBOX.md#fixture-engineering-workflow--phase-10e) connects inspection, failing baseline tests, exact review and approved validation in one durable run.
 Several-task acceptance and full Phase 10 closure remain future work.
 
 Reliability is verified with deterministic tests and worker-process crash/recovery

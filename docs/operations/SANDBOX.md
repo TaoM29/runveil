@@ -326,3 +326,84 @@ acceptance or evidence of model quality.
 CI opts into the new fresh-process patch test and real preimage/validation boundary
 exercise with the same image used for the existing sandbox checks. See
 [ADR 0035](../adr/0035-approved-sandbox-patches.md) and [handoff](PHASE_10D.md).
+
+## Fixture engineering workflow — Phase 10E
+
+Use `software-engineering-v1` for the complete existing clamp task. This separate
+version-15 profile connects inspection, baseline reproduction, exact proposal,
+human review, controlled application and post-change validation. It shares the
+patch worker's implementation and preserves the earlier profiles' authorities.
+
+With `DATABASE_URL` set to a migrated local database:
+
+```sh
+docker build --network=none -t runveil-sandbox:phase10e sandbox
+SANDBOX_IMAGE=$(docker image inspect runveil-sandbox:phase10e --format '{{.Id}}')
+uv run python -m runveil_worker.software_worker submit --image "$SANDBOX_IMAGE"
+# Set RUN_ID to the returned UUID.
+uv run python -m runveil_worker.software_worker work --run-id "$RUN_ID" --image "$SANDBOX_IMAGE" --allow-execute
+uv run python -m runveil_worker.software_worker inspect --run-id "$RUN_ID"
+# Review baseline, exact proposal/diff, sandbox identity and application consequence.
+# Set REVISION and DIGEST from revision and approval.digest in that inspection.
+uv run python -m runveil_worker.software_worker approve --run-id "$RUN_ID" --revision "$REVISION" --digest "$DIGEST"
+uv run python -m runveil_worker.software_worker work --run-id "$RUN_ID" --image "$SANDBOX_IMAGE" --allow-execute --allow-write
+uv run python -m runveil_worker.software_worker inspect --run-id "$RUN_ID"
+```
+
+Use `reject` with the same revision/digest to terminate without application.
+Approval dispatches nothing; extra operator grants cannot bypass a pending review.
+Neither the old patch/review workers nor the approval HTTP API can adopt this job.
+The operator CLI uses trusted database access. Its JSON includes raw fixture and
+test evidence, while telemetry and trace APIs retain their existing payload limits.
+
+The pre-approval tool sequence is exactly `repository.inspect`, `tests.run`,
+`repository.propose_patch`. Each runs after a durable model request/action; inspection
+and baseline each use a fresh container from the same pinned image. A baseline must
+report `tests_failed` with exit 1 before a proposal is permitted. Unexpected passing
+tests, timeout or output limits produce `sandbox_baseline_invalid`, preserving the
+tool observation in a FAILED run. Infrastructure failures retain their existing
+safe error codes. There is no automatic repair loop or model-provided early success.
+
+Core checks ordered observations; persistence independently checks invocation order,
+model action and exact baseline/inspection context before proposal approval, review
+decision and mutation admission. Approved continuation reuses Phase 10D's full
+workspace/preimage revalidation, single-use intent, explicit WRITE/EXECUTE, fixed
+post-change tests, diff/digest verification and confirmed cleanup. Success means
+that exact approved patch was applied and passed the fixed tests inside a disposable
+container. The durable proposal/diff is the retained patch; no checkout survives.
+
+`inspect` now covers queued, waiting and terminal states, including failures before
+an approval exists. `tools` contains ordered invocation IDs, event sequences,
+statuses, error codes and bounded results; `approval` and `diff` are null until
+review exists. `mutation` and `patch_applied` distinguish no mutation, a known
+application (even if validation failed), and an unknown outcome (`null`). Consult
+approval status for rejection; rejection is a human decision, not a tool error.
+The same inspection improvement applies to the Phase 10D patch CLI.
+
+Seven steps (three model calls/four tool calls) share the existing token/cost limits
+and one-hour deadline, including review wait. Clean checkpoints reuse saved evidence.
+Unresolved baseline/proposal intent fails as `execution_interrupted`; unresolved
+mutation remains `sandbox_patch_outcome_unknown`, never a retry. After lease expiry,
+recover uncertain intent without image, socket or grants:
+
+```sh
+uv run python -m runveil_worker.software_worker work --run-id "$RUN_ID"
+```
+
+Existing operator container cleanup after crashes remains necessary. No automatic
+container adoption/reconciliation is added. Changes to covered implementation files
+(including the new workflow policy) deliberately invalidate old live bindings;
+start new runs with the reviewed installation, or use the original installation
+for clean continuation. Uncertain-intent terminal recovery still requires no binding.
+
+CI runs the new Docker workflow test with the other sandbox tests:
+
+```sh
+RUNVEIL_SANDBOX_IMAGE="$SANDBOX_IMAGE" uv run pytest packages/persistence/tests/test_software_worker.py
+```
+
+The scripted provider repairs one public project-owned fixture. This verifies
+orchestration and boundaries, not model quality or several-task acceptance.
+Additional fixture selection, bounded search and the Phase 10 closure audit remain
+separate review work. See [ADR 0036](../adr/0036-fixture-engineering-workflow.md) and
+[handoff](PHASE_10E.md).

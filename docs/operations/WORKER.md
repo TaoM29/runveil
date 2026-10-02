@@ -419,3 +419,19 @@ adopted. Approved continuation needs `--allow-execute --allow-write`. The single
 mutation revalidates a fresh workspace, applies/tests the exact patch and persists
 evidence after cleanup. Uncertain mutations terminate without replay. See
 [sandbox operations](SANDBOX.md#approved-sandbox-patch-and-validation--phase-10d).
+
+## Fixture engineering workflow (Phase 10E)
+
+`runveil_worker.software_worker` enrolls the independent version-15
+`software-engineering-v1` profile. It connects inspect → baseline tests → exact
+proposal → human review → approved application and post-change tests. Three model
+calls and four tool calls share the existing budgets and one-hour deadline.
+Only the next pre-approval tool is offered; mutation requires approval and separate
+operator EXECUTE/WRITE. Existing workers cannot adopt this profile.
+
+`inspect` works before approval and after failures, retaining ordered observations,
+diff, test results and unknown mutation status. Interrupted intent is never replayed;
+terminal recovery needs no Docker binding or execution grants. See the
+[complete operator procedure](SANDBOX.md#fixture-engineering-workflow--phase-10e)
+and [handoff](PHASE_10E.md). This is the single scripted project-owned clamp task,
+not a general coding agent or Phase 10 closure.

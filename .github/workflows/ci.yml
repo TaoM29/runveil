@@ -49,7 +49,7 @@ jobs:
           docker build --network=none -t runveil-sandbox:phase10a sandbox
           SANDBOX_IMAGE=$(docker image inspect runveil-sandbox:phase10a --format '{{.Id}}')
           uv run python scripts/phase10_sandbox_acceptance.py --image "$SANDBOX_IMAGE" --output /tmp/runveil-sandbox-acceptance.json
-          RUNVEIL_SANDBOX_IMAGE="$SANDBOX_IMAGE" uv run pytest packages/persistence/tests/test_sandbox_worker.py packages/persistence/tests/test_sandbox_review.py packages/persistence/tests/test_sandbox_patch_worker.py -k real_docker
+          RUNVEIL_SANDBOX_IMAGE="$SANDBOX_IMAGE" uv run pytest packages/persistence/tests/test_sandbox_worker.py packages/persistence/tests/test_sandbox_review.py packages/persistence/tests/test_sandbox_patch_worker.py packages/persistence/tests/test_software_worker.py -k real_docker
       - run: npm run format:check
       - run: npm run lint
       - run: npm run typecheck

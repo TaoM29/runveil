@@ -11,6 +11,7 @@ from runveil_core.models import Message, ModelRequest, ModelResponse, ToolAction
 from runveil_core.mutations import PATCH_PROFILE
 from runveil_core.runs import RunStatus
 from runveil_core.runtime import Pending, RuntimeConfig, RuntimeState
+from runveil_core.sandbox import TEST_TOOL, TestsResult
 from runveil_core.sandbox_patch import SANDBOX_PATCH_PROFILE, SandboxPatchInput
 from runveil_core.sandbox_review import (
     INSPECT_TOOL,
@@ -18,6 +19,7 @@ from runveil_core.sandbox_review import (
     InspectionResult,
     validate_proposal,
 )
+from runveil_core.software import SOFTWARE_PROFILE, baseline_failed, workflow_tool
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -41,6 +43,7 @@ def review_profile(config: RuntimeConfig) -> str:
         11: PATCH_PROFILE,
         13: SANDBOX_REVIEW_PROFILE,
         14: SANDBOX_PATCH_PROFILE,
+        15: SOFTWARE_PROFILE,
     }[config.schema_version]
 
 
@@ -80,7 +83,71 @@ async def sandbox_preimage(
     ):
         raise ValueError("Proposal model context differs from recorded inspection")
     validate_proposal(proposal, snapshot)
+    job = await session.get(JobRow, call.run_id)
+    if job is not None and job.profile == SOFTWARE_PROFILE:
+        await validate_baseline(session, call, inspected, request)
     return snapshot
+
+
+async def validate_baseline(
+    session: AsyncSession,
+    proposal: ToolCallRow,
+    inspection: ToolCallRow,
+    proposal_request: ModelRequest,
+) -> None:
+    calls = list(
+        await session.scalars(
+            select(ToolCallRow)
+            .where(ToolCallRow.run_id == proposal.run_id, ToolCallRow.tool_name == TEST_TOOL)
+            .limit(2)
+        )
+    )
+    if len(calls) != 1:
+        raise ValueError("Workflow requires exactly one recorded baseline")
+    baseline = calls[0]
+    source = await session.get(ModelInvocationRow, baseline.model_invocation_id)
+    proposal_source = await session.get(ModelInvocationRow, proposal.model_invocation_id)
+    if (
+        baseline.status != "SUCCEEDED"
+        or baseline.request != {}
+        or baseline.result is None
+        or source is None
+        or source.run_id != proposal.run_id
+        or source.status != "SUCCEEDED"
+        or source.result is None
+        or proposal_source is None
+        or inspection.completed_event_sequence is None
+        or baseline.completed_event_sequence is None
+        or source.completed_event_sequence is None
+        or not (
+            inspection.completed_event_sequence
+            < source.requested_event_sequence
+            < source.completed_event_sequence
+            < baseline.requested_event_sequence
+            < baseline.completed_event_sequence
+            < proposal_source.requested_event_sequence
+        )
+    ):
+        raise ValueError("Baseline must follow inspection and precede proposal generation")
+    result = TestsResult.model_validate_json(json.dumps(baseline.result))
+    request = ModelRequest.model_validate_json(json.dumps(source.request))
+    response = ModelResponse.model_validate_json(json.dumps(source.result))
+    action = validate_response(request, response)
+    observations = [m for m in request.messages if m.role == "tool"]
+    proposed = [m for m in proposal_request.messages if m.role == "tool"]
+    if (
+        not baseline_failed(result)
+        or workflow_tool(request.messages) != TEST_TOOL
+        or not isinstance(action, ToolAction)
+        or action.tool_name != TEST_TOOL
+        or action.arguments != {}
+        or len(observations) != 1
+        or InspectionResult.model_validate_json(observations[0].content).model_dump(mode="json")
+        != inspection.result
+        or workflow_tool(proposal_request.messages) != PROPOSAL_TOOL
+        or TestsResult.model_validate_json(proposed[1].content) != result
+    ):
+        raise ValueError("Proposal requires the recorded failing baseline in model context")
 
 
 async def validate_review_state(
@@ -92,7 +159,7 @@ async def validate_review_state(
     row = await session.get(ApprovalRow, state.approval_id, populate_existing=True)
     job = await session.get(JobRow, run_id)
     if (
-        config.schema_version not in (10, 11, 13, 14)
+        config.schema_version not in (10, 11, 13, 14, 15)
         or job is None
         or job.profile != review_profile(config)
         or row is None
@@ -141,7 +208,7 @@ async def validate_review_state(
         or action.arguments != call.request
     ):
         raise ValueError("Approval differs from model action")
-    if config.schema_version in (13, 14):
+    if config.schema_version in (13, 14, 15):
         await sandbox_preimage(session, call, request.proposal)
     return row
 
@@ -158,7 +225,7 @@ async def prepare_pause(
         raise ValueError("Approval boundary requires prior state")
     call = await session.get(ToolCallRow, pending.id) if pending.kind == "tool" else None
     reviewing = (
-        config.schema_version in (10, 11, 13, 14)
+        config.schema_version in (10, 11, 13, 14, 15)
         and call is not None
         and call.tool_name == PROPOSAL_TOOL
         and result is not None
@@ -193,9 +260,9 @@ async def prepare_pause(
     proposal = PatchProposal.model_validate(result)
     if proposal != PatchProposal.model_validate(call.request):
         raise ValueError("Proposal output differs from request")
-    if config.schema_version in (13, 14):
+    if config.schema_version in (13, 14, 15):
         inspected = await sandbox_preimage(session, call, proposal)
-        if config.schema_version == 14:
+        if config.schema_version in (14, 15):
             SandboxPatchInput(
                 approval_id=state.approval_id, proposal=proposal, inspection=inspected
             )
@@ -259,7 +326,13 @@ async def resolve_worker_review(
     job = await session.get(JobRow, run_id, with_for_update=True, populate_existing=True)
     if (
         profile
-        not in (REVIEW_PROFILE, PATCH_PROFILE, SANDBOX_REVIEW_PROFILE, SANDBOX_PATCH_PROFILE)
+        not in (
+            REVIEW_PROFILE,
+            PATCH_PROFILE,
+            SANDBOX_REVIEW_PROFILE,
+            SANDBOX_PATCH_PROFILE,
+            SOFTWARE_PROFILE,
+        )
         or job is None
         or job.profile != profile
     ):
