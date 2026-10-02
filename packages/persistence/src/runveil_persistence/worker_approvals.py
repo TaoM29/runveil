@@ -20,7 +20,7 @@ from runveil_core.sandbox_review import (
     validate_inspection,
     validate_proposal,
 )
-from runveil_core.software import SOFTWARE_PROFILE, baseline_failed, workflow_tool
+from runveil_core.software import SEARCH_PROFILE, SOFTWARE_PROFILE, baseline_failed, workflow_tool
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -36,6 +36,7 @@ from runveil_persistence.models import (
     ToolCallRow,
 )
 from runveil_persistence.repositories import AgentRepository, RunRepository
+from runveil_persistence.sandbox_search import validate_search_chain
 
 
 def review_profile(config: RuntimeConfig) -> str:
@@ -45,6 +46,7 @@ def review_profile(config: RuntimeConfig) -> str:
         13: SANDBOX_REVIEW_PROFILE,
         14: SANDBOX_PATCH_PROFILE,
         15: SOFTWARE_PROFILE,
+        16: SEARCH_PROFILE,
     }[config.schema_version]
 
 
@@ -91,8 +93,10 @@ async def sandbox_preimage(
     validate_inspection(snapshot, config.sandbox.fixture)
     validate_proposal(proposal, snapshot)
     job = await session.get(JobRow, call.run_id)
-    if job is not None and job.profile == SOFTWARE_PROFILE:
-        await validate_baseline(session, call, inspected, request)
+    if job is not None and job.profile in (SOFTWARE_PROFILE, SEARCH_PROFILE):
+        await validate_baseline(
+            session, call, inspected, request, search=config.schema_version == 16
+        )
     return snapshot
 
 
@@ -101,6 +105,8 @@ async def validate_baseline(
     proposal: ToolCallRow,
     inspection: ToolCallRow,
     proposal_request: ModelRequest,
+    *,
+    search: bool = False,
 ) -> None:
     calls = list(
         await session.scalars(
@@ -144,17 +150,19 @@ async def validate_baseline(
     proposed = [m for m in proposal_request.messages if m.role == "tool"]
     if (
         not baseline_failed(result)
-        or workflow_tool(request.messages) != TEST_TOOL
+        or workflow_tool(request.messages, search=search) != TEST_TOOL
         or not isinstance(action, ToolAction)
         or action.tool_name != TEST_TOOL
         or action.arguments != {}
-        or len(observations) != 1
+        or len(observations) != (2 if search else 1)
         or InspectionResult.model_validate_json(observations[0].content).model_dump(mode="json")
         != inspection.result
-        or workflow_tool(proposal_request.messages) != PROPOSAL_TOOL
-        or TestsResult.model_validate_json(proposed[1].content) != result
+        or workflow_tool(proposal_request.messages, search=search) != PROPOSAL_TOOL
+        or TestsResult.model_validate_json(proposed[-1].content) != result
     ):
         raise ValueError("Proposal requires the recorded failing baseline in model context")
+    if search:
+        await validate_search_chain(session, baseline, request, proposal_request)
 
 
 async def validate_review_state(
@@ -166,7 +174,7 @@ async def validate_review_state(
     row = await session.get(ApprovalRow, state.approval_id, populate_existing=True)
     job = await session.get(JobRow, run_id)
     if (
-        config.schema_version not in (10, 11, 13, 14, 15)
+        config.schema_version not in (10, 11, 13, 14, 15, 16)
         or job is None
         or job.profile != review_profile(config)
         or row is None
@@ -215,7 +223,7 @@ async def validate_review_state(
         or action.arguments != call.request
     ):
         raise ValueError("Approval differs from model action")
-    if config.schema_version in (13, 14, 15):
+    if config.schema_version in (13, 14, 15, 16):
         await sandbox_preimage(session, call, request.proposal)
     return row
 
@@ -232,7 +240,7 @@ async def prepare_pause(
         raise ValueError("Approval boundary requires prior state")
     call = await session.get(ToolCallRow, pending.id) if pending.kind == "tool" else None
     reviewing = (
-        config.schema_version in (10, 11, 13, 14, 15)
+        config.schema_version in (10, 11, 13, 14, 15, 16)
         and call is not None
         and call.tool_name == PROPOSAL_TOOL
         and result is not None
@@ -267,9 +275,9 @@ async def prepare_pause(
     proposal = PatchProposal.model_validate(result)
     if proposal != PatchProposal.model_validate(call.request):
         raise ValueError("Proposal output differs from request")
-    if config.schema_version in (13, 14, 15):
+    if config.schema_version in (13, 14, 15, 16):
         inspected = await sandbox_preimage(session, call, proposal)
-        if config.schema_version in (14, 15):
+        if config.schema_version in (14, 15, 16):
             SandboxPatchInput(
                 approval_id=state.approval_id, proposal=proposal, inspection=inspected
             )
@@ -339,6 +347,7 @@ async def resolve_worker_review(
             SANDBOX_REVIEW_PROFILE,
             SANDBOX_PATCH_PROFILE,
             SOFTWARE_PROFILE,
+            SEARCH_PROFILE,
         )
         or job is None
         or job.profile != profile

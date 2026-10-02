@@ -18,7 +18,7 @@ from runveil_core.runtime import Cursor, Pending, RuntimeConfig, RuntimeState
 from runveil_core.sandbox import TEST_TOOL
 from runveil_core.sandbox_patch import PATCH_UNKNOWN
 from runveil_core.sandbox_review import INSPECT_TOOL
-from runveil_core.software import SOFTWARE_PROFILE
+from runveil_core.software import SEARCH_PROFILE, SOFTWARE_PROFILE
 from runveil_core.tools import ToolError
 from runveil_persistence.approvals import ApprovalRepository
 from runveil_persistence.execution import PostgresExecutionStore
@@ -57,7 +57,11 @@ def workflow_output(
 
 
 async def decide(
-    sessions: async_sessionmaker[AsyncSession], run_id: UUID, *, reject: bool = False
+    sessions: async_sessionmaker[AsyncSession],
+    run_id: UUID,
+    *,
+    reject: bool = False,
+    search: bool = False,
 ) -> None:
     async with sessions.begin() as session:
         run = await RunRepository(session).get(run_id)
@@ -68,7 +72,7 @@ async def decide(
             decision="REJECTED" if reject else "APPROVED",
             expected_revision=run.revision,
             expected_digest=approval.digest,
-            profile=SOFTWARE_PROFILE,
+            profile=SEARCH_PROFILE if search else SOFTWARE_PROFILE,
         )
 
 
@@ -196,13 +200,20 @@ async def test_changed_baseline_context_cannot_create_approval(
     assert docker_stub.operations.count("start") == 2
 
 
+@pytest.mark.parametrize("search", [False, True])
 @pytest.mark.parametrize("cut", ["baseline", "mutation"])
 async def test_checkpoint_reuse_and_uncertain_effect_never_replay(
-    database: AsyncEngine, docker_stub: DockerStub, monkeypatch: pytest.MonkeyPatch, cut: str
+    database: AsyncEngine,
+    docker_stub: DockerStub,
+    monkeypatch: pytest.MonkeyPatch,
+    cut: str,
+    search: bool,
 ) -> None:
     workflow_output(docker_stub, monkeypatch)
     sessions = async_sessionmaker(database)
-    run_id = await worker.submit_patch(sessions, IMAGE, socket=docker_stub.endpoint, workflow=True)
+    run_id = await worker.submit_patch(
+        sessions, IMAGE, socket=docker_stub.endpoint, workflow=True, search=search
+    )
 
     class Stop(PostgresExecutionStore):
         async def complete(
@@ -234,6 +245,7 @@ async def test_checkpoint_reuse_and_uncertain_effect_never_replay(
                 socket=docker_stub.endpoint,
                 allow_execute=True,
                 workflow=True,
+                search=search,
             )
         assert docker_stub.operations.count("start") == 1
         await expire(sessions, run_id)
@@ -246,6 +258,7 @@ async def test_checkpoint_reuse_and_uncertain_effect_never_replay(
                     socket=docker_stub.endpoint,
                     allow_execute=True,
                     workflow=True,
+                    search=search,
                 )
         else:
             state = await worker.work_patch_once(
@@ -255,9 +268,10 @@ async def test_checkpoint_reuse_and_uncertain_effect_never_replay(
                 socket=docker_stub.endpoint,
                 allow_execute=True,
                 workflow=True,
+                search=search,
             )
             assert state and state.approval_id
-            await decide(sessions, run_id)
+            await decide(sessions, run_id, search=search)
             with pytest.raises(ToolError):
                 await worker.work_patch_once(
                     sessions,
@@ -266,6 +280,7 @@ async def test_checkpoint_reuse_and_uncertain_effect_never_replay(
                     socket=docker_stub.endpoint,
                     allow_execute=True,
                     workflow=True,
+                    search=search,
                 )
             await expire(sessions, run_id)
             with pytest.raises(asyncio.CancelledError):
@@ -277,26 +292,28 @@ async def test_checkpoint_reuse_and_uncertain_effect_never_replay(
                     allow_execute=True,
                     allow_write=True,
                     workflow=True,
+                    search=search,
                 )
     before = list(docker_stub.operations)
     assert before.count("start") == (2 if cut == "baseline" else 3)
     await expire(sessions, run_id)
     state = await worker.work_patch_once(
-        sessions, run_id=run_id, socket=Path("/missing"), workflow=True
+        sessions, run_id=run_id, socket=Path("/missing"), workflow=True, search=search
     )
     assert state and state.error_code == (
         "execution_interrupted" if cut == "baseline" else PATCH_UNKNOWN
     )
     assert docker_stub.operations == before
     async with sessions.begin() as session:
-        evidence = await worker.inspect_patch(session, run_id, workflow=True)
+        evidence = await worker.inspect_patch(session, run_id, workflow=True, search=search)
         assert evidence["status"] == "FAILED"
         assert evidence["patch_applied"] is (False if cut == "baseline" else None)
 
 
+@pytest.mark.parametrize("search", [False, True])
 @pytest.mark.parametrize("fixture", ["clamp-v1", "slug-v1", "mean-v1"])
 async def test_real_docker_engineering_workflow_in_fresh_processes(
-    database: AsyncEngine, fixture: FixtureName
+    database: AsyncEngine, fixture: FixtureName, search: bool
 ) -> None:
     image = os.environ.get("RUNVEIL_SANDBOX_IMAGE")
     if not image:
@@ -307,7 +324,7 @@ async def test_real_docker_engineering_workflow_in_fresh_processes(
         child = await asyncio.create_subprocess_exec(
             sys.executable,
             "-m",
-            "runveil_worker.software_worker",
+            "runveil_worker.software_search_worker" if search else "runveil_worker.software_worker",
             *args,
             env=os.environ
             | {
@@ -402,13 +419,30 @@ async def test_real_docker_engineering_workflow_in_fresh_processes(
                     .order_by(ToolCallRow.requested_event_sequence)
                 )
             )
-            assert [call.tool_name for call in calls] == [
-                INSPECT_TOOL,
-                TEST_TOOL,
-                "repository.propose_patch",
-            ] + ([APPLY_TOOL] if decision == "approve" else [])
+            assert [call.tool_name for call in calls] == [INSPECT_TOOL] + (
+                ["repository.search"] if search else []
+            ) + [TEST_TOOL, "repository.propose_patch"] + (
+                [APPLY_TOOL] if decision == "approve" else []
+            )
             assert calls[0].result == original.model_dump(mode="json")
-            assert calls[1].result and calls[1].result["status"] == "tests_failed"
+            baseline_index = 2 if search else 1
+            baseline = calls[baseline_index]
+            assert baseline.result and baseline.result["status"] == "tests_failed"
+            if search:
+                searched = calls[1]
+                assert searched.request == {"query": "return", "max_matches": 10}
+                assert searched.result and searched.result["inspection_digest"] == original.digest
+                assert (
+                    searched.result["files_scanned"] == 3 and searched.result["truncated"] is False
+                )
+                matches = searched.result["matches"]
+                assert isinstance(matches, list)
+                assert [(m["path"], m["line"]) for m in matches if isinstance(m, dict)] == [
+                    (file.path, number)
+                    for file in original.files
+                    for number, line in enumerate(file.content.splitlines(), 1)
+                    if "return" in line
+                ]
             if decision == "approve":
                 assert calls[-1].result and calls[-1].result["cleanup_confirmed"] is True
                 assert calls[-1].result["after_digest"] == expected_digest
@@ -422,15 +456,15 @@ async def test_real_docker_engineering_workflow_in_fresh_processes(
                     .order_by(ModelInvocationRow.requested_event_sequence)
                 )
             )
-            assert len(models) == 3
+            assert len(models) == (4 if search else 3)
             assert (
-                calls[1].completed_event_sequence
-                and calls[1].completed_event_sequence < models[2].requested_event_sequence
+                baseline.completed_event_sequence
+                and baseline.completed_event_sequence < models[-1].requested_event_sequence
             )
             trace = await read_trace(session, UUID(run_id))
-            assert trace.checkpoint and trace.checkpoint.schema_version == 15
+            assert trace.checkpoint and trace.checkpoint.schema_version == (16 if search else 15)
             for call in calls:
-                if call.tool_name == "repository.propose_patch":
+                if call.tool_name in ("repository.propose_patch", "repository.search"):
                     continue
                 absent = await docker_module._command(
                     (
