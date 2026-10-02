@@ -11,6 +11,7 @@ from pydantic import ValidationError
 from runveil_core.agents import JsonValue
 from runveil_core.approvals import PatchProposal
 from runveil_core.errors import InvalidTransition
+from runveil_core.mcp import MCP_PROFILE
 from runveil_core.models import (
     FinalResult,
     Message,
@@ -209,9 +210,11 @@ class PostgresExecutionStore:
                     "Provider binding does not match the pinned configuration"
                 )
             if (
-                config.workspace is not None or config.sandbox is not None
+                config.workspace is not None or config.sandbox is not None or config.mcp is not None
             ) and self.expected_config is None:
                 raise ConfigurationRejected("Workspace execution requires a verified binding")
+            if config.mcp is not None and (self.claim is None or self.claim.profile != MCP_PROFILE):
+                raise ConfigurationRejected("MCP execution requires the dedicated profile")
             if config.sandbox is not None and (
                 self.claim is None
                 or self.claim.profile

@@ -12,6 +12,7 @@ from pydantic import Field, model_validator
 
 from runveil_core.agents import JsonValue
 from runveil_core.approvals import PROPOSAL_TOOL, PatchProposal
+from runveil_core.mcp import MCP_POLICY, McpIdentity
 from runveil_core.models import (
     Contract,
     FinalResult,
@@ -94,7 +95,8 @@ class ModelPricing(Contract):
 
 
 class RuntimeConfig(Contract):
-    schema_version: Literal[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16] = 2
+    schema_version: Literal[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17] = 2
+    mcp: McpIdentity | None = None
     workspace: WorkspaceIdentity | None = None
     sandbox: SandboxIdentity | None = None
     max_model_calls: Annotated[int, Field(ge=0, le=64)] | None = None
@@ -117,6 +119,12 @@ class RuntimeConfig(Contract):
 
     @model_validator(mode="after")
     def versioned_budgets(self) -> RuntimeConfig:
+        if (self.schema_version == 17) != (self.mcp is not None):
+            raise ValueError("MCP identity requires configuration version 17 and a binding")
+        if self.schema_version == 17 and (
+            self.tool_policy != MCP_POLICY or self.model_retry != ModelRetryPolicy()
+        ):
+            raise ValueError("MCP profile permits only fixed read tools without retries")
         if self.schema_version == 2 and self.model_retry != ModelRetryPolicy():
             raise ValueError("Model retry policy requires configuration version 3")
         if (self.schema_version >= 4) != (self.max_elapsed_seconds is not None):
@@ -244,7 +252,7 @@ class CostAccounting(Contract):
 
 
 class RuntimeState(Contract):
-    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16] = 2
+    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17] = 2
     approval_id: UUID | None = None
     approval_resolved: bool = False
     cost: CostAccounting | None = None

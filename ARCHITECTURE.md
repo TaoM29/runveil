@@ -1,6 +1,6 @@
 # Architecture
 
-## Implemented through Phase 11A; MCP slice review pending
+## Implemented through Phase 11B; pinned MCP worker review pending
 
 ```mermaid
 flowchart LR
@@ -717,3 +717,22 @@ worker profile, transport reconnect, tool retry or mutating MCP support. Stdio i
 trusted host execution, not isolation; SDK wire decoding precedes response-size
 checks. See [ADR 0040](docs/adr/0040-typed-read-only-mcp.md),
 [operations](docs/operations/MCP.md) and [handoff](docs/operations/PHASE_11A.md).
+
+## Phase 11B pinned MCP read worker
+
+The separate `mcp-fixture-read-v1` profile pins interpreter, captured public server
+source, contract and implementation digests in version-17 configuration. Clean
+execution requires its own READ grant and complete expected-configuration equality
+at fenced store start. A lazy native typed binding starts MCP only after durable
+intent; claim/history/deadline checks before launch and after discovery precede RPC.
+Existing core persistence and telemetry apply, and the trace projection accepts v17.
+
+Clean checkpoints resume from durable context; committed tool results never cause
+another server launch. Unresolved intent uses the existing terminal failure path
+without binding construction or grants. Active leases and terminal duplicates do
+no work. The one-hour elapsed limit permits recovery after the existing 660-second
+lease expires. No new migration, retry, transport, mutation or approval capability.
+Identity is conservative trusted-installation compatibility, not host isolation.
+See [ADR 0041](docs/adr/0041-pinned-mcp-worker.md),
+[operations](docs/operations/MCP.md#pinned-durable-fixture-worker-phase-11b) and
+[handoff](docs/operations/PHASE_11B.md).

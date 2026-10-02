@@ -452,3 +452,14 @@ requires explicit READ/tool grants, shares the original snapshot identity and is
 independently revalidated at approval and mutation boundaries. The old v15 CLI and
 configuration remain supported. See [operations](SANDBOX.md#sandbox-evidence-search--phase-10g),
 [handoff](PHASE_10G.md) and [closure assessment](PHASE_10.md).
+
+## Pinned read-only MCP fixture (Phase 11B)
+
+`python -m runveil_worker.mcp_worker` owns `mcp-fixture-read-v1`, with version-17
+configuration/checkpoints. Submission captures fixed local server/contract and
+implementation identity; work requires `--run-id --allow-read` for clean execution.
+The server starts only after committed typed tool intent. Clean recovery checks
+identity and continues from durable context, while uncertain intent fails without
+server construction, RPC or replay. The general worker/SQS CLI cannot adopt this
+profile. See [MCP operations](MCP.md#pinned-durable-fixture-worker-phase-11b),
+[ADR 0041](../adr/0041-pinned-mcp-worker.md) and [handoff](PHASE_11B.md).

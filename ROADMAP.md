@@ -17,7 +17,7 @@ commit or push is authorized.
 | 8     | Deterministic evaluation harness                          | Complete; Phase 9 continuation authorized       |
 | 9     | Statistical comparison                                    | Complete; Phase 10 continuation authorized      |
 | 10    | Sandboxed software engineering application                | Implemented through 10G; closure review pending |
-| 11    | MCP adapter through existing policy                       | 11A implemented; review pending                 |
+| 11    | MCP adapter through existing policy                       | 11B implemented; review pending                 |
 | 12    | AWS infrastructure with Terraform                         | Planned                                         |
 | 13    | Production CI/CD                                          | Planned                                         |
 | 14    | Temporary self-hosted inference and benchmarks            | Planned                                         |
@@ -443,11 +443,20 @@ and [handoff](docs/operations/SHOWCASE_HANDOFF.md).
   [ADR 0040](docs/adr/0040-typed-read-only-mcp.md),
   [operations](docs/operations/MCP.md) and [handoff](docs/operations/PHASE_11A.md).
 
-The current user request explicitly authorized this Phase 11 slice. Earlier
+- **11B — Implemented; review pending:** separate pinned public read-only MCP worker,
+  version-17 configuration/checkpoints, explicit execution-time READ grant and
+  verified server/interpreter/contract/implementation identity. Lazy stdio dispatch
+  follows committed native tool intent and rechecks ownership after discovery.
+  Fresh-process clean checkpoint recovery and conservative uncertain-intent failure
+  preserve existing budgets, trace/telemetry and approval boundaries. No new transport,
+  mutation, retry, generic server configuration or broker path. See
+  [ADR 0041](docs/adr/0041-pinned-mcp-worker.md) and [handoff](docs/operations/PHASE_11B.md).
+
+The current user requests explicitly authorized these Phase 11 slices. Earlier
 Phase 10/showcase human acceptance remains a separate review, not an inferred sign-off.
 
 ## Recommended next slice
 
-Review Phase 11A. If accepted, define one pinned read-only MCP worker profile with
-server/contract identity checks and clean-checkpoint/uncertain-intent recovery
-evidence. No automatic continuation or broader MCP transport/mutation support is authorized.
+Review Phase 11B, then audit Phase 11 acceptance and remaining trust/SDK limitations
+against the charter before proposing more integration scope. No automatic
+continuation or broader transport/mutation support is authorized.

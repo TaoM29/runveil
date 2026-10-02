@@ -1,4 +1,4 @@
-# MCP tools: Phase 11A
+# MCP tools: Phases 11A and 11B
 
 The stdio adapter exposes explicitly selected read tools through the same
 `TypedTool` and `ToolRegistry` used by native tools. See
@@ -65,9 +65,10 @@ disconnect, schema drift, pagination and malformed unsolicited output.
   or CPU isolation boundary. The SDK owns shutdown and process termination.
 - No HTTP transport or server-selected sampling, resources, prompts or approval
   actions. No automatic registration or list-change refresh.
-- No worker enrollment, resume, reconnect or retry. An interrupted in-process run
+- The in-process demo has no worker enrollment, resume, reconnect or retry. An interrupted run
   remains inspectable with unresolved intent and cannot be restarted by this demo.
-  Do not attach MCP bindings to existing worker profiles to imply recovery support.
+  Use the separate pinned worker below for supported recovery; do not attach MCP
+  bindings to other worker profiles.
 - No MCP mutation support. Existing patch approvals cannot authorize MCP tools.
 
 ## Verification
@@ -83,3 +84,59 @@ grants/validation, schema rejection, safe failures, deadline/cancellation, disco
 limits, log redaction and expired bindings. Database tests verify committed intent
 outside transactions, source-model provenance, atomic/restorable outcomes, durable
 trace and telemetry correlation, and refusal to replay interrupted execution.
+
+## Pinned durable fixture worker: Phase 11B
+
+`mcp-fixture-read-v1` supports clean checkpoint recovery with conservative refusal
+of uncertain intent. Server source, remote `info`, local `mcp.fixture.info` and
+schemas are fixed project code. There are no executable, environment or transport
+flags. Use the same migrated database and Python environment for both commands:
+
+```sh
+uv run python -m runveil_worker.mcp_worker submit
+# Use the run_id printed above:
+RUNVEIL_TELEMETRY=json uv run python -m runveil_worker.mcp_worker work --run-id <uuid> --allow-read
+```
+
+Submission atomically records version-17 configuration and enrollment without
+starting MCP. Clean work requires its own READ grant and verifies interpreter,
+server, contract and implementation digests against the pinned version before
+execution. The server launches only inside a committed typed tool attempt;
+ownership and deadline are rechecked after discovery, before RPC. The ten-second
+tool deadline includes startup/discovery. Run limits are three steps, two model
+calls, one tool call and one elapsed hour, allowing recovery after the 660-second
+lease expires. Accounting is synthetic fixture usage.
+
+Normal output contains `selected: true`, no error, and `Public MCP fixture verified.`.
+Exit status is zero for success/no selection, one for run/setup failure and 130 for
+keyboard interruption. Active leases and terminal duplicates select no work. The
+existing trace surface shows version-17 accounting and ordinary tool records.
+
+After interruption, wait for the PostgreSQL lease to expire (660 seconds after its
+last fence), then rerun work. Do not edit lease rows operationally. Clean checkpoints
+resume without repeating persisted observations. Unresolved model/tool intent fails
+as `execution_interrupted` without constructing a binding or launching MCP, even
+without `--allow-read`. Existing elapsed-expiry handling takes precedence when
+overdue. There is no reconnect, automatic retry or guess about a lost RPC result.
+
+Interpreter path/bytes, environment prefix, server source, schemas or covered
+implementation changes reject clean recovery. Keep the original deployment
+available, or submit a new run for changed code. Missing grants or configuration
+rejection leave the lease until expiry. Identity is not protection against hostile
+installations or concurrent replacement of installed imports. MCP worker verification
+for this slice runs on macOS; CI is configured for Linux. Windows is unverified.
+
+The server uses isolated Python arguments, a fixed directory and blanked SDK-inherited
+environment keys. Captured public source is supplied via `-c`; secrets/arbitrary
+scripts are not accepted. No host filesystem/network isolation or MCP mutations.
+Native patch approvals grant no authority here.
+
+```sh
+uv run pytest packages/persistence/tests/test_mcp_worker.py
+```
+
+Eight cases cover grants/store guards and identity drift at a clean checkpoint;
+fresh-process recovery after model/tool checkpoints; unresolved model/tool intent
+and a lost response; duplicate selection; and ownership loss during discovery and
+after response. All protocol dispatch uses the real SDK fixture. See
+[ADR 0041](../adr/0041-pinned-mcp-worker.md) and [handoff](PHASE_11B.md).
