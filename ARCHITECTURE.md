@@ -655,5 +655,32 @@ pins fixture and runner bytes. No model-selected path or command is introduced.
 Real Docker acceptance covers all three failing baselines, exact approved repairs,
 post-change tests, rejection, postimage digests and unchanged task/test content.
 This establishes bounded scripted multi-task orchestration, not model quality.
-The [Phase 10 closure audit](docs/operations/PHASE_10.md) retains sandbox search as
-an open original requirement. See [ADR 0037](docs/adr/0037-controlled-task-catalog.md).
+At the 10F gate, the [Phase 10 closure audit](docs/operations/PHASE_10.md) retained
+sandbox search as the remaining requirement; 10G below addresses it. See [ADR 0037](docs/adr/0037-controlled-task-catalog.md).
+
+## Phase 10G search over sandbox evidence
+
+Version 16 introduces `software-engineering-v2` and a separate local CLI. Version 15
+configuration and CLI remain unchanged. The new sequence is inspect → search →
+baseline tests → exact proposal → human approval → controlled application/tests.
+Search reads the complete immutable snapshot captured inside the sandbox. It has
+no filesystem, command, network or model-selected path capability. A case-sensitive
+literal query (1–128 characters, no CR/LF/NUL) yields at most ten path/line/excerpt
+matches, 160-character excerpts, truncation and the inspection digest.
+
+Both pinned and operator policy must explicitly grant repository.search and READ.
+Search intent/outcome uses ordinary durable accounting and fences. Persistence
+recomputes results from the independently recorded inspection and validates the
+source model action/context/order. Approval and mutation checks also require the
+same search evidence in baseline and proposal model contexts. Clean checkpoints
+reuse it; unresolved intent terminates conservatively without replay or Docker.
+The scripted provider uses a source return-statement match to select its repair.
+
+Nine steps, four model calls and five tool calls retain the one-hour deadline and
+token ceilings; v16 raises only the cost ceiling to 125,000 nanodollars for the fourth
+scripted call. Existing approval, explicit WRITE/EXECUTE, single-use mutation,
+full workspace/preimage checks and post-change validation remain shared. The search
+module is covered by sandbox implementation identity. No runner, migration,
+dependency, API/UI or provider-service change. See
+[ADR 0038](docs/adr/0038-sandbox-evidence-search.md) and the
+[closure audit](docs/operations/PHASE_10.md) for bounded-scope evidence and limits.

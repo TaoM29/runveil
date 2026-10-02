@@ -25,7 +25,8 @@ A separate review worker inspects the pinned fixture and records exact patch pro
 A distinct WRITE-authorized sandbox worker applies approved patches and records test/diff evidence.
 An integrated [fixture workflow](docs/operations/SANDBOX.md#fixture-engineering-workflow--phase-10e) connects inspection, failing baseline tests, exact review and approved validation in one durable run.
 The workflow supports three controlled repairs: clamp bounds, whitespace slugs and fractional means.
-The [Phase 10 audit](docs/operations/PHASE_10.md) retains sandbox search as an open closure requirement.
+The search-enabled workflow now covers the original Phase 10 checklist across three controlled tasks.
+The [Phase 10 audit](docs/operations/PHASE_10.md) is ready for bounded-scope closure review.
 
 Reliability is verified with deterministic tests and worker-process crash/recovery
 checks. This is a development project, not a production service.

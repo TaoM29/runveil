@@ -396,7 +396,7 @@ Phase 10 continuation was authorized on 2026-10-02.
   [operations](docs/operations/SANDBOX.md#fixture-engineering-workflow--phase-10e)
   and [handoff](docs/operations/PHASE_10E.md).
 
-- **10F — Implemented; review pending:** closed clamp, whitespace-slug and fractional-mean
+- **10F — Implemented; Phase 10G continuation authorized:** closed clamp, whitespace-slug and fractional-mean
   tasks in the existing software workflow, with submission-only pinned selection,
   complete task-specific allowlists and independent cross-fixture checks. Earlier
   profiles remain clamp-only. Fresh-process Docker acceptance verifies baseline
@@ -404,18 +404,27 @@ Phase 10 continuation was authorized on 2026-10-02.
   for all three tasks. See [ADR 0037](docs/adr/0037-controlled-task-catalog.md),
   [closure audit](docs/operations/PHASE_10.md) and [handoff](docs/operations/PHASE_10F.md).
 
+- **10G — Implemented; closure review pending:** separate version-16
+  `software-engineering-v2` profile searches the immutable sandbox inspection before
+  baseline tests and proposal generation. Literal queries and results are bounded;
+  explicit READ grants, durable source-model provenance and independently recomputed
+  evidence guard approval and mutation. Existing v15 jobs retain their configuration.
+  Fresh-process Docker acceptance covers search through approved/rejected outcomes
+  for all three tasks. See [ADR 0038](docs/adr/0038-sandbox-evidence-search.md),
+  [closure audit](docs/operations/PHASE_10.md) and [handoff](docs/operations/PHASE_10G.md).
+
 ## Phase 10 closure assessment
 
-The three acceptance criteria are evidenced within the public scripted fixture
-scope: several repairs complete end to end, failures remain inspectable, and fixture
-execution stays off the host. This does not establish general coding/model quality.
-The original implementation checklist still requires search in the sandbox workflow;
-the older host repository search capability does not meet that boundary. Phase 10
-is **not closed**. No original requirement is silently waived.
+All original checklist items and the three acceptance criteria are evidenced within
+public scripted fixture scope: several repairs complete end to end with sandbox
+inspection and search, failures remain inspectable, and fixture execution stays off
+the host. Search operates on the original immutable sandbox snapshot, with no live
+host filesystem access. This does not establish general coding/model quality.
+Phase 10 is **ready for bounded-scope closure review**, pending human acceptance.
+No original requirement is waived; see the audit for evidence and limitations.
 
 ## Recommended next slice
 
-Review 10F, then integrate bounded search over the pinned sandbox evidence with
-explicit authorization, durable provenance and focused acceptance. Reassess the
-original checklist and closure gate afterward. Do not start Phase 11 automatically.
+Review 10G and the original-criteria closure audit. If accepted, separately authorize
+Phase 11's first coherent MCP integration slice. Do not start Phase 11 automatically.
 No automatic continuation is authorized.
