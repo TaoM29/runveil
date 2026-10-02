@@ -106,7 +106,9 @@ async def test_oracle_failures_and_untrusted_tool_requests_do_not_pass(
                 file_content="public\n",
                 responses=responses,
                 expected_summary="ok",
-                expected_tools=("repository.read_file",),
+                expected_tools=(
+                    "repository.apply_patch" if name == "write" else "repository.read_file",
+                ),
             )
             for name, responses in (
                 ("wrong-answer", (finish("wrong"),)),
@@ -133,7 +135,7 @@ async def test_oracle_failures_and_untrusted_tool_requests_do_not_pass(
         "runtime_failure",
     ]
     assert result.cases[2].error_code == "invalid_tool_arguments"
-    # Unadvertised mutation is rejected during model-response validation, before tool intent.
+    # An oracle expectation grants no authority: mutation fails before tool intent.
     assert result.cases[3].error_code == "invalid_response"
     assert result.cases[3].tool_calls == 0
 

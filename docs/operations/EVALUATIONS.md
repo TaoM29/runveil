@@ -96,3 +96,13 @@ after inspection. See the [closure audit](PHASE_8.md) for evidence and claim lim
 Use `--statistics` for a separately versioned wrapper containing paired uncertainty,
 elapsed/cost summaries and failure categories. Default output stays unchanged.
 See the [methodology and limitations](STATISTICS.md) before interpreting bounds.
+
+## Tool-name expectations
+
+`EvalCase.expected_tools` accepts the shared validated tool-name contract. The
+scorer compares ordered native durable tool records, including MCP records, without
+transport-specific logic. Expectations do not register or authorize tools: the
+CLI runner still uses only its fixed repository read/search registry and READ
+policy. Phase 11 verifies MCP scoring against an already-completed pinned worker
+run; it does not introduce an MCP benchmark runner. Frozen suite content and
+digests are unchanged. See the [acceptance audit](PHASE_11.md).

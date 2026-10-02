@@ -12,7 +12,6 @@ from runveil_core.runtime import CostAccounting, RuntimeConfig, TokenAccounting
 
 Text = Annotated[str, Field(min_length=1, max_length=4096)]
 Digest = Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
-ReadTool = Literal["repository.read_file", "repository.search"]
 
 
 def digest(value: Contract) -> str:
@@ -27,7 +26,7 @@ class EvalCase(Contract):
     file_content: Text
     responses: Annotated[tuple[Text, ...], Field(min_length=1, max_length=3)]
     expected_summary: Text
-    expected_tools: Annotated[tuple[ReadTool, ...], Field(max_length=2)]
+    expected_tools: Annotated[tuple[Name, ...], Field(max_length=2)]
 
 
 class EvalSuite(Contract):

@@ -1,4 +1,4 @@
-# MCP tools: Phases 11A and 11B
+# MCP tools: Phase 11
 
 The stdio adapter exposes explicitly selected read tools through the same
 `TypedTool` and `ToolRegistry` used by native tools. See
@@ -140,3 +140,10 @@ fresh-process recovery after model/tool checkpoints; unresolved model/tool inten
 and a lost response; duplicate selection; and ownership loss during discovery and
 after response. All protocol dispatch uses the real SDK fixture. See
 [ADR 0041](../adr/0041-pinned-mcp-worker.md) and [handoff](PHASE_11B.md).
+
+## Acceptance and closure
+
+The [Phase 11 audit](PHASE_11.md) records acceptance within this trusted read-only
+scope, with [current verification and handoff](PHASE_11C.md). Human review is pending.
+Native evaluation scoring accepts MCP tool names and persisted evidence; oracle
+expectations do not grant capabilities or change the fixed evaluation runner.

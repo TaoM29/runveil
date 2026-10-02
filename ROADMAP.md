@@ -17,7 +17,7 @@ commit or push is authorized.
 | 8     | Deterministic evaluation harness                          | Complete; Phase 9 continuation authorized       |
 | 9     | Statistical comparison                                    | Complete; Phase 10 continuation authorized      |
 | 10    | Sandboxed software engineering application                | Implemented through 10G; closure review pending |
-| 11    | MCP adapter through existing policy                       | 11B implemented; review pending                 |
+| 11    | MCP adapter through existing policy                       | Closure assessed; human review pending          |
 | 12    | AWS infrastructure with Terraform                         | Planned                                         |
 | 13    | Production CI/CD                                          | Planned                                         |
 | 14    | Temporary self-hosted inference and benchmarks            | Planned                                         |
@@ -455,8 +455,17 @@ and [handoff](docs/operations/SHOWCASE_HANDOFF.md).
 The current user requests explicitly authorized these Phase 11 slices. Earlier
 Phase 10/showcase human acceptance remains a separate review, not an inferred sign-off.
 
+- **11C — Acceptance assessed; human review pending:** original five checklist
+  items and both acceptance criteria are demonstrated in the trusted local
+  read-only scope. The evaluator oracle now accepts native validated tool names;
+  real MCP durable evidence passes the existing scorer without new authority.
+  The focused rerun passed 20 MCP and 11 Docker regression cases; storage recovery
+  and review-resource cleanup are confirmed.
+  See the [closure audit](docs/operations/PHASE_11.md) and
+  [handoff](docs/operations/PHASE_11C.md).
+
 ## Recommended next slice
 
-Review Phase 11B, then audit Phase 11 acceptance and remaining trust/SDK limitations
-against the charter before proposing more integration scope. No automatic
-continuation or broader transport/mutation support is authorized.
+Human review and acceptance of Phase 11. After explicit continuation authorization,
+plan the smallest Phase 12 infrastructure slice against the charter. No automatic
+continuation, broader MCP transport or mutation support is authorized.

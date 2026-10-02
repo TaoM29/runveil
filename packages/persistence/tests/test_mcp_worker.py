@@ -12,9 +12,12 @@ from uuid import UUID
 import pytest
 from mcp import ClientSession, StdioServerParameters, types
 from runveil_core.agents import JsonValue
-from runveil_core.mcp import MCP_PROFILE
+from runveil_core.mcp import MCP_PROFILE, MCP_TOOL
 from runveil_core.runtime import Cursor, Pending, RuntimeConfig, RuntimeState
 from runveil_core.tools import ToolError
+from runveil_evaluations.contracts import EvalCase
+from runveil_evaluations.fixtures import SUITE
+from runveil_evaluations.runner import score_case
 from runveil_persistence.execution import (
     ConfigurationRejected,
     PostgresExecutionStore,
@@ -101,6 +104,23 @@ async def test_grant_identity_and_store_guards_precede_execution(
         assert trace.tool_calls == 1 and trace.approval is None
         assert trace.checkpoint is not None and trace.checkpoint.schema_version == 17
         assert trace.checkpoint.tokens == state.tokens and trace.checkpoint.cost == state.cost
+    # Score already-persisted evidence through the unchanged evaluator; fixture
+    # execution fields from the calibration case are not used by score_case.
+    case = EvalCase.model_validate(
+        SUITE.cases[0].model_dump()
+        | {
+            "id": "mcp-fixture-closure",
+            "expected_summary": "Public MCP fixture verified.",
+            "expected_tools": (MCP_TOOL,),
+        }
+    )
+    grade = await score_case(sessions, case, run_id, original_run.agent_version_id)
+    assert grade.grade == "pass" and grade.tool_calls == 1 and grade.model_calls == 2
+    assert grade.tokens == state.tokens and grade.cost == state.cost
+    wrong_tool = case.model_copy(update={"expected_tools": ("repository.read_file",)})
+    assert (
+        await score_case(sessions, wrong_tool, run_id, original_run.agent_version_id)
+    ).grade == "tool_mismatch"
     assert await worker.work_mcp_once(sessions, run_id=run_id) is None
 
 

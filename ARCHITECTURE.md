@@ -1,6 +1,6 @@
 # Architecture
 
-## Implemented through Phase 11B; pinned MCP worker review pending
+## Implemented through Phase 11; closure review pending
 
 ```mermaid
 flowchart LR
@@ -736,3 +736,12 @@ Identity is conservative trusted-installation compatibility, not host isolation.
 See [ADR 0041](docs/adr/0041-pinned-mcp-worker.md),
 [operations](docs/operations/MCP.md#pinned-durable-fixture-worker-phase-11b) and
 [handoff](docs/operations/PHASE_11B.md).
+
+## Phase 11 acceptance assessment
+
+The [closure audit](docs/operations/PHASE_11.md) maps the original checklist and
+acceptance criteria to the trusted read-only implementation. Evaluation expectations
+use the shared validated tool-name contract; the existing scorer consumes native
+MCP records without transport-specific logic. Expected names do not register tools
+or grant permissions, and the evaluation runner keeps its repository-only profile.
+Phase 11 is ready for human closure review; no transport or mutation expansion.
