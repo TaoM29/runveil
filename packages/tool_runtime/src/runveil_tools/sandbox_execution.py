@@ -44,6 +44,7 @@ class BoundSandbox:
             "runveil_core.sandbox_review",
             "runveil_core.sandbox_patch",
             "runveil_core.software",
+            "runveil_core.sandbox_search",
             "runveil_core.approvals",
             "runveil_core.runtime",
             "runveil_core.tools",

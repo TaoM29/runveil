@@ -54,7 +54,14 @@ from runveil_core.sandbox_review import (
     validate_inspection,
     validate_proposal,
 )
-from runveil_core.software import SOFTWARE_POLICY, baseline_failed, workflow_tool
+from runveil_core.sandbox_search import (
+    SEARCH_TOOL,
+    SearchInput,
+    authorize_search,
+    search_offer,
+    search_snapshot,
+)
+from runveil_core.software import SEARCH_POLICY, SOFTWARE_POLICY, baseline_failed, workflow_tool
 from runveil_core.telemetry import observe
 from runveil_core.tools import Permission, ToolError, ToolErrorCode, ToolPolicy, ToolRegistry
 
@@ -87,7 +94,7 @@ class ModelPricing(Contract):
 
 
 class RuntimeConfig(Contract):
-    schema_version: Literal[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] = 2
+    schema_version: Literal[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16] = 2
     workspace: WorkspaceIdentity | None = None
     sandbox: SandboxIdentity | None = None
     max_model_calls: Annotated[int, Field(ge=0, le=64)] | None = None
@@ -150,8 +157,10 @@ class RuntimeConfig(Contract):
                 authorize_patch(self.tool_policy, self.tool_policy)
             except ToolError:
                 raise ValueError("Patch configuration requires an explicit WRITE grant") from None
-        if (self.schema_version in (12, 13, 14, 15)) != (self.sandbox is not None):
-            raise ValueError("Sandbox execution requires version 12, 13, 14 or 15 and a binding")
+        if (self.schema_version in (12, 13, 14, 15, 16)) != (self.sandbox is not None):
+            raise ValueError(
+                "Sandbox execution requires version 12, 13, 14, 15 or 16 and a binding"
+            )
         if (
             self.schema_version in (12, 13, 14)
             and self.sandbox is not None
@@ -183,6 +192,10 @@ class RuntimeConfig(Contract):
             self.tool_policy != SOFTWARE_POLICY or self.model_retry != ModelRetryPolicy()
         ):
             raise ValueError("Software workflow requires exact grants without retries")
+        if self.schema_version == 16 and (
+            self.tool_policy != SEARCH_POLICY or self.model_retry != ModelRetryPolicy()
+        ):
+            raise ValueError("Search workflow requires exact grants without retries")
         return self
 
 
@@ -231,7 +244,7 @@ class CostAccounting(Contract):
 
 
 class RuntimeState(Contract):
-    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] = 2
+    schema_version: Literal[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16] = 2
     approval_id: UUID | None = None
     approval_resolved: bool = False
     cost: CostAccounting | None = None
@@ -247,7 +260,7 @@ class RuntimeState(Contract):
 
     @model_validator(mode="after")
     def approval_version(self) -> RuntimeState:
-        if self.schema_version not in (10, 11, 13, 14, 15) and (
+        if self.schema_version not in (10, 11, 13, 14, 15, 16) and (
             self.approval_id is not None or self.approval_resolved
         ):
             raise ValueError("Approval state requires version 10")
@@ -451,7 +464,7 @@ async def _execute(
             update={
                 "steps_used": state.steps_used + 1,
                 "error_code": PATCH_UNKNOWN
-                if config.schema_version in (14, 15) and state.approval_resolved
+                if config.schema_version in (14, 15, 16) and state.approval_resolved
                 else "execution_interrupted",
             }
         )
@@ -459,15 +472,17 @@ async def _execute(
             state = state.account_model_usage(TokenUsage(), config)
         await store.complete(started.interrupted, state, error_code=state.error_code)
         return state
-    if config.schema_version in (12, 15):
+    if config.schema_version == 16:
+        authorize_search(config.tool_policy, operator_policy)
+    if config.schema_version in (12, 15, 16):
         authorize_sandbox(config.tool_policy, operator_policy)
         if sandbox is None or sandbox.identity != config.sandbox:
             raise ValueError("Sandbox execution requires the verified binding")
-    if config.schema_version in (13, 14, 15):
+    if config.schema_version in (13, 14, 15, 16):
         authorize_review(config.tool_policy, operator_policy)
         if inspection is None or inspection.identity != config.sandbox:
             raise ValueError("Sandbox review requires the verified binding")
-    if config.schema_version in (14, 15) and state.approval_resolved:
+    if config.schema_version in (14, 15, 16) and state.approval_resolved:
         authorize_sandbox_patch(config.tool_policy, operator_policy)
         if sandbox_patch is None or sandbox_patch.identity != config.sandbox:
             raise ValueError("Sandbox patch requires the verified writer binding")
@@ -581,11 +596,11 @@ async def _execute(
             ) as telemetry:
                 try:
                     async with asyncio.timeout(seconds):
-                        if config.schema_version == 15 and action.tool_name != workflow_tool(
-                            state.messages
+                        if config.schema_version in (15, 16) and action.tool_name != workflow_tool(
+                            state.messages, search=config.schema_version == 16
                         ):
                             raise ToolError(ToolErrorCode.DENIED)
-                        if config.schema_version in (12, 15) and action.tool_name == TEST_TOOL:
+                        if config.schema_version in (12, 15, 16) and action.tool_name == TEST_TOOL:
                             authorize_sandbox(config.tool_policy, operator_policy)
                             if sandbox is None or sandbox.identity != config.sandbox:
                                 raise ToolError(ToolErrorCode.DENIED)
@@ -603,7 +618,7 @@ async def _execute(
                                 ).model_dump(mode="json")
                             except (ValueError, AttributeError):
                                 raise ToolError(ToolErrorCode.INVALID_OUTPUT) from None
-                        elif config.schema_version in (13, 14, 15):
+                        elif config.schema_version in (13, 14, 15, 16):
                             authorize_review(config.tool_policy, operator_policy)
                             if inspection is None or inspection.identity != config.sandbox:
                                 raise ToolError(ToolErrorCode.DENIED)
@@ -626,6 +641,27 @@ async def _execute(
                                     observation = snapshot.model_dump(mode="json")
                                 except (ValueError, AttributeError):
                                     raise ToolError(ToolErrorCode.INVALID_OUTPUT) from None
+                            elif config.schema_version == 16 and action.tool_name == SEARCH_TOOL:
+                                authorize_search(config.tool_policy, operator_policy)
+                                try:
+                                    query = SearchInput.model_validate(action.arguments)
+                                    snapshots = [
+                                        m
+                                        for m in state.messages
+                                        if m.role == "tool" and m.tool_name == INSPECT_TOOL
+                                    ]
+                                    if len(snapshots) != 1:
+                                        raise ToolError(ToolErrorCode.RESOURCE_INVALID)
+                                    snapshot = InspectionResult.model_validate_json(
+                                        snapshots[0].content
+                                    )
+                                except ValueError:
+                                    raise ToolError(ToolErrorCode.INVALID_ARGUMENTS) from None
+                                assert config.sandbox is not None
+                                validate_inspection(snapshot, config.sandbox.fixture)
+                                observation = search_snapshot(snapshot, query).model_dump(
+                                    mode="json"
+                                )
                             elif action.tool_name == PROPOSAL_TOOL:
                                 if state.approval_id is not None:
                                     raise ToolError(ToolErrorCode.DENIED)
@@ -646,7 +682,7 @@ async def _execute(
                                 assert config.sandbox is not None
                                 validate_inspection(snapshot, config.sandbox.fixture)
                                 validate_proposal(proposal, snapshot)
-                                if config.schema_version in (14, 15):
+                                if config.schema_version in (14, 15, 16):
                                     try:
                                         SandboxPatchInput(
                                             approval_id=uuid4(),
@@ -691,11 +727,12 @@ async def _execute(
                     "source_model_id": None,
                 }
             )
-            if config.schema_version == 15 and action.tool_name == TEST_TOOL:
+            if config.schema_version in (15, 16) and action.tool_name == TEST_TOOL:
                 if not baseline_failed(TestsResult.model_validate(observation)):
                     state = state.model_copy(update={"error_code": "sandbox_baseline_invalid"})
             reviewing = (
-                config.schema_version in (10, 11, 13, 14, 15) and action.tool_name == PROPOSAL_TOOL
+                config.schema_version in (10, 11, 13, 14, 15, 16)
+                and action.tool_name == PROPOSAL_TOOL
             )
             if reviewing:
                 state = state.model_copy(
@@ -710,14 +747,14 @@ async def _execute(
             messages=state.messages,
             available_tools=tuple(
                 offer
-                for offer in (*review_offers(), test_offer())
-                if offer.name == workflow_tool(state.messages)
+                for offer in (*review_offers(), test_offer(), search_offer())
+                if offer.name == workflow_tool(state.messages, search=config.schema_version == 16)
             )
-            if config.schema_version == 15
+            if config.schema_version in (15, 16)
             else (test_offer(),)
             if config.schema_version == 12
             else review_offers()
-            if config.schema_version in (13, 14, 15)
+            if config.schema_version in (13, 14, 15, 16)
             else registry.offers(config.tool_policy, operator_policy),
             temperature=config.temperature,
             max_output_tokens=config.max_output_tokens,
@@ -747,7 +784,7 @@ async def _execute(
                     response = await provider.generate(request)
                 usage = response.usage
                 model_action = validate_response(request, response)
-                if config.schema_version == 15 and isinstance(model_action, FinishAction):
+                if config.schema_version in (15, 16) and isinstance(model_action, FinishAction):
                     raise ProviderError(ProviderErrorCode.INVALID_RESPONSE, usage=response.usage)
             except ProviderError as exc:
                 if usage == TokenUsage():

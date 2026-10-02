@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 from uuid import UUID
 
+from runveil_core.agents import JsonValue
 from runveil_core.approvals import PROPOSAL_TOOL, PatchProposal
 from runveil_core.errors import NotFound
 from runveil_core.fixtures import FIXTURE_PATHS, FixtureName
@@ -22,7 +23,14 @@ from runveil_core.sandbox_review import (
     authorize_review,
     proposal_diff,
 )
-from runveil_core.software import SOFTWARE_POLICY, SOFTWARE_PROFILE, workflow_tool
+from runveil_core.sandbox_search import SEARCH_TOOL, SearchResult, authorize_search
+from runveil_core.software import (
+    SEARCH_POLICY,
+    SEARCH_PROFILE,
+    SOFTWARE_POLICY,
+    SOFTWARE_PROFILE,
+    workflow_tool,
+)
 from runveil_core.tools import Permission, ToolPolicy
 from runveil_persistence.approvals import ApprovalRepository
 from runveil_persistence.database import create_engine, database_url
@@ -98,12 +106,37 @@ def workflow_configuration(identity: SandboxIdentity) -> RuntimeConfig:
     )
 
 
+def search_configuration(identity: SandboxIdentity) -> RuntimeConfig:
+    base = workflow_configuration(identity)
+    assert base.pricing is not None
+    return RuntimeConfig.model_validate(
+        base.model_dump()
+        | {
+            "schema_version": 16,
+            "provider": "scripted-software-search-v1",
+            "system_prompt": base.system_prompt
+            + " Search the inspected snapshot before testing or proposing.",
+            "tool_policy": SEARCH_POLICY,
+            "max_steps": 9,
+            "max_cost_nanousd": 125_000,
+            "max_model_calls": 4,
+            "max_tool_calls": 5,
+            "pricing": base.pricing.model_copy(update={"provider": "scripted-software-search-v1"}),
+        }
+    )
+
+
 class SoftwareProvider:
     """Scripted orchestration fixture, not a model-quality evaluation."""
 
+    def __init__(self, *, search: bool = False) -> None:
+        self.search = search
+
     async def generate(self, request: ModelRequest) -> ModelResponse:
-        tool = workflow_tool(request.messages)
-        arguments = {}
+        tool = workflow_tool(request.messages, search=self.search)
+        arguments: dict[str, JsonValue] = {}
+        if tool == SEARCH_TOOL:
+            arguments = {"query": "return", "max_matches": 10}
         if tool == PROPOSAL_TOOL:
             inspected = InspectionResult.model_validate_json(
                 next(
@@ -121,9 +154,24 @@ class SoftwareProvider:
                 ),
                 "mean.py": ("sum(values) // len(values)", "sum(values) / len(values)"),
             }
-            old, new = replacements[inspected.files[1].path]
+            path = inspected.files[1].path
+            if self.search:
+                searched = SearchResult.model_validate_json(
+                    next(
+                        m.content
+                        for m in request.messages
+                        if m.role == "tool" and m.tool_name == SEARCH_TOOL
+                    )
+                )
+                if searched.inspection_digest != inspected.digest:
+                    raise ValueError("Search snapshot changed")
+                hits = [m for m in searched.matches if m.path == path and "return" in m.excerpt]
+                if len(hits) != 1:
+                    raise ValueError("Search did not locate the source return statement")
+                path = hits[0].path
+            old, new = replacements[path]
             arguments = PatchProposal(
-                path=inspected.files[1].path,
+                path=path,
                 before=before,
                 after=before.replace(old, new),
             ).model_dump(mode="json")
@@ -148,9 +196,17 @@ async def submit_patch(
     *,
     socket: Path = Path("/var/run/docker.sock"),
     workflow: bool = False,
+    search: bool = False,
     fixture: FixtureName = "clamp-v1",
 ) -> UUID:
-    configuration = workflow_configuration if workflow else patch_configuration
+    workflow = workflow or search
+    configuration = (
+        search_configuration
+        if search
+        else workflow_configuration
+        if workflow
+        else patch_configuration
+    )
     config = configuration(BoundSandbox(image, socket=socket, fixture=fixture).identity)
     async with sessions.begin() as session:
         agents = AgentRepository(session)
@@ -165,7 +221,11 @@ async def submit_patch(
             session,
             run.id,
             task=workflow_task(fixture) if workflow else TASK,
-            profile=SOFTWARE_PROFILE if workflow else SANDBOX_PATCH_PROFILE,
+            profile=SEARCH_PROFILE
+            if search
+            else SOFTWARE_PROFILE
+            if workflow
+            else SANDBOX_PATCH_PROFILE,
         )
         return run.id
 
@@ -179,9 +239,17 @@ async def work_patch_once(
     allow_execute: bool = False,
     allow_write: bool = False,
     workflow: bool = False,
+    search: bool = False,
 ) -> RuntimeState | None:
-    configuration = workflow_configuration if workflow else patch_configuration
-    profile = SOFTWARE_PROFILE if workflow else SANDBOX_PATCH_PROFILE
+    workflow = workflow or search
+    configuration = (
+        search_configuration
+        if search
+        else workflow_configuration
+        if workflow
+        else patch_configuration
+    )
+    profile = SEARCH_PROFILE if search else SOFTWARE_PROFILE if workflow else SANDBOX_PATCH_PROFILE
     claim = await claim_next(sessions, profile=profile, run_id=run_id)
     if claim is None:
         return None
@@ -203,7 +271,9 @@ async def work_patch_once(
     binding: BoundSandbox | None = None
     config = pinned
     operator = ToolPolicy(
-        allowed_tools=(SOFTWARE_POLICY if workflow else PATCH_POLICY).allowed_tools,
+        allowed_tools=(
+            SEARCH_POLICY if search else SOFTWARE_POLICY if workflow else PATCH_POLICY
+        ).allowed_tools,
         permissions=(
             (*REVIEW_POLICY.permissions, Permission.WRITE)
             if allow_write
@@ -214,6 +284,8 @@ async def work_patch_once(
     )
     if not interrupted:
         authorize_review(pinned.tool_policy, operator)
+        if search:
+            authorize_search(pinned.tool_policy, operator)
         if workflow:
             authorize_sandbox(pinned.tool_policy, operator)
         async with sessions() as session:
@@ -228,7 +300,7 @@ async def work_patch_once(
         run_id,
         claim.task,
         provider_name=config.provider,
-        provider=SoftwareProvider() if workflow else SandboxReviewProvider(),
+        provider=SoftwareProvider(search=search) if workflow else SandboxReviewProvider(),
         sandbox=binding if workflow else None,
         inspection=binding,
         sandbox_patch=binding,
@@ -238,8 +310,9 @@ async def work_patch_once(
 
 
 async def inspect_patch(
-    session: AsyncSession, run_id: UUID, *, workflow: bool = False
+    session: AsyncSession, run_id: UUID, *, workflow: bool = False, search: bool = False
 ) -> dict[str, object]:
+    workflow = workflow or search
     # Serialize against decisions so revision and exact evidence describe one boundary.
     from runveil_persistence.models import RunRow
 
@@ -248,8 +321,14 @@ async def inspect_patch(
     version = await AgentRepository(session).get_version(run.agent_version_id)
     config = RuntimeConfig.model_validate_json(version.configuration_json)
     job = await session.get(JobRow, run_id)
-    configuration = workflow_configuration if workflow else patch_configuration
-    profile = SOFTWARE_PROFILE if workflow else SANDBOX_PATCH_PROFILE
+    configuration = (
+        search_configuration
+        if search
+        else workflow_configuration
+        if workflow
+        else patch_configuration
+    )
+    profile = SEARCH_PROFILE if search else SOFTWARE_PROFILE if workflow else SANDBOX_PATCH_PROFILE
     if (
         config.sandbox is None
         or config != configuration(config.sandbox)
@@ -296,6 +375,7 @@ async def inspect_patch(
             {
                 "id": str(call.id),
                 "name": call.tool_name,
+                "request": call.request,
                 "status": call.status,
                 "requested_sequence": call.requested_event_sequence,
                 "completed_sequence": call.completed_event_sequence,
@@ -323,7 +403,8 @@ async def inspect_patch(
     return evidence
 
 
-async def main(*, workflow: bool = False) -> int:
+async def main(*, workflow: bool = False, search: bool = False) -> int:
+    workflow = workflow or search
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=("submit", "work", "inspect", "approve", "reject"))
     parser.add_argument("--run-id", type=UUID)
@@ -359,6 +440,7 @@ async def main(*, workflow: bool = False) -> int:
                                 args.image,
                                 socket=args.socket,
                                 workflow=workflow,
+                                search=search,
                                 fixture=(args.fixture or "clamp-v1") if workflow else "clamp-v1",
                             )
                         )
@@ -374,6 +456,7 @@ async def main(*, workflow: bool = False) -> int:
                 allow_execute=args.allow_execute,
                 allow_write=args.allow_write,
                 workflow=workflow,
+                search=search,
             )
             print(
                 json.dumps(
@@ -395,7 +478,10 @@ async def main(*, workflow: bool = False) -> int:
                 if args.command == "inspect":
                     print(
                         json.dumps(
-                            await inspect_patch(session, args.run_id, workflow=workflow), indent=2
+                            await inspect_patch(
+                                session, args.run_id, workflow=workflow, search=search
+                            ),
+                            indent=2,
                         )
                     )
                 else:
@@ -405,7 +491,11 @@ async def main(*, workflow: bool = False) -> int:
                         decision="APPROVED" if args.command == "approve" else "REJECTED",
                         expected_revision=args.revision,
                         expected_digest=args.digest,
-                        profile=SOFTWARE_PROFILE if workflow else SANDBOX_PATCH_PROFILE,
+                        profile=SEARCH_PROFILE
+                        if search
+                        else SOFTWARE_PROFILE
+                        if workflow
+                        else SANDBOX_PATCH_PROFILE,
                     )
                     print(json.dumps({"approval_id": str(approval.id), "status": approval.status}))
         return 0
