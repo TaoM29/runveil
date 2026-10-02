@@ -1,6 +1,6 @@
 # Architecture
 
-## Implemented through Phase 11; closure review pending
+## Runtime through Phase 11; Phase 12A infrastructure defined, review pending
 
 ```mermaid
 flowchart LR
@@ -745,3 +745,22 @@ use the shared validated tool-name contract; the existing scorer consumes native
 MCP records without transport-specific logic. Expected names do not register tools
 or grant permissions, and the evaluation runner keeps its repository-only profile.
 Phase 11 is ready for human closure review; no transport or mutation expansion.
+
+## Phase 12A private AWS data foundation
+
+Terraform now defines a separate protected S3 state bootstrap and an environment
+root for isolated two-AZ networking, private encrypted PostgreSQL 17 with an
+RDS-managed administrator secret, and SQS Standard/DLQ. Separate API, worker and
+migration security groups restrict database access; source-queue IAM policies
+separate relay send from consumer receive/delete. No policy is attached to a task
+identity yet. Production requires Multi-AZ, retained backups and deletion protection.
+
+This is infrastructure code with offline mocked tests, not a deployed architecture.
+No compute, ECR, public ingress or application credential provisioning is included.
+PostgreSQL remains authoritative; SQS only notifies the fixed fixture profile.
+The API is still a local operator surface, relay/consumer commands are one-shot,
+and Docker sandbox profiles cannot use Fargate's unavailable host Docker runtime.
+The next deployment slice must address supervision, private migrations, database
+roles, secret injection and immutable images. See [ADR 0042](docs/adr/0042-private-aws-data-foundation.md)
+and the [AWS runbook](docs/operations/AWS.md). Phase 12 live health and teardown gates
+remain open; no production-readiness claim is made.

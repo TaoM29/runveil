@@ -18,7 +18,7 @@ commit or push is authorized.
 | 9     | Statistical comparison                                    | Complete; Phase 10 continuation authorized      |
 | 10    | Sandboxed software engineering application                | Implemented through 10G; closure review pending |
 | 11    | MCP adapter through existing policy                       | Closure assessed; human review pending          |
-| 12    | AWS infrastructure with Terraform                         | Planned                                         |
+| 12    | AWS infrastructure with Terraform                         | 12A implemented; review pending                 |
 | 13    | Production CI/CD                                          | Planned                                         |
 | 14    | Temporary self-hosted inference and benchmarks            | Planned                                         |
 | 15    | Security hardening                                        | Planned                                         |
@@ -464,8 +464,24 @@ Phase 10/showcase human acceptance remains a separate review, not an inferred si
   See the [closure audit](docs/operations/PHASE_11.md) and
   [handoff](docs/operations/PHASE_11C.md).
 
+## Phase 12: AWS infrastructure
+
+- **12A — Implemented; review pending:** Terraform state bootstrap and private data
+  foundation with isolated subnets, encrypted PostgreSQL 17, AWS-managed administrator
+  secret, explicit database client groups, SQS Standard/DLQ and separate queue-scoped
+  relay/consumer policies. Production enables Multi-AZ and stronger recovery protection.
+  Provider locks and offline Terraform boundary tests run in CI. No AWS apply or public
+  application deployment is claimed. See [ADR 0042](docs/adr/0042-private-aws-data-foundation.md),
+  [runbook](docs/operations/AWS.md) and [handoff](docs/operations/PHASE_12A.md).
+
+The current user explicitly authorized Phase 12 continuation. Earlier closure reviews
+remain separate human decisions. Phase 12's fresh cloud environment, application health
+and clean teardown acceptance are still open. ECR/ECS, application secrets/roles,
+private migrations, worker supervision and live operations remain subsequent slices.
+
 ## Recommended next slice
 
-Human review and acceptance of Phase 11. After explicit continuation authorization,
-plan the smallest Phase 12 infrastructure slice against the charter. No automatic
-continuation, broader MCP transport or mutation support is authorized.
+Review Phase 12A, then package the API and supervise the fixed SQS fixture path for
+private compute with separate runtime database and AWS roles. Demonstrate immutable
+images, explicit migrations and health/recovery before public exposure. Keep Docker
+sandbox profiles out of Fargate until their execution boundary is separately reviewed.
