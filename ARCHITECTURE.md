@@ -1,6 +1,17 @@
 # Architecture
 
-## Runtime through Phase 11; Phase 12B private deployment defined, review pending
+## Runtime through Phase 11; Phase 12C paused, local security review underway
+
+The owner paused live AWS acceptance pending account, billing and credential setup.
+Phase 12 remains open. A temporary local Phase 15A–15C track reviews existing
+boundaries without adding deployment, production authentication or GPU services.
+See [ADR 0044](docs/adr/0044-local-security-detour.md) for the sequencing decision
+and [the roadmap](ROADMAP.md#intended-resume-order) for the intended resume order.
+The [local threat model](docs/security/THREAT_MODEL.md) records the trusted-host,
+fixture-only and residual-risk boundaries. Telemetry now validates finite metadata
+before tracer handoff as well as JSON export; it does not redact durable payloads.
+The [demo policy](docs/security/PUBLIC_DEMO.md) preserves seeded anonymous inspection
+and local operator-only execution, with no public submission authority.
 
 ```mermaid
 flowchart LR

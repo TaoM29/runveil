@@ -106,6 +106,10 @@ runs that disposable acceptance without cloud credentials.
 
 ## Runtime operations
 
+- [Local threat model and abuse analysis](../security/THREAT_MODEL.md)
+- [Public-demo safety policy](../security/PUBLIC_DEMO.md)
+- [Phase 15 local security verification and handoff](PHASE_15.md)
+
 - [Recorded product showcase and console routes](SHOWCASE.md)
 
 - [In-process demonstration](RUNTIME.md)
