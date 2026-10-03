@@ -32,18 +32,55 @@ or model quality. Phase 10 and 11 closure reviews remain pending.
 
 ## Tech stack
 
+Runtime, data & tools
+
 [![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![Pydantic](https://img.shields.io/badge/Pydantic-E92063?logo=pydantic&logoColor=white)](https://docs.pydantic.dev/)
+[![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-D71F00?logo=sqlalchemy&logoColor=white)](https://www.sqlalchemy.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![MCP](https://img.shields.io/badge/MCP-222222?logo=modelcontextprotocol&logoColor=white)](https://modelcontextprotocol.io/docs/getting-started/intro)
+
+Web
+
 [![Next.js](https://img.shields.io/badge/Next.js-000000?logo=nextdotjs&logoColor=white)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React-20232A?logo=react&logoColor=61DAFB)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-0F172A?logo=tailwindcss&logoColor=38BDF8)](https://tailwindcss.com/)
+[![Node.js](https://img.shields.io/badge/Node.js-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![npm](https://img.shields.io/badge/npm-CB3837?logo=npm&logoColor=white)](https://docs.npmjs.com/)
+
+Development, testing & observability
+
 [![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
-[![Terraform](https://img.shields.io/badge/Terraform-844FBA?logo=terraform&logoColor=white)](https://developer.hashicorp.com/terraform)
+[![Docker Compose](https://img.shields.io/badge/Docker_Compose-2496ED?logo=docker&logoColor=white)](https://docs.docker.com/compose/)
+[![uv](https://img.shields.io/badge/uv-5B21B6?logo=uv&logoColor=white)](https://docs.astral.sh/uv/)
+[![Ruff](https://img.shields.io/badge/Ruff-5B21B6?logo=ruff&logoColor=white)](https://docs.astral.sh/ruff/)
+[![pytest](https://img.shields.io/badge/pytest-0A9EDC?logo=pytest&logoColor=white)](https://docs.pytest.org/)
+[![Vitest](https://img.shields.io/badge/Vitest-467522?logo=vitest&logoColor=white)](https://vitest.dev/)
+[![ESLint](https://img.shields.io/badge/ESLint-4B32C3?logo=eslint&logoColor=white)](https://eslint.org/)
+[![Prettier](https://img.shields.io/badge/Prettier-333333?logo=prettier&logoColor=white)](https://prettier.io/)
 [![OpenTelemetry](https://img.shields.io/badge/OpenTelemetry-425CC7?logo=opentelemetry&logoColor=white)](https://opentelemetry.io/)
 [![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?logo=githubactions&logoColor=white)](https://github.com/features/actions)
+
+Cloud infrastructure (configured; live acceptance pending)
+
+[![AWS](https://custom-icon-badges.demolab.com/badge/AWS-232F3E?logo=aws&logoColor=white)](https://aws.amazon.com/)
+[![Terraform](https://img.shields.io/badge/Terraform-844FBA?logo=terraform&logoColor=white)](https://developer.hashicorp.com/terraform)
+[![ECS](https://custom-icon-badges.demolab.com/badge/ECS-232F3E?logo=aws&logoColor=white)](https://aws.amazon.com/ecs/)
+[![Fargate](https://custom-icon-badges.demolab.com/badge/Fargate-232F3E?logo=aws&logoColor=white)](https://aws.amazon.com/fargate/)
+[![ECR](https://custom-icon-badges.demolab.com/badge/ECR-232F3E?logo=aws&logoColor=white)](https://aws.amazon.com/ecr/)
+[![RDS](https://custom-icon-badges.demolab.com/badge/RDS-232F3E?logo=aws&logoColor=white)](https://aws.amazon.com/rds/)
+[![SQS](https://custom-icon-badges.demolab.com/badge/SQS-232F3E?logo=aws&logoColor=white)](https://aws.amazon.com/sqs/)
+[![S3](https://custom-icon-badges.demolab.com/badge/S3-232F3E?logo=aws&logoColor=white)](https://aws.amazon.com/s3/)
+[![CloudWatch](https://custom-icon-badges.demolab.com/badge/CloudWatch-232F3E?logo=aws&logoColor=white)](https://aws.amazon.com/cloudwatch/)
+[![IAM](https://custom-icon-badges.demolab.com/badge/IAM-232F3E?logo=aws&logoColor=white)](https://aws.amazon.com/iam/)
+[![Secrets Manager](https://custom-icon-badges.demolab.com/badge/Secrets_Manager-232F3E?logo=aws&logoColor=white)](https://aws.amazon.com/secrets-manager/)
+
+Planned inference experiments
+
+[![vLLM](https://img.shields.io/badge/vLLM-333333?logo=vllm&logoColor=white)](https://docs.vllm.ai/)
+[![EC2 GPU](https://custom-icon-badges.demolab.com/badge/EC2_GPU-232F3E?logo=aws&logoColor=white)](https://aws.amazon.com/ec2/instance-types/#Accelerated_Computing)
 
 | Layer                      | In place                                                                                     | Remaining                                                    |
 | -------------------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
