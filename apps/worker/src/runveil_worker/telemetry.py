@@ -6,35 +6,14 @@ import sys
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from typing import TextIO
-from uuid import UUID
 
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import ReadableSpan, SpanLimits, TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, SpanExporter, SpanExportResult
 from opentelemetry.sdk.trace.sampling import ALWAYS_ON
-from runveil_core.telemetry import using_tracer
+from runveil_core.telemetry import safe_attribute, using_tracer
 
 NAMES = {"agent.execute", "model.attempt", "tool.dispatch", "tool.apply_patch"}
-NUMBERS = {
-    "request_sequence",
-    "steps",
-    "retries_scheduled",
-    "model_attempts",
-    "input_tokens",
-    "output_tokens",
-    "unknown_usage_attempts",
-    "known_nanousd",
-    "unknown_cost_attempts",
-}
-OUTCOMES = {
-    "failed",
-    "succeeded",
-    "approval_wait",
-    "retry_wait",
-    "returned",
-    "exception",
-    "interrupted",
-}
 
 
 class JsonSpanExporter(SpanExporter):
@@ -53,14 +32,8 @@ class JsonSpanExporter(SpanExporter):
                     if not key.startswith("runveil."):
                         continue
                     field = key.removeprefix("runveil.")
-                    if field in {"run_id", "invocation_id"} and isinstance(value, str):
-                        attributes[field] = str(UUID(value))
-                    elif field in NUMBERS and type(value) is int and 0 <= value <= 2**63 - 1:
-                        attributes[field] = value
-                    elif field == "usage_complete" and type(value) is bool:
-                        attributes[field] = value
-                    elif field == "outcome" and isinstance(value, str) and value in OUTCOMES:
-                        attributes[field] = value
+                    if (safe := safe_attribute(field, value)) is not None:
+                        attributes[field] = safe
                 line = json.dumps(
                     {
                         "event": "execution.span",

@@ -5,12 +5,45 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
 from typing import Literal
+from uuid import UUID
 
 from opentelemetry.context import Context
 from opentelemetry.trace import Span, StatusCode, Tracer, set_span_in_context
 
 _tracer: ContextVar[Tracer | None] = ContextVar("runveil_tracer", default=None)
 _parent: ContextVar[Span | None] = ContextVar("runveil_span", default=None)
+
+NUMBER_FIELDS = frozenset(
+    {
+        "request_sequence",
+        "steps",
+        "retries_scheduled",
+        "model_attempts",
+        "input_tokens",
+        "output_tokens",
+        "unknown_usage_attempts",
+        "known_nanousd",
+        "unknown_cost_attempts",
+    }
+)
+OUTCOMES = frozenset(
+    {"failed", "succeeded", "approval_wait", "retry_wait", "returned", "exception", "interrupted"}
+)
+
+
+def safe_attribute(field: str, value: object) -> str | int | bool | None:
+    if field in {"run_id", "invocation_id"} and isinstance(value, str) and len(value) <= 36:
+        try:
+            return str(UUID(value))
+        except ValueError:
+            return None
+    if field in NUMBER_FIELDS and type(value) is int and 0 <= value <= 2**63 - 1:
+        return value
+    if field == "usage_complete" and type(value) is bool:
+        return value
+    if field == "outcome" and isinstance(value, str) and value in OUTCOMES:
+        return value
+    return None
 
 
 @contextmanager
@@ -30,11 +63,16 @@ class Observation:
     def fields(self, **values: str | int | bool) -> None:
         if self.span is not None:
             try:
-                self.span.set_attributes({f"runveil.{key}": value for key, value in values.items()})
-                if "outcome" in values:
+                attributes = {
+                    f"runveil.{key}": safe
+                    for key, value in values.items()
+                    if (safe := safe_attribute(key, value)) is not None
+                }
+                self.span.set_attributes(attributes)
+                if "runveil.outcome" in attributes:
                     self.span.set_status(
                         StatusCode.ERROR
-                        if values["outcome"] in {"failed", "exception", "interrupted"}
+                        if attributes["runveil.outcome"] in {"failed", "exception", "interrupted"}
                         else StatusCode.OK
                     )
             except Exception:

@@ -95,6 +95,8 @@ async def test_retry_spans_correlate_with_persisted_intents_and_accounting(
         # Even SDK spans containing accidental payload/exception fields cannot leak them.
         with sdk.get_tracer("runveil.runtime").start_as_current_span("agent.execute") as raw:
             raw.set_attribute("task", "private-sentinel")
+            raw.set_attribute("runveil.run_id", "private-sentinel")
+            raw.set_attribute("runveil.steps", 3)
             raw.set_attribute("runveil.outcome", "private-sentinel")
             raw.record_exception(ValueError("private-sentinel"))
         safe = io.StringIO()
@@ -103,6 +105,7 @@ async def test_retry_spans_correlate_with_persisted_intents_and_accounting(
             == SpanExportResult.SUCCESS
         )
         assert "private-sentinel" not in safe.getvalue()
+        assert json.loads(safe.getvalue())["attributes"] == {"steps": 3}
     finally:
         sdk.shutdown()
 

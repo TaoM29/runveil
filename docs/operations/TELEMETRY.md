@@ -59,8 +59,12 @@ or disagree with the last committed state after a crash. Reconcile via durable I
 
 The runtime supplies no prompts, model output, arguments/results, file paths,
 provider/model labels, arbitrary tool names, credentials or raw exception text.
-The exporter independently selects fixed names/outcomes, canonical UUIDs, bounded
-nonnegative integers and booleans. It never serializes SDK events, status text or
+The core filters attributes before handing them to any supplied tracer, accepting
+only canonicalized UUIDs, fixed outcomes, bounded nonnegative integer accounting
+and the usage-completeness boolean. Unexpected fields and values are omitted;
+there is no arbitrary-text redaction or payload inspection. The worker exporter
+reapplies the same value policy and independently selects fixed span names.
+It never serializes SDK events, status text or
 resource attributes. Records are capped at 4096 UTF-8 bytes before the newline.
 Run IDs, usage and timing are operational metadata; protect access to any captured
 stderr output. This switch does not make unrelated application stderr structured.

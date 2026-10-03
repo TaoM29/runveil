@@ -69,3 +69,35 @@ def test_broken_instrumentation_preserves_original_exception() -> None:
         tracer.start_span.side_effect = RuntimeError("private start failure")
         with observe("agent.execute", root=True) as observation:
             observation.fields(outcome="succeeded")
+
+
+def test_attributes_are_filtered_before_reaching_a_custom_tracer() -> None:
+    output = InMemorySpanExporter()
+    provider = TracerProvider(shutdown_on_exit=False)
+    provider.add_span_processor(SimpleSpanProcessor(output))
+    run_id = str(uuid4())
+    try:
+        with using_tracer(provider.get_tracer("test")):
+            with observe(
+                "agent.execute", root=True, run_id=run_id, prompt="private-prompt-sentinel"
+            ) as observation:
+                observation.fields(
+                    invocation_id="private-token-sentinel",
+                    outcome="private-outcome-sentinel",
+                    input_tokens=True,
+                    output_tokens=-1,
+                    known_nanousd=2**63,
+                    usage_complete="private-usage-sentinel",
+                )
+                observation.fields(steps=3, usage_complete=False, outcome="succeeded")
+        spans = output.get_finished_spans()
+        assert len(spans) == 1
+        assert dict(spans[0].attributes or {}) == {
+            "runveil.run_id": run_id,
+            "runveil.steps": 3,
+            "runveil.usage_complete": False,
+            "runveil.outcome": "succeeded",
+        }
+        assert not spans[0].events
+    finally:
+        provider.shutdown()
