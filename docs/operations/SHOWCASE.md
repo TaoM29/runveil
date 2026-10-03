@@ -5,6 +5,10 @@ a database or API token. The records are real, committed acceptance evidence fro
 02 October 2026, using public project fixtures and a scripted provider. They are
 not a live activity feed or a model-quality benchmark.
 
+The [public-demo safety model](../security/PUBLIC_DEMO.md) defines anonymous
+read-only access, local operator fixture execution and deferred release gates.
+It grants no public execution or deployment authority.
+
 ## Start and explore
 
 Use the Node version in `.nvmrc`, then run `npm run dev:web` from the repository
