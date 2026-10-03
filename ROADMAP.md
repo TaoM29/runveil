@@ -18,10 +18,10 @@ commit or push is authorized.
 | 9     | Statistical comparison                                    | Complete; Phase 10 continuation authorized      |
 | 10    | Sandboxed software engineering application                | Implemented through 10G; closure review pending |
 | 11    | MCP adapter through existing policy                       | Closure assessed; human review pending          |
-| 12    | AWS infrastructure with Terraform                         | 12B implemented; review pending                 |
+| 12    | AWS infrastructure with Terraform                         | 12C paused; live acceptance open                |
 | 13    | Production CI/CD                                          | Planned                                         |
 | 14    | Temporary self-hosted inference and benchmarks            | Planned                                         |
-| 15    | Security hardening                                        | Planned                                         |
+| 15    | Security hardening                                        | Local 15A–15C implemented; review pending       |
 | 16    | Public demo and portfolio release                         | Planned                                         |
 
 ## Phase 1 review gates
@@ -485,9 +485,37 @@ The user explicitly authorized Phase 12 continuation. Earlier closure reviews re
 separate human decisions. Live AWS health, recovery, restore, IAM denial and clean
 teardown acceptance are still open. This is not public deployment readiness.
 
-## Recommended next slice
+- **12C — Paused until the owner returns and completes AWS account, billing and credential setup:** the completed deployment
+  model was inspected, but no local AWS credentials or target environment were
+  configured. No live gate has been performed. See the
+  [preflight record](docs/operations/PHASE_12C.md).
 
-Review Phase 12B and its local verification evidence, then conduct a bounded private
-non-production AWS acceptance with reviewed account, cost, credentials and operator
-access. Demonstrate migration, TLS health, fixture delivery/recovery, crossed IAM
-denials, rotation and teardown before expanding services or public exposure.
+## Temporary local security sequence (2026-10-03)
+
+The owner explicitly authorized a temporary local-only detour into Phase 15.
+Phase 12 is **not closed**. Live provisioning, migrations, health checks,
+queue/worker acceptance, teardown and retained-resource cleanup remain pending,
+along with the existing recovery, restore and authority-denial gates.
+
+1. **15A — Documented; review pending:** threat model records attack paths,
+   existing controls, residual risk and justified follow-up.
+2. **15B — Implemented; review pending:** finite telemetry metadata filtering before
+   tracer handoff and at export; focused hostile-repository and disclosure regressions.
+3. **15C — Documented; review pending:** [demo safety policy](docs/security/PUBLIC_DEMO.md)
+   preserves seeded read-only evidence, controlled fixtures and bounded local
+   execution. No public deployment or anonymous execution is authorized.
+
+The local detour stops for review; remaining Phase 15 cloud/public work is deferred.
+See [the handoff](docs/operations/PHASE_15.md),
+[ADR 0044](docs/adr/0044-local-security-detour.md) and the
+[threat model](docs/security/THREAT_MODEL.md). The original charter remains a
+historical specification; this explicit sequencing decision governs current work.
+AWS-dependent security, production authentication, cloud IAM changes, Phase 13
+deployment/CD and Phase 14 GPU/vLLM infrastructure are excluded from this detour.
+
+## Intended resume order
+
+**Resume Phase 12C live AWS acceptance → Phase 13 CI/CD → Phase 14 self-hosted
+inference → remaining AWS/public-deployment security work in Phase 15 → Phase 16
+public release.** Resume 12C only when the owner returns with the required setup;
+this order does not automatically authorize later implementation or close reviews.
